@@ -1,0 +1,794 @@
+---
+title: "Environmental Footprint Computation"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Computing Environmental Footprint Computation}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+editor: 
+  markdown: 
+    wrap: 150
+bibliography: references.bib
+link-citations: true
+---
+
+
+## Functional units (per ha, per kg product, per farm, per €)
+
+To estimate the impact of farm products, we follow life cycle analysis (LCA) principles, prioritizing scope restriction where possible and allocation
+where necessary (European Commission, 2010). For all farm products, the impact is expressed in the same unit (e.g., kg CO~2~e, BVI unit-less index), for
+different functional units: per hectare (kgCO~2~e ha^-1^, BVI~ha~), per ton (kgCO~2~e t^-1^, BVI~t~), per kcal (kgCO~2~e kcal^-1^, BVI~kcal~), or per kg of
+protein (kgCO~2~e kg protein^-1^, BVI\~kg protein\~).
+
+## Allocation of footprints to farm products {#sec-method-econ-alloc}
+
+For crops, footprints are estimated at the crop level (i.e., scope restriction) to obtain a impact value per hectare (kgCO~2~e ha^-1^,
+BVI~ha~) for each crop. The impact per ton of crop (kgCO~2~e t^-1^, BVI~t~) is then calculated by dividing the per hectare impact by the yield of the
+considered crop in t/ha. 
+
+For animal products, we restrict the scope to the herd involved in the product of interest (e.g., dairy herd for milk
+production; Section A.2.5 and Fig. A3) but apply economic allocation for co-products from this herd (e.g., milk and cull cow meat from dairy cattle).
+We assessed the animal product impact in two steps:
+
+1.  We estimate the total impact of the herd activity (e.g., milk production) as the sum of the per hectare impact of the feed given to the livestock
+    activity (e.g., feed, including both farm-grown and externally sourced purchased feed, given to the dairy cows, heifers and calves involved in the
+    milk production) *+ manure management and enteric fermentation*. The per hectare impact of both the on-farm and off-farm feed is estimated from
+    the agricultural practices implemented to produce it (Section 3.4).
+
+2.  We allocate the activity total impact among co-products in proportion to their economic value, aligning with standard LCA practices and reflecting
+    their contribution to environmental impact (Koch and Salou, 2020). Then, we divide the total impact allocated to a co-product by the produced
+    quantity of this co-product.
+
+## Data sources and tiered approach
+
+The package combines three tiers of input data following a tiered approach consistent with national GHG inventory reporting practice:
+
+1. **FADN farm-level recorded variables** (primary): animal inventories, crop areas and production, input costs (synthetic fertiliser, energy, feed purchases).
+2. **Package-level estimations** (secondary): feed dry matter and nitrogen intake, organic fertiliser quantities, energy carrier physical quantities back-calculated from expenditure data.
+3. **Country-specific parameters from UNFCCC national inventories or IPCC defaults** (fallback): animal waste management system (AWMS) distributions, emission factors (EF1–EF5), fraction parameters (Frac_gas_mm, Frac_leach, Frac_gas_f), volatile solid excretion and B₀ values.
+
+---
+
+# Greenhouse gas emissions {#sec-method-ghge}
+
+The computation of greenhouse gas (GHG) emissions at farm level relies on a combination of data sources and methodological frameworks
+(@tbl-ghg-sources). IPCC 2006 Guidelines equations form the methodological backbone, covering enteric fermentation (Ch. 10), manure management (Ch.
+10), managed soils (Ch. 11), and indirect CO~2~ emissions from energy use (Ch. 3). For each emission source, the package combines FADN recorded
+variables — primarily animal inventories, crop areas and production, and input costs — with package-level estimations such as feed dry matter and
+nitrogen intake, organic fertilizer quantities, and energy carrier quantities. Where farm-level data are unavailable, country-specific parameters
+sourced from UNFCCC national inventories (e.g., AWMS distributions, emission factors EF1 to EF5) or IPCC default values (e.g., Frac_gas_mm,
+Frac_leach) are used as fallback inputs, following a tiered approach consistent with national greenhouse gas inventory reporting practice.
+
+::: {#tbl-ghg-sources}
+
+```{r tbl-ghg-sources, echo=FALSE, message=FALSE, warning=FALSE}
+
+library(dplyr)
+
+emissions_data <- data.frame(
+  emission_source = c(
+    "CH4 from enteric fermentation",
+    "CH4 from manure management",
+    "N2O from manure management – direct",
+    "N2O from manure management – indirect from volatilisation",
+    "N2O from manure management – indirect from leaching",
+    "N2O from managed soils – direct\u00b9",
+    "N2O from managed soils – indirect",
+    "CO2 - indirect"
+  ),
+  ipcc_equations = c(
+    "Equations 10.21, 10.21A",
+    "Equations 10.23, 10.24",
+    "Equation 10.25",
+    "Equations 10.26, 10.28",
+    "Equations 10.27, 10.29",
+    "Equations 11.1, 11.2, 11.3, 11.5, 11.6, 11.8",
+    "Equations 11.10, 11.11",
+    "Equation 3.3.1"
+  ),
+  fadn_data = c(
+    "Animal number and category<br>Crop production and sales<br>Feed purchases",
+    "",
+    "",
+    "",
+    "",
+    "Synthetic N fertilizer<br>Animal numbers and category<br>Crop area and production",
+    "",
+    "Synthetic N fertilizer<br>Use of energy<br>Fuel cost<br>Heating fuel cost<br>Electricity cost"
+  ),
+  package_estimation = c(
+    "Feed (dry matter and N intake)",
+    "",
+    "",
+    "",
+    "",
+    "Organic N fertilizers\nN in manure on pasture\u00b2\nN in crop residues",
+    "",
+    "Fuel, heating fuel, and electricity quantities"
+  ),
+  unfccc_data = c(
+    "", "", "AWMS, EF3", "AWMS", "AWMS", "EF1, EF3", "EF4, EF5", "EF_fuel"
+  ),
+  ipcc_defaults = c(
+    "",
+    "",
+    "",
+    "Frac_gas_mm<br>EF4",
+    "Frac_leach<br>EF5",
+    "Frac_gas_mm<br>Frac_gas_f<br>Frac_leach",
+    "",
+    ""
+  ),
+  stringsAsFactors = FALSE
+)
+
+library(flextable)
+
+emissions_data |>
+  flextable() |>
+  set_header_labels(
+    emission_source = "Emission sources",
+    ipcc_equations = "IPCC equations",
+    fadn_data = "FADN data",
+    package_estimation = "Package estimation",
+    unfccc_data = "UNFCCC data",
+    ipcc_defaults = "IPCC default values"
+  ) |>
+  merge_at(i = 1:5, j = which(names(emissions_data) == "fadn_data")) |>
+  merge_at(i = 1:5, j = which(names(emissions_data) == "package_estimation")) |>
+  merge_at(i = 6:7, j = which(names(emissions_data) == "fadn_data")) |>
+  merge_at(i = 6:7, j = which(names(emissions_data) == "package_estimation")) |>
+  valign(valign = "top") |>
+  bold(part = "header") |>
+  bold(j = "emission_source") |>
+  bg(part = "header", bg = "#1B4F72") |>
+  color(part = "header", color = "white") |>
+  italic(j = "ipcc_equations") |>
+  color(j = "ipcc_equations", color = "#196F3D") |>
+  align(j = c("unfccc_data", "ipcc_defaults"), align = "center") |>
+  border_inner_h(part = "body", border = officer::fp_border(color = "#cccccc")) |>
+  add_footer_lines(values = c(
+    "FADN: Farm Accountancy Data Network | UNFCCC: UN Framework Convention on Climate Change | AWMS: Animal Waste Management System | EF: Emission Factor"
+  )) |>
+  fontsize(size = 10, part = "all") |>
+  fontsize(size = 9, part = "footer") |>
+  autofit() |>
+  set_table_properties(layout = "autofit", width = 1)
+
+
+```
+
+
+GHG sources estimated from the FADN2Footprint package
+:::
+
+## CH~4~ Emissions from Enteric Fermentation
+
+Methane (CH~4~) emissions from enteric fermentation were estimated for cattle, sheep, and goats following the IPCC Tier 2 methodology (IPCC 2006; IPCC
+2019). The estimation procedure consisted of three sequential steps:
+
+1.  retrieval of the observed herd structure from farm accounting data ([Method
+    article](articles/practice-inference.html#sec-method-practices-tillage))
+
+2.  estimation of livestock feed intake from both on-farm produced and purchased feed,
+
+3.  calculation of total CH~4~ emissions converted to CO~2~ equivalents.
+
+### Cattle (Tier 2)
+
+For cattle, emission factors were derived using two complementary IPCC Tier 2 approaches, drawing on IPCC Table 10.12 and differentiated by livestock
+category (dairy cows by milk productivity level, other cattle by feed digestibility).
+
+The first approach uses the methane conversion factor *Y*~m~ (%, proportion of gross energy converted to CH~4~), yielding an emission factor
+(kg CH~4~ head⁻¹ yr^-1^) computed as (IPCC Equation 10.21):
+
+$$EF_{Y_m} = \frac{GE \times (Y_m / 100)}{55.65}$$
+
+where 55.65 MJ kg⁻¹ CH~4~ is the energy content of methane.
+
+The second approach uses the methane yield *MY* (g CH~4~ kg DMI⁻¹), yielding an emission factor computed as (IPCC Equation 10.21A):
+
+$$EF_{MY} = DMI \times \frac{MY}{1000}$$
+
+The final cattle emission factor was taken as the arithmetic mean of the two estimates, and total cattle CH~4~ emissions were calculated as:
+
+$$CH_{4,enteric} = Q_{obs} \times \frac{EF_{Y_m} + EF_{MY}}{2}$$
+
+### Sheep and Goats (Tier 2)
+
+For sheep and goats, fixed methane conversion factors of *Y*~m~ = 6.7% and *Y*~m~ = 5.5% were applied, respectively, (IPCC Table
+10.13) using the *Y*~m~ method (IPCC Equation 10.21):
+
+$$EF_{Y_m} = \frac{GE \times (Y_m / 100)}{55.65}$$
+
+$$CH_{4,enteric} = Q_{obs} \times EF_{Y_m}$$
+
+## CH~4~ Emissions from Manure Management
+
+Methane (CH~4~) emissions from manure management were estimated for all livestock categories following IPCC Tier 2/3 methodology (IPCC 2006; IPCC
+2019), anchored on country-specific parameters reported to the UNFCCC. The estimation procedure consisted of five sequential steps:
+
+1.  retrieval of the observed herd structure,
+
+2.  estimation of livestock feed intake,
+
+3.  collection of country-specific volatile solid (VS) excretion rates and maximum methane producing capacity (B₀) from UNFCCC national inventory
+    submissions (Table 3.B(a)s1),
+
+4.  derivation of effective methane conversion factors (MCF) weighted by animal waste management system fractions (AWMS) per country and UNFCCC
+    livestock category (Table 3.B(a)s2),
+
+5.  calculation of CH~4~ emission factors and total emissions converted to CO~2~ equivalents.
+
+### Volatile Solid Excretion
+
+Daily volatile solid (VS) excretion per animal was estimated following IPCC Equation 10.24:
+
+$$VS = \left(GE \times \left(1 - \frac{DE}{100}\right) + UE \times GE\right) \times \frac{1 - ASH}{18.45}$$
+
+where *GE* is the gross energy intake (MJ head⁻¹ day⁻¹), *DE* is the digestibility of feed (%), *UE* is the urinary energy fraction of gross energy
+intake (default = 0.04 for ruminants, reduced to 0.02 for animals fed ≥ 85% grain or for swine), *ASH* is the ash content of feed expressed as a
+fraction of dry matter intake, and 18.45 is the conversion factor for dietary GE per kg of dry matter (MJ kg⁻¹ DM).
+
+Digestibility values (*DE*%) were sourced from UNFCCC national inventory submissions (Table 3.A s2) and weighted by livestock population size at the
+country level. When country-specific values were unavailable for a given UNFCCC livestock category, a cross-country population-weighted mean was used
+as a fallback.
+
+### Country-Specific Parameters
+
+Country-specific values of the maximum methane producing capacity (*B*₀, m³ CH~4~ kg⁻¹ VS) were retrieved from UNFCCC national inventory submissions
+(Table 3.B(a)s1) and aggregated to the FADN livestock category level as population-weighted means across UNFCCC animal subcategories within each
+country.
+
+The effective methane conversion factor, expressed as the population-weighted sum of MCF × AWMS products across all manure management systems (*S*)
+and climate regions (*k*), was pre-computed from UNFCCC Table 3.B(a)s2:
+
+$$\sum_{S,k} MCF_{S,k} \times AWMS_{T,S,k}$$
+
+where *MCF*~S,k~ is the methane conversion factor (%) for manure management system *S* in climate region *k*, and *AWMS*~T,S,k~ is
+the fraction of manure from livestock category *T* handled under system *S* in climate region *k*. For countries spanning multiple climate regions,
+population-weighted averaging was applied across regions.
+
+### CH~4~ Emission Factor
+
+The annual CH~4~ emission factor per animal was calculated following IPCC Equation 10.23:
+
+$$EF_T = VS_T \times 365 \times B_{o,T} \times 0.67 \times \sum_{S,k} MCF_{S,k} \times AWMS_{T,S,k}$$
+
+where *EF*~T~ is the annual CH~4~ emission factor for livestock category *T* (kg CH~4~ head⁻¹ yr^-1^), *VS*~T~ is the daily volatile
+solid excretion (kg VS head⁻¹ day⁻¹), 365 converts daily to annual excretion, *B*~o,T~ is the maximum methane producing capacity (m³ CH~4~
+kg⁻¹ VS), and 0.67 is the conversion factor from m³ CH~4~ to kg CH~4~.
+
+### Total CH4 Emissions from Manure Management
+
+Total CH~4~ emissions from manure management for each livestock category were calculated as:
+
+$$CH_{4,MM} = EF_T \times N_T$$
+
+where *N*~T~ is the observed number of animals of category *T* (*Q*~obs~).
+
+## N~2~O Emissions from Manure Management
+
+Nitrous oxide (N~2~O) emissions from manure management were estimated for all livestock categories following IPCC Tier 2/3 methodology [@IPCC2006;
+@IPCC2019], anchored on country-specific parameters reported to the UNFCCC. Three emission pathways were considered: direct N~2~O emissions, indirect
+N~2~O emissions from volatilisation, and indirect N~2~O emissions from leaching and runoff. The estimation procedure consisted of three sequential steps:
+
+1.  retrieval of the observed herd structure enriched with IPCC and UNFCCC category codes and country ISO codes,
+
+2.  estimation of nitrogen excretion per head and per livestock category, ({#sec-method-practices-Nferti}
+
+3.  calculation of the three N~2~O emission pathways converted to CO~2~ equivalents.
+
+### Nitrogen Excretion
+
+Total nitrogen excretion ($N_{ex}$, kg N yr^-1^) per livestock category was estimated using the `f_n_excr` function, which combines on-farm produced and
+purchased feed composition data to derive nitrogen intake and excretion for each livestock category. Species-specific outputs were row-bound after
+harmonisation of common columns across livestock groups.
+
+### Manure Management System Fractions
+
+Country- and category-specific manure management system (MMS) fractions ($AWMS_{T,S}$) were derived from UNFCCC national inventory submissions (Table
+3.B(a)s2, `UNFCCC_data$table3Bas2`). Population-weighted MMS fractions were computed per UNFCCC livestock category $T$ and country as:
+
+$$AWMS_{T,S} = \frac{N_T \times AWMS_{T,S}^{raw}}{\sum_S N_T \times AWMS_{T,S}^{raw}}$$
+
+where $N_T$ is the livestock population of category $T$ and $AWMS_{T,S}^{raw}$ is the raw fraction of manure handled under management system $S$ as
+reported in UNFCCC submissions.
+
+### Emission Pathways
+
+#### Direct N~2~O Emissions
+
+Direct N~2~O emissions from manure management were estimated following IPCC Equation 10.25:
+
+$$N_2O_{D,MM} = \sum_{T,S} N_{ex,T} \times AWMS_{T,S} \times EF3_S \times \frac{44}{28}$$
+
+where $EF3_S$ is the direct N~2~O emission factor for manure management system $S$ (kg N~2~O-N kg⁻¹ N). Emission factors were sourced from UNFCCC national
+inventory submissions (`UNFCCC_data$table3Bb`). When country-specific values were absent, IPCC default values (`data_extra$IPCC_default_values`,
+parameter `"EF3"`) were used as fallback. The ratio $\frac{44}{28}$ converts kg N~2~O-N to kg N~2~O.
+
+#### Indirect N~2~O Emissions from Volatilisation
+
+Nitrogen lost through volatilisation of NH₃ and NO~x~ from manure management systems was estimated following IPCC Equations 10.26 and 10.28. The
+amount of nitrogen volatilised was first calculated as:
+
+$$N_{vol,MMS} = \sum_{T,S} N_{ex,T} \times AWMS_{T,S} \times Frac_{gasMS,T,S}$$
+
+where $Frac_{gasMS,T,S}$ is the fraction of managed manure nitrogen that volatilises as NH₃ and NO~x~ from management system $S$ for livestock
+category $T$ (IPCC Table 10.22). Species mapping for $Frac_{gasMS}$ followed IPCC conventions: `LCOWDAIR` was mapped to dairy cattle; other cattle,
+swine, poultry, and all remaining categories were mapped to their respective species groups or to "other animals". The resulting indirect N~2~O
+emissions were then computed as:
+
+$$N_2O_{G,mm} = N_{vol,MMS} \times EF_4 \times \frac{44}{28}$$
+
+where $EF_4$ is the emission factor for N~2~O from atmospheric deposition of volatilised NH₃ and NO~x~ (IPCC Chapter 11, Table 11.3), taken from IPCC
+default values.
+
+#### Indirect N~2~O Emissions from Leaching and Runoff
+
+Nitrogen lost through leaching and runoff from manure management systems was estimated following IPCC Equations 10.27 and 10.29. The amount of
+nitrogen leached was first calculated as:
+
+$$N_{leach,MMS} = \sum_{T,S} N_{ex,T} \times AWMS_{T,S} \times Frac_{leachMS,T,S}$$
+
+where $Frac_{leachMS,T,S}$ is the fraction of managed manure nitrogen lost through leaching and runoff from management system $S$ for livestock
+category $T$ (IPCC Table 10.22), taken from IPCC default values. The resulting indirect N~2~O emissions were then computed as:
+
+$$N_2O_{L,mm} = N_{leach,MMS} \times EF_5 \times \frac{44}{28}$$
+
+where $EF_5$ is the emission factor for N~2~O from nitrogen leaching and runoff (IPCC Chapter 11, Table 11.3), taken from IPCC default values.
+
+### Total N~2~O Emissions from Manure Managements
+
+Final results were returned at the farm × livestock category level, disaggregated into the three emission pathways: $N_2O_{D,MM}$ (direct),
+$N_2O_{G,mm}$ (indirect volatilisation), and $N_2O_{L,mm}$ (indirect leaching), all expressed in kg CO~2~-eq yr^-1^.
+
+## N~2~O Emissions from Managed Soils
+
+Direct and indirect nitrous oxide (N~2~O) emissions from managed soils (cropland and grassland) were estimated following IPCC Tier 2/3 methodology
+[@IPCC2006; @IPCC2019], anchored on country-specific emission factors reported to the UNFCCC. Three emission pathways were considered:
+
+-   direct N~2~O emissions from nitrogen inputs to managed soils,
+
+-   indirect N~2~O emissions from atmospheric deposition of volatilised NH₃ and NO~x~,
+
+-   indirect N~2~O emissions from nitrogen leaching and runoff.
+
+### Activity Data Assembly
+
+Activity data were assembled by joining crop-level information (area, yield, land use type, species) with nitrogen fertilisation data, country- and
+year-specific emission factors from UNFCCC national inventory submissions, and IPCC crop-specific parameters (Tables 11.1 and 11.2). When
+country-specific emission factors were unavailable for a given country–year combination, cross-country means were used as fallback. Similarly, when
+crop-specific IPCC parameters could not be matched to a given species, generic default values were applied.
+
+### Nitrogen Input Variables
+
+Six nitrogen input variables were considered:
+
+-   **Synthetic nitrogen** ($F_{SN}$, kg N yr^-1^): synthetic fertiliser nitrogen applied per crop and farm, estimated via the `f_n_ferti` function.
+
+-   **Organic nitrogen on arable soils** ($F_{ON}$, kg N yr^-1^): organic fertiliser nitrogen applied to arable crops, estimated via `f_n_ferti`; set to
+    zero for grassland.
+
+-   **Nitrogen deposited by grazing animals on pasture** ($F_{PRP}$, kg N yr^-1^): approximated as the organic fertilisation of grassland from
+    `f_n_ferti`; set to zero for arable land.
+
+-   **Crop residue nitrogen** ($F_{CR}$, kg N yr^-1^): nitrogen in crop residues returned to soil, estimated from above-ground and below-ground dry
+    matter residues using IPCC crop-specific regression parameters (Tables 11.1 and 11.2). Above-ground dry matter ($AG_{DM,T}$) was estimated as a
+    linear function of crop yield:
+
+$$AG_{DM,T} = Crop_T \times Slope_T + Intercept_T$$
+
+Above-ground residue nitrogen and below-ground residue nitrogen were then derived as:
+
+$$AGR_T = AG_{DM,T} \times Area_T$$
+
+$$BGR_T = (Crop_T + AG_{DM,T}) \times RS_T \times Area_T \times Frac_{renew,T}$$
+
+$$F_{CR} = AGR_T \times N_{AG,T} + BGR_T \times N_{BG,T}$$
+
+where $RS_T$ is the root-to-shoot ratio, $N_{AG,T}$ and $N_{BG,T}$ are the nitrogen contents of above-ground and below-ground residues respectively,
+and $Frac_{renew,T}$ is the fraction of land renewed annually. Grasslands were assumed to be renewed every six years ($Frac_{renew} = 1/6$), while
+annual crops had $Frac_{renew} = 1$. Residue removal and burning were assumed to be zero ($Frac_{remove} = 0$; $Frac_{burn} = 0$).
+
+-   **Nitrogen mineralised from soil organic matter** ($F_{SOM}$, kg N yr^-1^): nitrogen mineralised following land use change; currently set to zero,
+    pending integration with a land use change module.
+
+-   **Drained organic soils** ($F_{OS}$, ha): area of drained organic soils; currently set to zero.
+
+### Direct N~2~O Emissions
+
+Direct N~2~O emissions from managed soils were estimated following IPCC Equation 11.2:
+
+$$N_2O\text{-}N_d = F_{SN} \times EF_{SN} + F_{ON} \times EF_{ON} + F_{CR} \times EF_{CR} + F_{SOM} \times EF_{SOM} + F_{OS} \times EF_{OS} + F_{PRP} \times EF_{PRP}$$
+
+$$N_2O_d = N_2O\text{-}N_d \times \frac{44}{28}$$
+
+where $EF_{SN}$, $EF_{ON}$, $EF_{CR}$, $EF_{SOM}$, $EF_{OS}$, and $EF_{PRP}$ are the direct N~2~O emission factors (kg N~2~O-N kg⁻¹ N) for each nitrogen
+source, sourced from country- and year-specific UNFCCC submissions. The ratio $\frac{44}{28}$ converts kg N~2~O-N to kg N~2~O.
+
+### Indirect N~2~O Emissions from Volatilisation
+
+Nitrogen lost through volatilisation of NH₃ and NO~x~ from managed soils was estimated following IPCC Equation 11.11:
+
+$$N_2O\text{-}N_{ATD} = \left(F_{SN} \times Frac_{GASF} + (F_{ON} + F_{PRP}) \times Frac_{GASM}\right) \times EF_4$$
+
+$$N_2O_{ATD} = N_2O\text{-}N_{ATD} \times \frac{44}{28}$$
+
+where $Frac_{GASF} = 0.11$ is the fraction of synthetic fertiliser nitrogen that volatilises as NH₃ and NO~x~, $Frac_{GASM} = 0.21$ is the
+corresponding fraction for organic nitrogen amendments and grazing deposits (IPCC Table 11.3), and $EF_4$ is the emission factor for N~2~O from
+atmospheric deposition of volatilised nitrogen, sourced from UNFCCC submissions.
+
+### Indirect N~2~O Emissions from Leaching and Runoff
+
+Nitrogen lost through leaching and runoff from managed soils was estimated following IPCC Equation 11.10:
+
+$$N_2O\text{-}N_L = (F_{SN} + F_{ON} + F_{PRP} + F_{CR} + F_{SOM}) \times Frac_{leach,H} \times EF_5$$
+
+$$N_2O_L = N_2O\text{-}N_L \times \frac{44}{28}$$
+
+where $Frac_{leach,H} = 0.24$ is the fraction of total nitrogen additions that is lost through leaching and runoff in regions where leaching occurs
+(IPCC Table 11.3), and $EF_5$ is the emission factor for N~2~O from nitrogen leaching and runoff, sourced from UNFCCC submissions.
+
+### Total N20 Emissions from Managed Soils
+
+Final results were returned at the farm × crop level, disaggregated into the three emission pathways: $N_2O_d$ (direct), $N_2O_{ATD}$
+(indirect volatilisation), and $N_2O_L$ (indirect leaching), all expressed in kg CO~2~-eq yr^-1^.
+
+## CO~2~ emissions  from On-Farm energy use
+
+### Fuel Combustion
+
+Greenhouse gas emissions from the combustion of liquid fuels used on the farm were estimated following IPCC stationary and mobile combustion methodology [@IPCC2006energy], using country- and year-specific emission factors from UNFCCC national inventory submissions.
+
+#### Activity Data
+
+On-farm fuel consumption was distinguished into two categories:
+-   diesel consumed by farm machinery and field operations,
+-   heating fuels consumed in farm buildings and livestock facilities. Fuel quantities, expressed in both litres and megajoules (MJ), were retrieved from the FADN, with the conversion from litres to MJ performed upstream during the farm practices inference step (`infer_practices`).
+
+#### Emission Factors
+
+Country- and year-specific CO~2~ emission factors ($EF_{fuel,CO_2}$, t CO~2~ TJ^-1^) were sourced from UNFCCC national inventory submissions and matched by country ISO code and year. When country- or year-specific values were unavailable, cross-country means were used as fallback. Emission factors were converted from t CO~2~ TJ^-1^ to kg CO~2~ MJ^-1^ for calculation:
+
+$$EF_{fuel,CO_2} \; [\text{kg CO}_2 \text{ MJ}^{-1}] = EF_{fuel,CO_2} \; [\text{t CO}_2 \text{ TJ}^{-1}] \times 10^{-3}$$
+
+A single average emission factor was applied to both diesel and heating fuels. Differentiation by specific fuel type (e.g., gas oil vs. natural gas) is not yet implemented.
+
+#### Emission Calculation
+
+CO~2~ emissions from fuel combustion were calculated separately for diesel and heating fuels, then summed:
+
+$$ghg_{diesel} = Q_{diesel,MJ} \times EF_{fuel,CO_2}$$
+
+$$ghg_{heat} = Q_{heat,MJ} \times EF_{fuel,CO_2}$$
+
+$$ghg_{fuels} = ghg_{diesel} + ghg_{heat}$$
+
+where $Q_{diesel,MJ}$ and $Q_{heat,MJ}$ are the annual fuel consumption for diesel and heating fuels respectively (MJ yr^-1^), and $EF_{fuel,CO_2}$ is the emission factor (kg CO~2~ MJ^-1^). All emissions were expressed in kg CO~2~-eq yr^-1^. Only CO~2~ emissions from direct (scope 1) fuel combustion were estimated; CH₄ and N₂O emissions from mobile combustion, which represent a minor contribution, and indirect upstream emissions from fuel production were not included.
+
+### Electricity Consumption
+
+Greenhouse gas emissions associated with on-farm electricity consumption were estimated using country- and year-specific electricity emission factors and EUROSTAT electricity prices.
+
+#### Electricity Quantity Estimation
+
+Since FADN reports electricity as an expenditure value (€) rather than a physical quantity, electricity consumption in kWh was back-calculated using national average electricity prices for non-household consumers sourced from EUROSTAT [table NRG_PC_205, @EUROSTAT2024elec]:
+
+$$elec_{kWh} = \frac{elec_V}{euro_{kWh}}$$
+
+where $elec_V$ is the electricity expenditure reported in FADN (€ yr^-1^) and $euro_{kWh}$ is the national average electricity price (€ kWh^-1^), matched by country and survey year. When country- and year-specific prices were unavailable, the cross-country mean price was used as fallback.
+
+#### Emission Calculation
+
+Total GHG emissions from electricity use were estimated as:
+
+$$ghg_{elec} = elec_{kWh} \times EF_{elec}$$
+
+where $EF_{elec}$ is the country- and year-specific electricity emission factor (kg CO~2~-eq kWh^-1^), reflecting the carbon intensity of the national electricity grid. When country- and year-specific emission factors were missing, the cross-country mean emission factor was substituted.
+
+Emissions were expressed in kg CO~2~-eq yr^-1^ at the whole-farm level. Allocation of electricity emissions to specific farm activities (crops or livestock) was not performed at this stage but handled downstream using economic allocation keys.
+
+## GHG Emissions from Mineral Fertiliser Production
+
+Upstream greenhouse gas emissions associated with the production of mineral (synthetic) nitrogen fertilisers applied on the farm were estimated following a life cycle assessment approach (scope 3).
+
+### Emission Factor
+
+A single average emission factor covering the full supply chain of nitrogen fertiliser production — including energy use and process emissions — was applied:
+
+$$EF_{ferti,prod} = 4.572 \; \text{kg CO}_2\text{-eq kg}^{-1} \text{ N}$$
+
+This value was sourced from JRC Table 47 [@Edwards2019]. While this average factor may overestimate emissions for urea-based fertilisers and underestimate them for ammonium nitrate, it is consistent with the review by @Walling2020, which accounts for recent innovations in European fertiliser production.
+
+### Emission Calculation
+
+Emissions from mineral fertiliser production were calculated at the crop level as:
+
+$$ghg_{ferti,prod} = N_{ferti,min} \times EF_{ferti,prod}$$
+
+where $N_{ferti,min}$ (kg N yr^-1^) is the mineral nitrogen applied per crop and farm, estimated by the `f_n_ferti` function. Only mineral nitrogen fertilisers ($F_{SN}$) were considered; emissions from organic fertiliser production were attributed to the livestock system of origin and were not double-counted. Field-level N₂O emissions from fertiliser application were estimated separately (see N₂O from managed soils).
+
+
+## Conversion to CO~2~ Equivalents
+
+All CH~4~ emission estimates (kg CH~4~ head⁻¹ yr^-1^) were multiplied by the global warming potential (GWP) of CH~4~, as stored in the `GWP` parameter
+object, to obtain emissions expressed in kg CO~2~ equivalents per year (kg CO~2~e yr^-1^).
+
+---
+
+# Biodiversity impact
+
+Biodiversity footprint is computed through the BVIAS model. The BVIAS model extends the BVI framework originally chosen by ADEME for environmental
+labeling (Lindner et al., 2022) and have been used in a study comparing the effect of Food Quality Schemes on the biodiversity impact of wheat and
+milk production (ref Huet).
+
+## BVIAS model
+
+To aggregate the impact of farming practices into a synthetic biodiversity value, the BVIAS model first considers their normalized intensity values in
+the interval \[0.1\]. To exclude possible outliers, the 95th percentile of observed intensity is set as the function maximum limit (i.e., a threshold
+above which values are truncated). The contribution to the biodiversity value of each practice is then calculated by applying a response function
+specific to each parameter @eq-BVC.
+
+$$
+BVC_{i,l,v}= \gamma_{l,v} + \epsilon_{l,v} \cdot \exp(- \frac{ |(x_{i,l,v}^{\delta_{l,v}} - \beta_{l,v}) ^{\alpha_{l,v}}| }{2\sigma_{l,v}^{\alpha_{l,v}}})
+$$ {#eq-BVC}
+
+where $BVC$ is the biodiversity value contribution (without dimension, 1 = maximum contribution of practice, 0 = minimum contribution) of a practice v
+for each observation $i$ in a land use type $l$, $x$ is the normalized practice intensity, and $[\alpha, \beta, \delta, \epsilon, \gamma, \sigma]$ are
+the contribution function constants. Whereas the original BVI model uses a simple average of BVCs to calculate the land use specific biodiversity
+value (BVLU), BVIAS relies on a weighted average of BVCs (@eq-BVLU, where $z$ is the practice weight), based on their relative importance as a driver
+of biodiversity loss (@sec-model-calibration).
+
+$$
+BV_{LU} = \sum z_{l,v} \cdot BVC_{i,l,v}
+$$ {#eq-BVLU}
+
+As mentioned above, $BV_{LU}$ is then projected into the range of possible biodiversity values ($[LU_{min,l};LU_{max,l}]$) for this particular land
+use type (i.e., arable or grassland), in order to obtain a standardized biodiversity value ($BV_{loc}$; @eq-BVloc). Unlike Lindner et al. (2019)’s
+seminal method, we do not correct for possibly «more valuable biomes » (e.g., tropical moist climate \> temperate moist climate). Finally, the impact
+on biodiversity value (BVI) of one hectare is defined as $BVI_{ha} = 1 - BV_{loc}$
+
+$$
+BV_{loc,i,l} = LU_{min,l} + BV_{LU,i,l} \times (LU_{max,l} - LU_{min,l})
+$$ {#eq-BVloc}
+
+## Model calibration according to literature {#sec-model-calibration}
+
+For each land use type (arable and grassland), three sets of parameters must be calibrated: the range of possible $BV_{loc}$ values per land-use, the
+parameters of functions used to calculate BVCs in @eq-BVC, and the weight of each practice when aggregating BVCs into $BV_{loc}$. Because we define
+biodiversity as ecosystem resilience and well function, we select large-scale studies or meta-analysis which can constrain these sets of parameters
+based on taxa that correspond well to this definition, namely large umbrella species (vertebrates), aquatic species of neighboring streams which
+concentrate landscape effects, pollinators and the wild plants that support them, etc. Symmetrically, we exclude studies focused on soil
+microorganisms. While soils are, of course, a very valuable resource for farmers, we argue this is not the biodiversity primarily targeted by a policy
+such as environmental labeling for three main reasons. First, soil biodiversity has only a secondary impact on the well-being of others (other than
+the farmer himself), especially for impacts not taken into account in other components of environmental labeling (e.g., erosion). This contrasts with
+the impact of practices on birds or pollinators that strongly penalize third parties. Second, soil communities are more resilient, have a much lower
+equilibrium state recovery time than above-ground communities and are enhanced by practice having detrimental impact on other species at landscape
+level (i.e., manure input). Even if they disappear from a field (which does not happen, even in the desert, there are soil communities), they remain
+present in the field or forest next door and would quickly recolonize the field. Moreover, no species "below-ground" is part of the red lists of IUCN,
+only above-ground species have been listed as endangered, threatened or extinct (IUCN, 2025). Third, the impact of agricultural practices on soil
+communities is highly idiosyncratic and limited at the plot scale or even infra. In order to calibrate our model, we compare estimated biodiversity
+levels with in situ measurements identified in the literature. These in situ measurements serve as references and we adjust the three sets of
+parameters in order to minimize the distance between our results and the in situ measurements selected. The range of possible $BV_{loc}$ are derived
+on the wild plants abundance and diversity reported by Gallego-Zamorano et al. (2022) (Table A xxx; see Section
+2.2.1). The two other sets of parameters are calibrated to minimize the average distance between our results and literature values on plants, birds,
+bees, butterflies, hoverflies, carabids, spiders, bats, bush-crickets, other arthropods and microbes (Beketov et al., 2013; Sánchez-Bayo and Wyckhuys,
+2019; Sirami et al., 2019; Tuck et al., 2014; Vallé et al., 2023) (Table A xxx; see Section 2.2.2). This
+calibration step uses the optim function from the R base package (R Core Team, 2023).
+
+### Levels of biodiversity in different land use types
+
+To compare the levels of biodiversity of different land use types, we base our analysis on Gallego-Zamorano et al. (2022) who estimated the richness
+in plant species according to nine archetypes of land use in relation to the richness in plant species in a natural space. We define the equivalent of
+each archetype in our modeling framework (@tbl-land-use-BV).
+
+::: {#tbl-land-use-BV}
+
+```{r tbl-land-use-BV, echo=FALSE, message=FALSE, warning=FALSE}
+
+library(flextable)
+library(dplyr)
+
+bio_data <- tibble::tribble(
+  ~land_use, ~equivalent, ~richness,
+
+  "Pasture, Minimal-intensity use (P-M)",
+  "BVLU upper bound for grasslands (BVLU,P,ha,max)",
+  "0.92 (P-M average)\u00b9",
+
+  "Pasture, Light- and high-intensity use (P-LH)",
+  "Pastures with all variables at the median of our grassland sample",
+  "0.57 (95% CI: 0.44-0.76)",
+
+  "Pasture, Light- and high-intensity use (P-LH)",
+  "BVLU lower bound for grasslands (BVLU,P,ha,min)",
+  "0.44 (P-LH lower bound)\u00b2",
+
+  "Cropland, Minimal-intensity use (C-M)",
+  "BVLU upper bound for croplands (BVLU,C,ha,max)",
+  "0.52 (C-M average)\u00b9",
+
+  "Cropland, High-intensity use (C-H)",
+  "Croplands with all variables at the median of our arable sample",
+  "0.32 (95% CI: 0.23-0.44)",
+
+  "Cropland, High-intensity use (C-H)",
+  "BVLU lower bound for cropland (BVLU,C,ha,min)",
+  "0.23 (C-H lower bound)\u00b2"
+)
+
+flextable(bio_data) |>
+  set_header_labels(
+    land_use = "Land use archetypes (Gallego-Zamorano et al., 2022)",
+    equivalent = "Equivalent in our modeling framework",
+    richness = "Plant species richness relative to primary vegetation"
+  ) |>
+  merge_v(j = "land_use") |>
+  valign(j = "land_use", valign = "top") |>
+  bold(part = "header") |>
+  bg(part = "header", bg = "#f4f4f4") |>
+  border_inner_h(part = "body", border = officer::fp_border(color = "#cccccc")) |>
+  add_footer_lines(values = c(
+    "\u00b9 For minimal-intensity archetypes, the observed variability is due to the idiosyncrasy of biodiversity rather than the variability of the intensity of practices: we therefore choose the average as the limit.",
+    "\u00b2 For high-intensity archetypes, variability is due to the variability of intensity of practices rather than the idiosyncrasies of biodiversity: we therefore choose the lower limit as maximum intensity of practice."
+  )) |>
+  fontsize(size = 9, part = "footer") |>
+  autofit() |>
+  set_table_properties(layout = "autofit", width = 1)
+
+
+```
+
+
+Calibration by land use type.
+:::
+
+### Effect of practices on biodiversity level
+
+::: {#tbl-practice-BVloc}
+
+```{r tbl-practice-BVloc, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+
+sirami_taxa <- "Plants, bees, butterflies, hoverflies, carabids, spiders, and birds"
+sirami_area <- "France, United Kingdom, Germany, Spain and Canada"
+
+effect_data <- tibble::tribble(
+  ~archetypes, ~taxa, ~bio_component, ~geo_area, ~framework, ~expected,
+
+  "Low VS maximum use of pesticides (Beketov et al., 2013)",
+  "Stream invertebrates", "Richness", "Germany, France and Australia",
+  "@eq-ES_pesticides\u00b9", "0.35",
+
+  "Few VS maximum nitrogen inputs (S\u00e1nchez-Bayo and Wyckhuys, 2019)",
+  "Entomofauna", "Abundance and Richness", "Worldwide",
+  "@eq-ES_nitrogen", "Same effect size than pesticides",
+
+  "High crop diversity with 3 crop types sampled VS low crop diversity with 1 crop type sampled (Sirami et al., 2019)",
+  sirami_taxa, "Richness", sirami_area,
+  "@eq-ES_shannon", "0.18",
+
+  "Small VS large mean field size (Sirami et al., 2019)",
+  sirami_taxa, "Richness", sirami_area,
+  "@eq-ES_MFS", "0.05",
+
+  "High VS low density of small woody features (Vall\u00e9 et al., 2023)",
+  "Birds, bats and bush-crickets", "Richness", "France",
+  "@eq-ES_SNC", "0.20",
+
+  "Organic VS conventional wheat & grassland (Tuck et al., 2014)",
+  "Arthropods, birds, microbes and plants", "Richness", "Europe and North America",
+  "@eq-ES_org_conv\u00b3", "0.30 (wheat) & 0.15 (grassland)"
+)
+
+flextable(effect_data) |>
+  set_header_labels(
+    archetypes = "Archetypes",
+    taxa = "Taxa considered",
+    bio_component = "Biodiversity component",
+    geo_area = "Geographical area",
+    framework = "Equivalent in our modeling framework",
+    expected = "Expected result from literature"
+  ) |>
+  merge_v(j = c("taxa", "bio_component", "geo_area")) |>
+  valign(j = c("taxa", "bio_component", "geo_area"), valign = "top") |>
+  bold(part = "header") |>
+  bg(part = "header", bg = "#f4f4f4") |>
+  border_inner_h(part = "body", border = officer::fp_border(color = "#cccccc")) |>
+  add_footer_lines(values = c(
+    "\u00b9 In our modeling framework, the best translation of a landscape with few pesticides as described in Beketov et al. (2013) is an average landscape with half-grassland and half-crop with few pesticides.",
+    "\u00b2 Nitrogen fertilization impact assumed to be equal to pesticide impact, according to S\u00e1nchez-Bayo and Wyckhuys (2019).",
+    "\u00b3 Ratio of predictions after matching procedure for structural characteristics of farms (simple matching)."
+  )) |>
+  fontsize(size = 9, part = "footer") |>
+  autofit() |>
+  set_table_properties(layout = "autofit", width = 1)
+
+```
+
+
+Literature values and references for the practice effect size calibration of the BVIAS model.
+:::
+
+$$
+\frac{ \frac{BV_{loc,P,ha} ( \textrm{pesticide use } 5^{th} \textrm{ percentile, other variable medians} ) + BV_{loc,C,ha} \textrm{pesticide use } 5^{th} \textrm{ percentile, other variable medians} ) }{2} - BV_{loc,C,ha} ( \textrm{pesticide use } 95^{th} \textrm{ percentile, other variable medians} ) }{ \frac{ BV_{loc,P,ha} ( \textrm{pesticide use } 5^{th} \textrm{ percentile, other variable medians} ) + BV_{loc,C,ha} ( \textrm{pesticide use } 5^{th} \textrm{ percentile, other variable medians} ) }{ 2 } }
+$$ {#eq-ES_pesticides}
+
+$$
+\frac{\frac{BV_{loc,P,ha} (\textrm{nitrogen input } 5^{th} \textrm{ percentile, other variable medians}) + BV_{loc,C,ha} ( \textrm{nitrogen input } 5^{th} \textrm{ percentile, other variable medians})}{2} - BV_{loc,C,ha} ( \textrm{nitrogen input } 95^{th} \textrm{ percentile, other variable medians})}{\frac{BV_{loc,P,ha} ( \textrm{nitrogen input } 5^{th} \textrm{ percentile, other variable medians}) + BV_{loc,C,ha} ( \textrm{nitrogen input } 5^{th} \textrm{ percentile, other variable medians})}{2}}
+$$ {#eq-ES_nitrogen}
+
+$$
+\frac{ BV_{loc,ha}(\textrm{Shannon index } 75^{th} \textrm{ percentile of farms with 3 crops, other variable medians}) - BV_{loc,ha} (\textrm{Shannon index } 25^{th} \textrm{ percentile of farms with 1 crops, other variable medians})}{BV_{loc,ha}(\textrm{Shannon index } 75^{th} \textrm{ percentile of farms with 3 crops, other variable medians})}
+$$ {#eq-ES_shannon}
+
+$$
+\frac{ BV_{loc,ha}(\textrm{hedge density } 75^{th} \textrm{ percentile, other variable medians}) - BV_{loc,ha} (\textrm{hedge density } 25^{th} \textrm{ percentile, other variable medians})}{BV_{loc,ha}(\textrm{hedge density } 75^{th} \textrm{ percentile, other variable medians})}
+$$ {#eq-ES_SNC}
+
+$$
+\frac{ BV_{loc,ha}(\textrm{mean field size } 25^{th} \textrm{ percentile, other variable medians}) - BV_{loc,ha} (\textrm{mean field size } 75^{th} \textrm{ percentile, other variable medians})}{BV_{loc,ha}(\textrm{mean field size } 25^{th} \textrm{ percentile, other variable medians})}
+$$ {#eq-ES_MFS}
+
+$$
+\frac{ BV_{loc,ha}(\textrm{organic soft wheat}) - BV_{loc,ha}(\textrm{conventional soft wheat})}{BV_{loc,ha}(\textrm{organic soft wheat})}
+$$ {#eq-ES_org_conv}
+
+#### Within-field practices
+
+In the absence of a meta-analysis of the effect of pesticides on taxa and “essential” functional groups (pollinators, vertebrates), we use aquatic
+invertebrates as a benchmark whose diversity is reduced by 27-42% in an environment with high pesticide use (Beketov et al., 2013). This is consistent
+with the use of ecofreshwater toxicity for weighting estimated inputs of pesticides in our model ([Pesticide Use
+section](method_practices.html#sec-method-pesticides)). We consider that within-field practices of nitrogen fertilization and pesticide application
+have comparable effects on biodiversity. Pesticides are as often implicated in the causes of biodiversity loss as fertilization (Sánchez-Bayo and
+Wyckhuys, 2019).
+
+#### Landscape effects
+
+To compare the effects of mean field size and crop diversity, we relied on Sirami et al. (2019), one of the only studies that provides effect sizes
+for these two variables (Table A xxx). To compare the effects of hedges we use (Vallé et al., 2023) which
+estimate the effect of small woody features (Table A xxx). To retrieve the average percentile corresponding to
+the breaking point and the average effect size of the predicted species diversity (Simpson index) of the three taxa, we used WebPlotDigitizer (version
+5.2) to calculate the area under the density curve and retrieve breaking point Simpson index value (see sheet “valle_2023_WebPlotDigitizer” in
+Appendix C).
+
+#### Comparison of labels
+
+The effect of organic farming on biodiversity has been examined by numerous studies whose results have been aggregated in a meta-analysis comparing in
+situ measurements of species richness between organic and conventional agriculture (Tuck et al., 2014). We take the observed differences to calibrate
+the model (Table A xxx).
+
+#### The case of grassland
+
+In our modeling framework, since grasslands are not ploughed nor receive pesticides, we do not use these variables to calibrate the set of grassland
+parameters. Similarly, the crop diversity does not apply to grassland. We also considered that the effects of hedges and parcel size are negligible
+for grasslands. These five variables will therefore be weighted to zero for the calculation of the BVIAS of grasslands.
+
+### Model calibration
+
+First, the range of possible biodiversity values (in which BVLU is projected for normalization) for each land use type (arable and grassland) are
+defined as in Gallego-Zamorano et al. (2022) (Table A xxx). Secondly, the set of response function parameters
+(BVCi,l,v, see Section 4.1) and the aggregation weights for each type of land use are calibrated (separately for arable and grassland). The
+calibration pursues the objective of minimizing the fourth power of the distance from one of the ratio between our predicted values and the target
+values of Table A xxx (average croplands and grasslands) and Table AErreur : source de la référence non
+trouvée:
+
+-   Initially, the functional forms of the responses are taken from Lindner et al. (2019). Unlike initial Lindner’s method (2022) that aggregates
+    variables by averaging them, the variable weights used for their aggregation are assigned manually such that their value corresponds to the effect
+    size of variables listed in the literature (Table A xxx), with a minimum weight of 0.05 (for the negative
+    effect sizes and the variables not listed in the literature).
+
+-   Then, both the functional forms of the responses (all constants except epsilon and gamma, which modulates the response range, and beta which
+    define the variation direction; see code available online) and the aggregation weights are calibrated using the basic optim function of R (R Core
+    Team, 2023)
+
+-   Note that the effect size of each variable (or its relative importance) results from the combination of both weights and functional forms. In
+    principle, a very “responsive” functional form combined with low weight can confer the same importance as a very “flat” functional form combined
+    with high weight.
+
+---
+
+# Water consumption & pollution
+
+WORK IN PROGRESS

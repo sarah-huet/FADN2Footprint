@@ -1,0 +1,564 @@
+---
+title: "Inferring Agricultural Practices from FADN"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Inferring Agricultural Practices from FADN}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+link-citations: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  eval     = FALSE
+)
+library(FADN2Footprint)
+library(dplyr)
+library(tidyr)
+library(readxl)
+library(gt)
+```
+
+# Why inference is needed (FADN doesn't record practices directly)
+
+Our objective is to estimate the impact of farming practices in terms of
+Green house gas (GHG) emissions and biodiversity impact. This requires first to characterize farming practices
+implemented at the farm level using data on the area of crop
+production, the quantity and type of inputs used, the number of
+livestock, the amount and type of feed, and the
+quantity and value of production ([Method article](articles/practice-inference.html#sec-method-practice-intro) for FADN primary variables used to
+characterize practices).
+
+The **FADN2Footprint package** infer up to nine agricultural practices
+from both FADN and LPIS variables: four within-field practices (tillage,
+quantity and type of nitrogen fertilization, pesticide use) and five
+landscape variables (livestock density, hedge density, mean field size,
+ground cover, and crop diversity). Note that hedge density, mean field
+size and ground cover cannot be inferred based solely on FADN.
+
+Besides, FADN2Footprint also infer herding practices: feed (e.g., dry matter intake and nitrogen content), rearing parameters (e.g., first calving age).
+
+| Data source / Practices | FADN<br>(+ Farm practices survey & feed tables for allocation keys)           | \+ LPIS & SENTINEL-2<br>\+ parameters from national GHGIs |
+| ----------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Crop practices          | •Fertilizer quantity and quality •Pesticides •Tillage •Crop diversity •Yields | •Hedge density •Mean field size •Ground cover             |
+| Grassland practices     | •Fertilizer quantity and quality •Livestock density                           | •Hedge density •Yields                                    |
+| Herding practices       | •Feed intake •Rearing parameters •Production / Yields                         | •Manure management systems •Animal weight                 |
+
+
+To infer all these practices, install the package, build a S4 FADN2Footprint object and run the `infer_practices` function:
+
+```{r}
+
+# Install the package
+#install.packages('FADN2Footprint')
+
+# Load your data (here we use the mock data and dictionary included in the package)
+data("mock_data", package = "FADN2Footprint")
+data("dict_FADN", package = "FADN2Footprint")
+
+fict_data <- mock_data$fadn_fict
+
+# Build the S4 object
+my_object = FADN2Footprint::data_4FADN2Footprint(
+  df = fict_data,
+  var_dict = dict_FADN,
+  id_cols = c("ID","YEAR","COUNTRY")
+)
+
+# Infer the practices
+my_object_w_practices <- FADN2Footprint::infer_practices(my_object)
+
+```
+
+```{r tmp}
+
+load("C:/Users/srhuet/OneDrive/Research/GitHub/Organic_prod_in_Europe/data_raw/FADN_16_18_object_w_practices.RData")
+
+my_object_w_practices = FADN_16_18_GHGE
+
+```
+
+# Crop-side practices
+
+## Tillage
+
+Tillage intensity (L diesel/ha) is estimated from off-road diesel
+consumption, allocated to crops by area ([Method article](articles/practice-inference.html#sec-method-practices-tillage)).
+
+## Nitrogen fertilization
+
+Nitrogen input is estimated separately for mineral and organic
+fertilizers ([Method article](articles/practice-inference.html#sec-method-practices-Nferti)). 
+
+For mineral fertilizers, the total
+farm-level amount (reported in FADN) is distributed across crops using
+national nitrogen input averages (Ministère De L’Agriculture - SSP,
+2019). 
+
+For organic fertilizers, since FADN data on organic nitrogen is
+incomplete, estimates depend on livestock presence. For farms without
+livestock, a standard national average of organic nitrogen input per
+crop is assigned (Ministère De L’Agriculture - SSP, 2019). For farms
+with livestock, we assume all excreted nitrogen is spread on-farm, which
+is estimated in accordance with IPCC recommendations (Eggleston et al.,
+2006; Calvo Buendia et al., 2019; [Method article](articles/practice-inference.html#sec-method-practices-Nferti)). Nitrogen is then
+allocated across crops using national organic nitrogen input averages
+(Ministère De L’Agriculture - SSP, 2019).
+
+Let's have a look at the inferred fertilisation practice. What does it say for common wheat:
+```{r practice_Nferti_wheat, message=FALSE}
+
+my_Nferti_wheat <- my_object_w_practices@practices$crops$N_ferti |>
+  # filter for wheat
+  dplyr::filter(FADN_code_letter == "CWHTC")
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# remove outliers
+outlier_thrld = quantile(my_Nferti_wheat$N_ferti,0.95,na.rm = T)
+
+# Reshape data to long format for easier plotting
+my_Nferti_wheat_long <- my_Nferti_wheat |>
+  dplyr::filter(N_ferti <= outlier_thrld) |>
+  select(ID, YEAR, COUNTRY, ORGANIC, N_ferti, N_ferti_min, N_ferti_org) %>%
+  pivot_longer(
+    cols = c(N_ferti, N_ferti_min, N_ferti_org),
+    names_to = "variable",
+    values_to = "value_kgNha"
+  ) %>%
+  mutate(
+    variable = recode(variable,
+                      "N_ferti"     = "Total N",
+                      "N_ferti_min" = "Mineral N",
+                      "N_ferti_org" = "Organic N"
+    ),
+    variable = factor(variable,
+                      levels = c("Total N", "Mineral N", "Organic N")),
+    ORGANIC = as.character(ORGANIC),
+    ORGANIC = recode(ORGANIC,
+                     'TRUE' =  "Organic farming",
+                     'FALSE' = "Non-Organic farming"
+    ),
+    ORGANIC = factor(ORGANIC, 
+                     levels = c("Organic farming", "Non-Organic farming"))
+    
+  )
+
+# Plot
+ggplot(my_Nferti_wheat_long) +
+  aes(x = COUNTRY, y = value_kgNha, fill = ORGANIC) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.8, color = "grey30") +
+  coord_flip() +
+  facet_wrap(vars(variable), scales = "free") +
+  scale_fill_manual(values = c(
+    "Organic farming" = "#4CAF50",
+    "Non-Organic farming" = "#2196F3"
+  )) +
+  labs(
+    title    = "Nitrogen Fertilization of Wheat",
+    subtitle = "Distribution by country and N source",
+    x        = NULL,
+    y        = "N application (kg N/ha)",
+    fill     = "Organic farming",
+    caption  = paste0("Outliers above ",names(outlier_thrld)," excluded for readability")
+  ) +
+  theme_minimal()+
+  theme(
+    legend.position  = "bottom",
+    strip.background = element_rect(fill = "grey90"),
+    strip.text       = element_text(face = "bold"),
+    axis.text.x      = element_text(angle = 20, hjust = 1),
+    plot.title       = element_text(face = "bold")
+  )
+
+
+```
+
+
+## Pesticide use {#sec-pesticides}
+
+Pesticide intensity is estimated using FADN pesticide expenditure (€),
+distributed across crops based on the national Treatment Frequency Index
+(TFI; Ministère De L’Agriculture - SSP, 2019). The indicator is divided
+by 3.8 in organic farms to account for the lower unit toxicity of
+mineral pesticides ([Method article](articles/practice-inference.html#sec-method-practices-pesticides)).
+
+# Landscape variables
+
+We estimate four landscape variables ([Method article](articles/practice-inference.html#sec-method-practices-landscape-var)). Hedge density is
+the total hedge length divided the utilized agricultural area (UAA) of
+the farm ([Method article](articles/practice-inference.html#sec-method-practices-hedge)). Mean field size is the UAA divided by the
+number of plots, based on LPIS data ([Method article](articles/practice-inference.html#sec-method-practices-mean-field-size)). Crop diversity is
+the Shannon diversity index derived from the FADN data ([Method article](articles/practice-inference.html#sec-method-practices-crop-div)). Ground cover is the average number of days per year without
+vegetation, estimated from Sentinel-2 raster data ([Method article](articles/practice-inference.html#sec-method-practices-ground-cover)).
+
+# Practices in grasslands
+
+For grasslands, we consider four agricultural practices: hedge density,
+total nitrogen fertilization as well as the share of mineral fertilizer
+and livestock density, estimated as the number of grazing animals (e.g.,
+cattle, sheep, horses) per hectare of main forage area (e.g., grass,
+green maize). Indeed, permanent grasslands are not ploughed, do not
+receive pesticides, and are not associated with any crop diversity. We
+also considered negligible the effect of mean field size on biodiversity
+in grasslands as few studies are available and report contradictory
+effects (Dumont et al., 2016; Lescourret et al., 2025)). Permanent
+grasslands also have a year-round ground cover. Note that temporary
+grasslands are considered as crops as they are part of a crop rotation.
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+library(patchwork) # For combining the plots
+library(scales)
+
+# --- 1. Grassland Area per Farm by Country ---
+# We use a log10 scale because FADN farm areas are highly skewed
+plot_area <- my_data |>
+  filter(!is.na(area_ha), area_ha > 0) |>
+  # Order countries by median area for a cleaner look
+  mutate(COUNTRY = reorder(COUNTRY, area_ha, FUN = median, na.rm = TRUE)) |>
+  ggplot(aes(x = COUNTRY, y = area_ha)) +
+  geom_boxplot(fill = "#81C784", colour = "#2E7D32", outlier.alpha = 0.2, outlier.size = 1) +
+  scale_y_log10(
+    labels = scales::comma_format(),
+    breaks = c(1, 10, 100, 1000)
+  ) +
+  coord_flip() +
+  labs(
+    title = "Grassland Area per Farm",
+    subtitle = "Logarithmic scale applied",
+    x = NULL,
+    y = "Area (ha) [log10]"
+  ) +
+  theme_light(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold"),
+    plot.subtitle = element_text(colour = "grey40"),
+    panel.grid.minor = element_blank()
+  )
+
+# --- 2. Grassland Productivity (Yield) by Country ---
+# We cap the maximum y-value at the 99th percentile to hide extreme outliers
+yield_cap <- quantile(my_data$yield, 0.99, na.rm = TRUE)
+
+plot_yield <- my_data |>
+  filter(!is.na(yield), yield > 0) |>
+  # Order countries by median yield
+  mutate(COUNTRY = reorder(COUNTRY, yield, FUN = median, na.rm = TRUE)) |>
+  ggplot(aes(x = COUNTRY, y = yield)) +
+  geom_boxplot(fill = "#64B5F6", colour = "#1565C0", outlier.alpha = 0.2, outlier.size = 1) +
+  scale_y_continuous(
+    limits = c(0, yield_cap), 
+    labels = scales::comma_format()
+  ) +
+  coord_flip() +
+  labs(
+    title = "Grassland Productivity",
+    subtitle = "Yield distribution by country",
+    x = NULL,
+    y = "Yield (t/ha)",
+    caption = "Yield outliers above the 99th percentile are excluded"
+  ) +
+  theme_light(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold"),
+    plot.subtitle = element_text(colour = "grey40"),
+    plot.caption  = element_text(colour = "grey50", size = 8, hjust = 1),
+    panel.grid.minor = element_blank()
+  )
+
+# --- Combine plots side-by-side using patchwork ---
+combined_plot <- plot_area + plot_yield + 
+  plot_annotation(
+    title = "FADN Grassland Overview",
+    theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5))
+  )
+
+combined_plot
+
+
+```
+
+# Herding practices
+
+## Herd structure
+
+We determine the number of animals involved in the dairy activity
+by estimating the on-farm population required to sustain observed milk
+production, including calves and heifers raised to renew dairy cows.
+Based on FADN data, we reconstruct the cattle herd structure and model
+the rearing process by estimating animal flows between categories
+(inflows and outflows). From these flows, we calculate key rearing
+parameters, specifically residence time for each livestock category,
+offspring rates per breeder, and the age at first calving. Then, we
+calculate the number of animals involved in the dairy activity by
+partitioning the number of animals in categories upstream of dairy cows
+based on the estimated rearing parameters ([Method article](articles/practice-inference.html#sec-method-practices-rearing-param)).
+
+## Feed
+
+We estimate the quantity and quality of the livestock feed,
+considering both on-farm (i.e., farm-grown) and off-farm (i.e.,
+purchased) feed to form a "pseudo-farm" ([Method article](articles/practice-inference.html#sec-method-practices-feed)). 
+This estimation relies on a theoretical feed ration constructed for each
+farm’s livestock category. Theoretical rations are determined by
+combining the total dry matter intake requirements per livestock unit
+(derived from the AROPAJ model; (Jayet et al., 2023) with the
+species-specific volumes of each feed consumed nationally (Sailley et
+al., 2021; see `FADN2Footprint::data_extra$Sailley_2021_feed_flows`).
+
+On-farm produced feed quantity is calculated as the recorded crop production
+minus sales, with grass yield - not provided in FADN - assumed equal to
+the NUTS2 average (Agreste, 2020). This net available on-farm biomass is
+then allocated to the farm's livestock categories proportional to their
+theoretical dry matter requirements for each crop.
+
+Purchased feed quantity is estimated based on FADN expenditures
+variables for concentrated feedstuffs and coarse fodder (Section
+A.2.5.2). We first value the theoretical ration using feed prices
+(Eurostat, 2022) to determine the theoretical cost share of each
+feedstuff per livestock species (concentrates and roughage). The
+observed FADN expenditure is then allocated to specific feed types
+according to these theoretical value shares. Finally, these allocated
+values are converted into physical quantities (tonnes) by dividing by
+the corresponding Eurostat unit prices.
+
+Feed quality parameters - gross energy (GE), crude protein content (CP),
+and ash – are calculated by applying nutritional coefficients from feed
+tables (Tran, 2002; [Method article](articles/practice-inference.html#sec-method-practices-feed-qty-qlty)) to the estimated dry matter
+quantities. To exclude aberrant estimations, we remove farms with
+extreme GE supplied to their main livestock category. Specifically, we
+exclude farms with, for the livestock category they have the highest number of livestock units,
+a GE exceeding the mean + 3 × standard deviation (a
+common threshold in the literature), below 0.25 × the mean GE for dairy
+cows (since even low-producing dairy cows are unlikely to be sustained
+on less than a quarter of the average energy intake), or below 0.10 x
+the mean GE for non-dairy cow livestock categories (Table A4).
+
+As an example, we can compare the package output against the literature for dairy cows.
+
+We compare with the litt, not only our model outputs (GHGE, biodiversity impact) but also the intermediate estimations we made (DMI,GE, Nex) to see if our model is valid
+
+For illustration: what the model as it currently stands = without optilmization of %DE for now
+In black: DMI estimate according to our method
+in italic and gray: instead of using our estimate of the DMI, we tried with the equations of the IPCC to estimate the GE
+
+
+#tbl-model-validation_feed
+```{r tbl-model-validation_feed, echo=FALSE, message=FALSE, warning=FALSE}
+
+#| tbl-cap: "Validation of FADN2Footprint Dairy Parameters against Literature"
+
+library(dplyr)
+library(tibble)
+library(kableExtra)
+
+# select dairy cattle farms with grasslands
+tmp_farms = my_object_w_practices@farm |>
+  dplyr::filter(TF14 == "45") |>
+  # combine with farms with grasslands
+  dplyr::semi_join(
+    my_object_w_practices@crop |>
+    dplyr::filter(land_use_type == "grassland") |>
+    dplyr::select(my_object_w_practices@traceability$id_cols) |>
+    dplyr::distinct(),
+    by = my_object_w_practices@traceability$id_cols
+  )
+
+
+# Retrieve model estimates
+my_Nexcr <- my_object_w_practices@practices$herding$N_excretion$cattle |>
+  # filter dairy farms
+  dplyr::semi_join(tmp_farms,
+                   by = my_object_w_practices@traceability$id_cols) |>
+  # filter for dairy cows
+  dplyr::filter(FADN_code_letter == "LCOWDAIR") |>
+  # select variables
+  dplyr::select(dplyr::all_of(my_object_w_practices@traceability$id_cols),
+                DM_t_anim,GE_DMI,GE_IPCC,Nex_DMI,Nex_IPCC)
+
+# resume table
+my_Nexcr_sumup <- my_Nexcr |>
+  dplyr::summarise(dplyr::across(
+    c(DM_t_anim,GE_DMI,GE_IPCC,Nex_DMI,Nex_IPCC),
+    list(
+      mean = ~ round(mean(.x, na.rm = T),0),
+      sd = ~ round(sd(.x, na.rm = T),0)
+    ),
+    .names = "{.col}_{.fn}"
+  ))
+
+# 1. Create the data with embedded HTML for precise formatting
+validation_data <- tibble(
+  Parameter = c(
+    "<b>DMI</b> (dry<br>matter intake)",
+    "<b>GE</b> (gross<br>energy)",
+    "<b>Nex</b> (N<br>excretion rates)"
+  ),
+  Literature_value = c(
+    "12 &ndash; 25 kg DMI / day, depending on milk production (Niemann et al., 2011)",
+    "GE = 308 MJ/day (Bellassen et al., 2021)",
+    "115.91 kg N/head/y for dairy cows (France GHG data from UNFCCC, 2020)"
+  ),
+  Model_output = c(
+    paste0("Mean = ",my_Nexcr_sumup$DM_t_anim_mean[[1]]," +/- ",my_Nexcr_sumup$DM_t_anim_sd[[1]]," kg DMI / day"),
+    
+    paste0("&bull; DMI \"data\": ",my_Nexcr_sumup$GE_DMI_mean[[1]]," (+/- ",my_Nexcr_sumup$GE_DMI_sd[[1]],") MJ / day<br><span style='color:#888888; font-style:italic;'>&bull; IPCC eq.: ",my_Nexcr_sumup$GE_IPCC_mean[[1]]," (+/- ",my_Nexcr_sumup$GE_IPCC_sd[[1]],") MJ / day</span>"),
+    
+    paste0("&bull; DMI \"data\": ",my_Nexcr_sumup$Nex_DMI_mean[[1]]," (+/- ",my_Nexcr_sumup$Nex_DMI_sd[[1]],") kg N / head / year<br><span style='color:#888888; font-style:italic;'>&bull; IPCC eq.: ",my_Nexcr_sumup$Nex_IPCC_mean[[1]]," (+/- ",my_Nexcr_sumup$Nex_IPCC_sd[[1]],") kg N / head / year</span>")
+  )
+)
+
+# 2. Build and style the kable table
+validation_data |> 
+  kbl(
+    escape = FALSE, # Crucial: allows the HTML tags in the text to render properly
+    format = "html",
+    align = c("l", "l", "l"),
+    col.names = c(
+      "Parameter", 
+      "Literature value", 
+      "Model output (mean +/- sd)"
+    )
+  ) |> 
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "bordered"), 
+    full_width = TRUE,
+    position = "center",
+    html_font = "inherit"
+  ) |> 
+  # Set specific column widths so the text wraps nicely
+  column_spec(1, width = "15%") |> 
+  column_spec(2, width = "40%") |> 
+  column_spec(3, width = "45%") |> 
+  # Style the header row
+  row_spec(0, bold = TRUE, background = "#f4f4f4", color = "#333333")
+
+```
+To illustrate more concretely one of the intermediate estimates that is GE (still without optimizing for the digestibility), here is the distribution of GE as estimated by our method in red, or as estimated with the equations of the IPCC in blue: 
+
+```{r}
+
+library(ggplot2)
+
+tmp_plot <- my_Nexcr |>
+  dplyr::select(dplyr::all_of(my_object_w_practices@traceability$id_cols),
+         GE_DMI,GE_IPCC) |>
+  tidyr::pivot_longer(cols = c(GE_DMI,GE_IPCC),
+                      names_to = "GE_method",
+                      values_to = "value") |>
+  filter(value > 0) |>
+  mutate(
+    GE_method = recode(GE_method,
+      "GE_DMI"  = "DMI-based",
+      "GE_IPCC" = "IPCC-based"
+    ),
+    GE_method = factor(GE_method, levels = c("DMI-based", "IPCC-based"))
+  )
+
+tmp_hist = ggplot(tmp_plot) +
+  geom_histogram(aes(x = value, fill = GE_method), bins = 50,alpha = 1) +
+  scale_fill_hue(direction = 1) +
+  labs(x = "Gross Energy (MJ animal-1 day-1)") +
+  labs(
+    title    = "Distribution of Gross Energy Intake",
+    subtitle = "Comparison between DMI-based and IPCC-based estimation methods",
+    x        = "Gross Energy (MJ animal⁻¹ day⁻¹)",
+    y        = "Density",
+    fill     = "Estimation method",
+  ) +
+  theme_light()
+tmp_hist
+
+
+
+
+```
+
+Then, we estimate the crop practices implemented to produce the feed,
+and consider practices associated with both on-farm and purchased feed
+([Method article](articles/practice-inference.html#sec-method-practices-feed-qty-qlty)). Farming practices associated with on-farm feed are
+obtained from farm-specific data (Sectionto). Practices associated with
+purchased feed reflect in-study national crop averages, distinguishing
+organic vs conventional, except for soybean meal. The soybean meals are
+assumed to be imported from Brazil, and we retrieve the associated
+practices of Brazilian soybean production from Lindner et al. (2022;
+Section A.2.5.3).
+
+## Manure management system
+
+The fraction of manure handled by each manure management system (AWMS) on a farm is not measured directly in FADN for most countries. Instead AWMS fractions are inferred by combining the observed herd and farm characteristics from FADN with country (and where available climate‑region) AWMS allocations reported in UNFCCC CRF tables, and then refined where farm‑level information exists (farm practices survey, LPIS, housing/grazing proxies). Those inferred AWMS fractions are then used together with IPCC/UNFCCC MCF and Bo parameters to compute CH4 and (together with N excretion and EF) N2O from manure management.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# Extract and clean the data
+awms_plot <- FADN2Footprint::UNFCCC_data$table3Bas2 |>
+  # filter for dairy cows
+  dplyr::filter(Animal_cat == "dairy_cattle") |>
+  # (Optional) filter for a single year if the dataset contains multiple
+  # filter(YEAR == "2018") |> 
+  ggplot(aes(x = Country_ISO_3166_1_A3, y = AWMS, fill = MMS)) +
+  # Use position = "fill" to normalize stacks to 100% (handles minor rounding variations)
+  geom_col(position = "fill", width = 0.8) + 
+  scale_y_continuous(labels = scales::percent_format()) +
+  # Using a colorbrewer palette for clear categorical distinctions
+  scale_fill_brewer(palette = "Set3") +
+  coord_flip() +
+  labs(
+    title = "Share of Manure Management Systems by Country",
+    subtitle = "Relative allocation for dairy cattle from UNFCCC",
+    x = "Country",
+    y = "Share of AWMS",
+    fill = "Management System"
+  ) +
+  theme_light(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    legend.position = "right",
+    legend.title = element_text(face = "bold"),
+    legend.key.size = unit(0.5, "cm"),
+    strip.background = element_rect(fill = "#e0e0e0"),
+    strip.text = element_text(color = "black", face = "bold"),
+    panel.grid.major.x = element_blank()
+  )
+
+awms_plot
+
+```
+
+## Animal weight estimation
+
+WORK IN PROGRESS
+see `UNFCCC_data[["table3As2"]]`
+
+# Yields (observed vs. imputed)
+
+Yields in FADN2Footprint are obtained directly from FADN when both crop area and production are registered.
+When FADN production is missing — especially important for forage/grass where FADN often records area but not production, we impute yields from external reference data (French forage yields aggregated by crop type and NUTS3; Agreste SAA 2020), joined at a NUTS3 level and used to infer the missing production.
+
+# Allocation keys: activity-level & product-level disaggregation
+
+For crops, we estimate practice intensities at the crop level for within
+field practices (fertilization, pesticides use, tillage) and at the
+farm-level for landscape variables (hedge density, crop diversity,
+ground cover, mean field size). To attribute within field practices to
+specific crops within the farm, we use the crop practices survey
+(Ministère De L’Agriculture - SSP, 2019) as an allocation key.
+
+# Validation: how users can check inferred practices against known data
+
+

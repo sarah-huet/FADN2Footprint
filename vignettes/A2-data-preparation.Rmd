@@ -1,0 +1,534 @@
+---
+title: "Data Preparation for National FADN and LPIS"
+output: rmarkdown::html_vignette
+vignette: >
+    %\VignetteIndexEntry{Data Preparation for National FADN and LPIS}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+link-citations: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  eval     = FALSE
+)
+
+library(FADN2Footprint)
+
+library(dplyr)
+library(tidyr)
+library(readxl)
+library(gt)
+```
+
+## Overview
+
+National FADN databases differ from the EU FADN in three ways:
+
+1. **Table structure** — National FADNs use **long product tables** (one row per
+   farm × product) while the EU FADN is a **single wide table** (one row per farm).
+2. **Variable naming** — Different suffixes encode the same concept (e.g., `SUPER3`
+   in RICA = `TA` in FADN = total area).
+3. **Category codes** — Products are identified by national codes (e.g., RICA code
+   `111` = FADN code `CWHTC`).
+
+The conversion is driven by **two user-filled tables**:
+
+| Table | What it maps | Example |
+|---|---|---|
+| **Variable pattern** | Suffix ↔ suffix within a product group | `SUPER3` → `TA` (total area, CROPS) |
+| **Category pattern** | National product code → FADN product code | `111` → `CWHTC` (common wheat) |
+
+Together they generate the full variable mapping: national long-table column
+`SUPER3` for code `111` becomes wide-table column `CWHTC_TA`.
+
+---
+
+## Understanding the two conversion tables
+
+### Variable pattern table
+
+Each row maps one **variable suffix** in the national FADN to one **variable
+suffix** in the EU FADN, within a product group. Some FADN suffixes have no
+national equivalent (and vice versa) — these rows are left with the
+corresponding cell empty.
+
+Here is the structure the user must fill:
+
+| Column | Description | Example |
+|---|---|---|
+| `pattern_FADN` | EU FADN variable suffix | `TA` |
+| `description_FADN` | Description of the EU FADN variable | Total area under production |
+| `Comment` | Unit or clarification | in ha |
+| `Group` | Product group: `CROPS`, `LIVESTOCK`, or `ANIMAL PRODUCTS AND SERVICES` | `CROPS` |
+| `pattern_national` | National (RICA) suffix in the long table | `SUPER3` |
+| `description_national` | Description of the national variable | Surface |
+
+**Key observations from the RICA example:**
+
+- Some FADN suffixes have **no RICA equivalent** (e.g., `A` = AA for crops,
+  `ENA` = energy crop area, `GM` = GMO area, `ENTA` = energy crop total area,
+  `IRA` = irrigated AA, many livestock suffixes like `SSN`, `SSV`, `SRN`, `SRV`,
+  `NO`, `FCN`, `FCV`, `FUN`, `FUV`, `PI`, `ALU`). These are left with an empty
+  `pattern_national` cell.
+- Some RICA suffixes have **no FADN equivalent** — these can be included with an
+  empty `pattern_FADN` cell if the user wants to preserve them.
+- The `Group` column determines which raw table and code column to use:
+  - `CROPS` → table `veg20`, code column `CODE3`
+  - `LIVESTOCK` → table `ani20`, code column `CODE6`
+  - `ANIMAL PRODUCTS AND SERVICES` → table `pan20`, code column `CODE7`
+
+**Excerpt of the filled table (RICA → FADN):**
+
+```{r variable-pattern-preview, echo=FALSE, eval=TRUE}
+
+# Load pre-filled dictionary
+dict_conversion <- h_read_dictionary("dictionary_conversion_filled.xlsx")
+
+dict_conversion$variable_pattern |> gt()
+
+```
+
+### Category pattern table
+
+Each row maps one **national product code** to one **FADN product code**.
+When several national codes map to the same FADN code, they will be **summed**
+during aggregation (many-to-one). When one national code maps to several FADN
+codes, an **allocation key** is needed (one-to-many).
+
+| Column | Description | Example |
+|---|---|---|
+| `FADN_code_letter` | EU FADN product code | `CWHTC` |
+| `national_code` | National product code (semicolon-separated if multiple) | `111` |
+| `Group` | `CROPS`, `LIVESTOCK`, or `ANIMAL PRODUCTS AND SERVICES` | `CROPS` |
+
+**Excerpt (from the provided data):**
+
+```{r category-pattern-preview, echo=FALSE, eval=TRUE}
+
+dict_conversion$category_pattern |> gt()
+
+```
+
+> **Note:** When multiple `national_code` rows share the same `FADN_code_letter`,
+> the corresponding pivoted columns are summed. For example, RICA codes `115`
+> and `116` both map to `CBRL` (barley), so `115_SUPER3 + 116_SUPER3` →
+> `CBRL_TA`.
+
+---
+
+## Step-by-step workflow
+
+### Step 0 – Load raw national data
+
+If you have several
+
+```{r load-raw}
+
+data("mock_data")
+
+RICA_20_raw <- list(
+  rica = mock_data$rica_fict$rica,
+  veg  = mock_data$rica_fict$veg,
+  ani  = mock_data$rica_fict$ani,
+  pan  = mock_data$rica_fict$pan
+  )
+
+RICA_19_raw <- list(
+  rica = mock_data$rica_fict$rica,
+  veg  = mock_data$rica_fict$veg,
+  ani  = mock_data$rica_fict$ani,
+  pan  = mock_data$rica_fict$pan
+  )
+
+RICA_18_raw <- list(
+  rica = mock_data$rica_fict$rica,
+  veg  = mock_data$rica_fict$veg,
+  ani  = mock_data$rica_fict$ani,
+  pan  = mock_data$rica_fict$pan
+  )
+
+```
+
+
+## Multi-year workflow
+
+National FADN data typically arrive as separate files per year. The package
+provides `stack_yearly_tables()` to bind them into a single set of tables
+before pivoting.
+
+#### Step 0.1 — Load each year's raw data
+
+```{r load-multi-year}
+# Suppose you have raw RICA data loaded per year:
+# RICA_18_raw, RICA_19_raw, RICA_20_raw — each a named list of data frames
+# with elements like "rica", "veg", "ani", "pan", "tvn", "res", ...
+
+yearly_data <- list(
+  "2018" = RICA_18_raw,
+  "2019" = RICA_19_raw,
+  "2020" = RICA_20_raw
+)
+```
+
+#### Step 0.2 — Stack into combined tables
+
+```{r stack}
+raw_tables <- h_stack_yearly_tables(yearly_data, year_col = "YEAR")
+# Stacked 6 tables across 3 years.
+#   rica: 22500 rows (3 years)
+#   veg:  185000 rows (3 years)
+#   ani:  67000 rows (3 years)
+#   ...
+```
+
+Each table in `raw_tables` now has a `YEAR` column. You simply include it in
+`id_cols` so that each farm × year combination stays on its own row.
+
+
+### Notes on multi-year stacking
+
+- **Column consistency**: `stack_yearly_tables()` uses `dplyr::bind_rows()`,
+  which handles columns that appear in some years but not others (filled with
+  `NA`). If a variable was renamed between survey years, harmonise the column
+  names *before* stacking.
+
+- **Year-specific unit changes**: If units changed between years (e.g., areas
+  switched from ares to hectares in 2019), add year-conditional logic to the
+  `unit_conversion` sheet of your dictionary, or pre-process the affected
+  tables before stacking.
+
+- **Table naming**: When stacking, the table names in the combined list must
+  match those referenced in `table_config`. If your yearly files use
+  year-suffixed names (e.g., `veg18`, `veg19`), rename them to a common name
+  (e.g., `veg`) in each year's list before passing to `stack_yearly_tables()`.
+
+```{r rename-example}
+# Example: standardise table names before stacking
+RICA_18_raw_std <- stats::setNames(
+  RICA_18_raw,
+  gsub("18$", "", names(RICA_18_raw))
+)
+# "veg18" becomes "veg", "ani18" becomes "ani", etc.
+```
+
+### Step 1 – Generate the template
+
+The template pre-fills the structure with EU FADN variable suffixes and
+category codes, and lists the national variable names found in your data.
+
+```{r create-template}
+
+h_create_dictionary_template(
+  output_path = "dictionary_conversion.xlsx",
+  raw_tables  = raw_tables,
+  id_cols = "IDENT",
+  table_config = list(
+    CROPS = list(table = "veg", code_col = "CODE3"),
+    LIVESTOCK = list(table = "ani", code_col = "CODE6"),
+    `ANIMAL PRODUCTS AND SERVICES` = list(table = "pan", code_col = "CODE7")
+  ),
+  data_extra        = data_extra,
+  national_code_col = "RICA_code_number",
+  overwrite         = T
+)
+
+```
+
+This creates an Excel workbook with the following sheets:
+
+| Sheet | Content | Action required |
+|---|---|---|
+| `instructions` | Guidance | Read |
+| `variable_pattern` | Pre-filled FADN suffixes + empty national suffix columns | **Fill `pattern_national` column** |
+| `category_pattern` | Pre-filled from `data_extra` | **Review & complete** |
+| `manual_matches` | For farm-level variables not following the pattern | **Fill** |
+| `fadn_reference` | All EU FADN variable codes | Read-only reference |
+| `category_reference` | All EU FADN category codes | Read-only reference |
+
+### Step 2 – Fill the `variable_pattern` sheet
+
+Open the Excel file and fill the `pattern_national` and `description_national` columns.
+For each row, identify which column in the national long table corresponds to
+the EU FADN suffix.
+
+**Rules:**
+
+- If no national equivalent exists, leave `pattern_national` empty (the variable
+  will be `NA` in the output).
+- If a national variable has no FADN equivalent but you want to keep it, add a
+  row with `pattern_FADN` empty.
+- The `Group` column must match exactly: `CROPS`, `LIVESTOCK`, or
+  `ANIMAL PRODUCTS AND SERVICES`.
+
+The table you fill should look like the excerpt shown above.
+
+### Step 3 – Review the `category_pattern` sheet
+
+This sheet is pre-filled from `data_extra`. Verify that:
+
+- All national codes present in your data are listed
+- Many-to-one mappings are correct (multiple national codes → one FADN code)
+- For one-to-many cases, add an `allocation_key` column with proportions that
+  sum to 1 across the FADN codes sharing the same national code
+
+### Step 4 – Fill the `manual_matches` sheet (farm-level variables)
+
+Variables from farm-level tables (`rica`, `res`, `tvn`) that don't follow
+the `<CATEGORY>_<SUFFIX>` pattern must be matched here:
+
+| fadn_variable | national_variable | fadn_table | national_table | conversion_factor | notes |
+|---|---|---|---|---|---|
+| `SE025` | `SUBUT`  | `STANDARD RESULTS` | `rica` | `0.01`  | UAA (ares → ha) |
+| `SE131` | `PBRTTO` | `STANDARD RESULTS` | `rica` | `1`     | Total output |
+| `SE290` | `CONSON` | `STANDARD RESULTS` | `tvn`  | `0.001` | N fertiliser (kg → t) |
+
+Here is a pre-filled sheet for French FADN:
+
+```{r manual_matches}
+
+dict_conversion$manual_matches |> gt()
+
+```
+
+
+### Step 5 – Validate
+
+```{r validate}
+
+issues <- h_validate_dictionary(
+  dictionary_path = "dictionary_conversion_filled.xlsx",
+  raw_tables      = raw_tables,
+  id_cols = "IDENT",
+  table_config    = list(
+    CROPS = list(table = "veg", code_col = "CODE3"),
+    LIVESTOCK = list(table = "ani", code_col = "CODE6"),
+    `ANIMAL PRODUCTS AND SERVICES` = list(table = "pan", code_col = "CODE7")
+  ),
+  verbose = TRUE
+)
+
+```
+
+### Step 6 – Load the dictionary and convert
+
+```{r convert}
+# Load
+dict_conversion <- h_read_dictionary("dictionary_conversion_filled.xlsx")
+
+# Convert (pivot + rename + aggregate + unit conversion)
+RICA_2020 <- h_pivot_national_fadn(
+  raw_tables      = raw_tables,
+  dict_conversion = dict_conversion,
+  id_cols = c("IDENT","YEAR"),
+  table_config    = list(
+    CROPS = list(table = "veg", code_col = "CODE3"),
+    LIVESTOCK = list(table = "ani", code_col = "CODE6"),
+    `ANIMAL PRODUCTS AND SERVICES` = list(table = "pan", code_col = "CODE7")
+  )
+)
+
+```
+
+---
+
+#### How the pivot works internally
+
+The function `pivot_national_fadn()` performs the following for each product
+group (using CROPS / `veg` as example):
+
+```{r pivot-internals}
+# --- Internal logic (pseudo-code, using CROPS as example) ---
+
+# 1. Read which national columns to pivot from variable_pattern
+#    For CROPS: SUPER3, SUPIR3, QPROD3, QVENT3, VAUTO3, VINT, VPBRT3,
+#               VSTOD3, VSTOF3, VVENT3
+crop_suffixes <- dict_conversion$variable_pattern %>%
+  filter(Group == "CROPS", !is.na(pattern_national)) %>%
+  select(pattern_national, pattern_FADN, unit_conversion)
+
+# 2. Read category mapping (many-to-one allowed)
+#    111 -> CWHTC, 115 -> CBRL, 116 -> CBRL, ...
+crop_categories <- dict_conversion$category_pattern %>%
+  filter(Group == "CROPS") %>%
+  select(national_code, FADN_code_letter, allocation_key)
+
+# 3. Identify numeric value columns, then summarise by farm × year × crop
+#    This collapses production modes or duplicate rows within a farm-crop
+group_cols  <- c("IDENT", "YEAR", "CODE3")
+value_cols  <- setdiff(
+  names(raw_tables$veg %>% select(where(is.numeric))),
+  group_cols
+)
+
+veg_summed <- raw_tables$veg %>%
+  summarise(
+    across(all_of(value_cols), ~ sum(.x, na.rm = TRUE)),
+    .by = all_of(group_cols)
+  )
+
+# 4. Pivot LONGER: one row per farm × year × crop × variable
+#    This is the key difference from a direct pivot_wider approach —
+#    going long first allows dictionary-driven joins
+veg_long <- veg_summed %>%
+  pivot_longer(
+    cols      = all_of(value_cols),
+    names_to  = "pattern_national",
+    values_to = "value"
+  ) %>%
+  mutate(CODE3 = as.character(CODE3))
+# Columns: IDENT, YEAR, CODE3, pattern_national, value
+# e.g.:    FARM_0001, 2020, 111, SUPER3, 12.5
+
+# 5. Join the FADN prefix (category mapping)
+#    CODE3 "111" → FADN_code_letter "CWHTC", allocation_key 1
+#    CODE3 "115" → FADN_code_letter "CBRL",  allocation_key 1
+#    CODE3 "116" → FADN_code_letter "CBRL",  allocation_key 1
+veg_long <- veg_long %>%
+  left_join(crop_categories, by = c("CODE3" = "national_code"))
+
+# 6. Join the FADN suffix (variable mapping) + unit conversion
+#    pattern_national "SUPER3" → pattern_FADN "TA", unit_conversion 0.01
+#    pattern_national "QPROD3" → pattern_FADN "PRQ", unit_conversion 0.01
+veg_long <- veg_long %>%
+  left_join(crop_suffixes, by = "pattern_national")
+
+# 7. Aggregate: sum value × allocation_key × unit_conversion
+#    This is where many-to-one categories are collapsed:
+#    CBRL_TA = sum of (115_SUPER3 × 1 × 0.01) + (116_SUPER3 × 1 × 0.01)
+#    Allocation keys allow splitting shared categories (e.g., eggs)
+veg_summed_fadn <- veg_long %>%
+  filter(!is.na(pattern_FADN), !is.na(FADN_code_letter)) %>%
+  summarise(
+    value = sum(value * allocation_key * unit_conversion, na.rm = TRUE),
+    .by = c("IDENT", "YEAR", "FADN_code_letter", "pattern_FADN")
+  )
+# e.g.: FARM_0001, 2020, CWHTC, TA, 0.125
+#        FARM_0001, 2020, CBRL,  TA, 0.340  (sum of 115 + 116)
+
+# 8. Pivot WIDER: one row per farm-year, FADN-named columns
+veg_final <- veg_summed_fadn %>%
+  pivot_wider(
+    id_cols     = c("IDENT", "YEAR"),
+    names_from  = c("FADN_code_letter", "pattern_FADN"),
+    values_from = value,
+    values_fill = NA_real_
+  )
+# Columns: IDENT, YEAR, CWHTC_TA, CWHTC_PRQ, CBRL_TA, CBRL_PRQ, ...
+
+```
+
+#### Manual matches: farm-level variables
+
+After all product groups are pivoted and joined, farm-level variables from
+the main national table are added via the manual_matches dictionary sheet.
+The function detects the column type automatically:
+
+```{r}
+
+# --- Manual match logic (pseudo-code) ---
+
+# Character/factor columns (e.g., REGIO → NUTS2, OTEXE → TF14)
+#   → take first non-NA value per farm-year (no numeric conversion)
+raw_tables$rica %>%
+  summarise(NUTS2 = first(REGIO[!is.na(REGIO)]), .by = c(IDENT, YEAR))
+
+# Numeric columns (e.g., SAUTI → SE025, UTANSP → SE010)
+#   → sum with unit conversion factor
+raw_tables$rica %>%
+  summarise(SE025 = sum(SAUTI * 1, na.rm = TRUE), .by = c(IDENT, YEAR))
+
+# Redundant id mappings (e.g., IDENT → ID when IDENT is in id_cols)
+#   → automatically skipped to avoid nonsensical aggregation
+
+```
+
+#### Summary of the pivot strategy
+
+| Step | Operation | Purpose |
+|------|-----------|---------|
+| 1–2 | Read dictionary sheets | Load suffix map, category map, unit conversions |
+| 3 | `summarise(.by = farm × crop)` | Collapse duplicate rows (e.g., production modes) |
+| 4 | `pivot_longer()` | One row per farm × crop × variable (join-ready) |
+| 5 | `left_join(categories)` | Attach FADN prefix + allocation key |
+| 6 | `left_join(suffixes)` | Attach FADN suffix + unit conversion |
+| 7 | `summarise(value × key × conv)` | Aggregate many-to-one categories |
+| 8 | `pivot_wider()` | Final wide format: `CWHTC_TA`, `CBRL_PRQ`, … |
+| 9 | Manual matches | Add farm-level character & numeric variables |
+
+---
+
+## Handling special cases
+
+### Many national codes → one FADN code (aggregation)
+
+Multiple RICA codes mapping to the same FADN code are **summed** automatically.
+
+```
+  RICA          FADN
+  115 (winter barley)  ─┐
+  116 (spring barley)  ─┼──► CBRL  (barley)
+  117 (escourgeon)     ─┘
+```
+
+The pivoted columns `115_SUPER3`, `116_SUPER3`, `117_SUPER3` are summed into
+`CBRL_TA`.
+
+### One national code → many FADN codes (allocation)
+
+When one RICA code must be split across multiple FADN codes, add an
+`allocation_key` in the `category_pattern` sheet:
+
+| FADN_code_letter | national_code | Group | allocation_key |
+|---|---|---|---|
+| `PEGGCONS` | `76` | ANIMAL PRODUCTS AND SERVICES | `0.95` |
+| `PEGGHATCH` | `76` | ANIMAL PRODUCTS AND SERVICES | `0.05` |
+
+The pivoted value for code `76` will be multiplied by the allocation key.
+
+### RICA-specific unit quirks (livestock)
+
+Some RICA variables encode units differently depending on the product code.
+These are handled via **code-specific conversion factors** declared in the
+`category_pattern` sheet or via a dedicated `unit_conversion` sheet:
+
+| national_code | pattern_national | conversion_factor | notes |
+|---|---|---|---|
+| `911:965` | `EFFEC6` | `0.1` | tenths of head → heads |
+| `974;975;983;984` | `EFFEC6` | `100000` | ten-thousandths → heads |
+| `993` | `EFFEC6` | `10` | tens of hives → hives |
+| `974;975;983;984` | `QPBRT6` | `1000` | thousands → units |
+
+These are applied **before** pivoting in `pivot_national_fadn()`.
+
+### FADN suffixes with no RICA equivalent
+
+Rows in `variable_pattern` where `pattern_national` is empty (e.g., `A`, `ENA`,
+`GM`, `ENTA`, `IRA`, `ALU`, `PI`, `SSN`, `SSV`, `SRN`, `SRV`, `NO`, `FCN`,
+`FCV`, `FUN`, `FUV` for livestock) will produce `NA` columns in the output.
+These can be computed downstream if data is available from other sources.
+
+---
+
+## Tips
+
+- **Start with `variable_pattern`**: even a dozen suffix rows generate hundreds
+  of variable mappings when crossed with the category codes.
+- **The `Group` column is the join key** between the two tables. It must match
+  exactly: `CROPS`, `LIVESTOCK`, or `ANIMAL PRODUCTS AND SERVICES`.
+- **Version-control your dictionary**: the Excel file is the single source of
+  truth. Track it alongside your code.
+- **Re-use across years**: once built for one year, only minor updates are
+  usually needed for subsequent years.
+- **Use `validate_dictionary()` after every edit**: it catches missing mappings,
+  invalid conversion factors, and orphaned category codes before they become
+  silent `NA` in your results.
+
+

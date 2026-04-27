@@ -90,6 +90,12 @@ infer_practices <- function(object,
   # Remove farms with aberrant gross energy values for their main livestock category
   ## GE thresholds
   tmp_mean_GE <- FADN_averages$GE_MJ_anim_day |>
+    # TODO: remove when data clean enough to have good averages
+    dplyr::summarise(
+      mean_GE_MJ_anim_day = mean(mean_GE_MJ_anim_day, na.rm = T),
+      sd_GE_MJ_anim_day = mean(sd_GE_MJ_anim_day, na.rm = T),
+      .by = FADN_code_letter
+    ) |>
     # define thresholds
     dplyr::mutate(
 
@@ -114,7 +120,9 @@ infer_practices <- function(object,
     # add thresholds
     dplyr::left_join(
       tmp_mean_GE,
-      by = c('FADN_code_letter', 'COUNTRY')
+      by = 'FADN_code_letter'
+      # TODO: restore by country when good enough data
+      #by = c('FADN_code_letter', 'COUNTRY')
     )
 
   ## retrieve farms with aberrant values

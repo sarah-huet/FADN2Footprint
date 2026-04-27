@@ -168,7 +168,7 @@ data("mock_data", package = "FADN2Footprint")
 data("dict_FADN", package = "FADN2Footprint")
 
 my_object <- FADN2Footprint::data_4FADN2Footprint(
-  df       = mock_data,
+  df       = mock_data$fadn_fict,
   var_dict = dict_FADN,
   id_cols  = c("ID", "YEAR", "COUNTRY")
 )

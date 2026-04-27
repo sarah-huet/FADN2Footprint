@@ -1,6 +1,8 @@
 # Mock data ----
 #' Create a mock (non-confidential) FADN dataset for testing FADN2Footprint
 #'
+#' @name mock_data
+#'
 #' @description
 #' This script builds a shareable *mock* (anonymised / perturbed) dataset from
 #' confidential raw FADN microdata so that users can test the
@@ -67,7 +69,6 @@
 #'
 #' @docType data
 #' @keywords datasets
-#' @name mock_data
 #' @keywords internal
 #'
 "mock_data"
@@ -75,10 +76,11 @@
 # Mock French data ----
 #' RICA database
 #'
-#' A Fictitious RICA database (each column is generated based on the mean and the standard deviation of the 2020 original RICA database)
+#' @name rica_fict
+#'
+#' @description A Fictitious RICA database (each column is generated based on the mean and the standard deviation of the 2020 original RICA database)
 #'
 #' @docType data
-#' @name rica_fict
 #'
 #' @format A list of four dataframes: rica, veg, ani, pan
 #'
@@ -101,6 +103,8 @@
 #' country-level and EU-level fallbacks applied to handle missing observations.
 #' This dataset is used internally by the \code{FADN2Footprint} package to
 #' supply default parameter values when farm-level data are insufficient.
+#'
+#' @name FADN_averages
 #'
 #' @format A named list with the following elements:
 #' \describe{
@@ -186,7 +190,9 @@
 # Data extra ----
 #' Extra reference tables and parameters used by FADN2Footprint
 #'
-#' `data_extra` is an **internal** auxiliary database distributed with the
+#' @name data_extra
+#'
+#' @description `data_extra` is an **internal** auxiliary database distributed with the
 #' **FADN2Footprint** package. It is a *named list* of tables providing:
 #' \itemize{
 #'  \item crop, livestock and product mapping keys (FADN ↔ RICA ↔ other nomenclatures),
@@ -340,7 +346,6 @@
 #' @source internal
 #' @docType data
 #' @keywords datasets
-#' @name data_extra
 #'
 #' @examples
 #' # Inspect available tables
@@ -354,6 +359,9 @@
 # Dictionary ----
 #' FADN2Footprint variable dictionary (`dict_FADN`)
 #'
+#' @name dict_FADN
+#'
+#' @description
 #' A crosswalk table used to **map user-provided FADN-like datasets** (national FADN/RICA extracts,
 #' EU-FADN extracts, or custom harmonized datasets) to the internal variable names expected by
 #' **FADN2Footprint**.
@@ -463,7 +471,6 @@
 #'
 #' @source internal
 #' @docType data
-#' @name dict_FADN
 #' @keywords datasets dictionary mapping
 #'
 "dict_FADN"
@@ -471,6 +478,9 @@
 # EUROSTAT ----
 #' EUROSTAT input prices for feed and other agricultural inputs (€/tonne)
 #'
+#' @name EUROSTAT_input_price
+#'
+#' @description
 #' Harmonised input price time series extracted from a custom EUROSTAT spreadsheet
 #' and transformed to support **FADN2Footprint** costing and allocation steps (e.g.,
 #' feed cost proxies or price-based allocation keys).
@@ -524,6 +534,9 @@
 
 #' EUROSTAT natural gas prices (€/GJ, annual mean from semester data)
 #'
+#' @name EUROSTAT_gaz_price
+#'
+#' @description
 #' Country-level natural gas price time series derived from EUROSTAT dataset
 #' \code{NRG_PC_203}. Values are extracted from a custom EUROSTAT Excel export
 #' and processed for use in **FADN2Footprint** (e.g., energy cost proxies and
@@ -571,6 +584,9 @@
 
 #' EUROSTAT electricity prices (€/kWh, annual mean from semester data)
 #'
+#' @name EUROSTAT_elec_price
+#'
+#' @description
 #' Country-level electricity price time series derived from an EUROSTAT export of
 #' dataset \code{NRG_PC_205}. Values are extracted from a custom Excel spreadsheet
 #' bundled with the package and processed for use in **FADN2Footprint** (e.g.,
@@ -622,6 +638,9 @@
 # EF electricity ----
 #' GHG emission factors for electricity consumption
 #'
+#' @name EF_electricity
+#'
+#' @description
 #' A dataset containing greenhouse gas emission factors
 #' for electricity by country and year, produced by the JRC.
 #'
@@ -643,6 +662,9 @@
 # UNFCCC National Inventories ----
 #' UNFCCC Sectoral Background Data for Agriculture and Energy
 #'
+#' @name UNFCCC_data
+#'
+#' @description
 #' A dataset containing selected Sectoral Background Data tables from UNFCCC
 #' National Inventory Reports (CRF tables). These tables provide activity data
 #' and implied emission factors required for calculating the carbon footprint
@@ -689,6 +711,9 @@
 # Global Warming Potential ----
 #' Reference Global Warming Potentials used for conversion to CO2 equivalents
 #'
+#' @name GWP
+#'
+#' @description
 #' `GWP` is an **internal** auxiliary vector distributed with the
 #' **FADN2Footprint** package.
 #'
@@ -719,6 +744,9 @@
 # Reference fuel prices ----
 #' Weekly Oil Bulletin fuel prices (without taxes), by country and year
 #'
+#' @name ref_fuel_wob
+#'
+#' @description
 #' Reference fuel price time series derived from the European Commission
 #' **Weekly Oil Bulletin (WOB)** historical files, processed for use in
 #' **FADN2Footprint** (e.g., cost proxies for energy use and related footprint

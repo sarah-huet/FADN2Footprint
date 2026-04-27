@@ -1,4 +1,6 @@
-url: ~ # Fill in when you deploy (e.g., GitHub Pages)
+url: https://github.com/sarah-huet/FADN2Footprint
+BugReports: https://github.com/sarah-huet/FADN2Footprint/issues
+
 
 template:
   bootstrap: 5
@@ -62,7 +64,6 @@ reference:
   - title: "Data Preparation"
     desc: Loading, validating and harmonising input data
     contents:
-      - FADN2Footprint-class
       - accessors
       - has_concept("data-preparation")
 

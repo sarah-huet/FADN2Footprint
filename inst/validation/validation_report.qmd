@@ -34,6 +34,7 @@ below a per-indicator threshold, or **out of range** otherwise.
 ```{r setup}
 
 library(dplyr)
+library(tidyr)
 library(gt)
 
 #devtools::document()

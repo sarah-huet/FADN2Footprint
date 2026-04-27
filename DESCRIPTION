@@ -1,11 +1,83 @@
 Package: FADN2Footprint
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: Infer agricultural practices and compute environmental footprints from FADN data.
+Version: 1.0.0
+Authors@R: person("Sarah", "Huet", email = "sarah.huet@inrae.fr",
+                  role = c("aut", "cre"))
+URL: https://sarah-huet.github.io/FADN2Footprint/, https://github.com/sarah-huet/FADN2Footprint
+BugReports: https://github.com/sarah-huet/FADN2Footprint/issues
+Description: Infers agricultural practices and computes environmental footprints
+    from Farm Accountancy Data Network (FADN) data.
+    The package supports two input configurations: national
+    FADN combined with national Land Parcel Identification System (LPIS),
+    hedges and cover crop maps; or European Union FADN data.
+    Additional internal data sets include farm practices surveys,
+    feed composition tables, and parameters from national greenhouse gas
+    inventories or Intergovernmental Panel on Climate Change (IPCC) guidelines.
+    Following a life cycle assessment approach (scope 3), it derives farm practices
+    (fertilizer use, pesticides, tillage, crop diversity, hedge density, 
+    field size, ground cover, livestock density, feed intake,
+    rearing parameters, manure management, animal weight) and estimates
+    environmental footprints (greenhouse gas emissions, biodiversity
+    impact, water consumption and pollution). Results
+    are estimated at farm, activity, and product level.
+License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 7.3.3
+Collate: 
+    'BVIAS_crops.R'
+    'BVIAS_data.R'
+    'BVIAS_feed.R'
+    'BVIAS_feed_pseudoherd.R'
+    'BVIAS_herd_products.R'
+    'FADN2Footprint-package.R'
+    'FADN2Footprint_constructor.R'
+    'FADN2Footprint_accessors.R'
+    'FADN2Footprint_helpers.R'
+    'FADN2Footprint_internal_parsers.R'
+    'FADN2Footprint_methods.R'
+    'GHGE_CH4_from_enteric_fermentation.R'
+    'GHGE_CH4_from_manure_management.R'
+    'GHGE_N2O_from_managed_soils.R'
+    'GHGE_N2O_from_manure_management.R'
+    'GHGE_crops.R'
+    'GHGE_elec.R'
+    'GHGE_farm.R'
+    'GHGE_feed.R'
+    'GHGE_ferti_prod.R'
+    'GHGE_fuels.R'
+    'GHGE_herd.R'
+    'GHGE_herd_products.R'
+    'compute_footprint_biodiv.R'
+    'compute_footprint_ghg.R'
+    'data.R'
+    'feed_offfarm.R'
+    'feed_onfarm.R'
+    'feed_theoretical_ration.R'
+    'feed_value.R'
+    'herd_activities.R'
+    'herd_feed.R'
+    'herd_n_excretion.R'
+    'herd_rearing_param_cattle.R'
+    'herd_rearing_param_poultry.R'
+    'herd_rearing_param_swine.R'
+    'infer_practices.R'
+    'output_econ_alloc.R'
+    'practice_crop_diversity.R'
+    'practice_ground_cover.R'
+    'practice_hedge_density.R'
+    'practice_herd.R'
+    'practice_livestock_density.R'
+    'practice_mean_field_size.R'
+    'practice_n_ferti.R'
+    'practice_pesticides.R'
+    'practice_share_ferti.R'
+    'practice_tillage.R'
+    'pseudoherd.R'
+    'pseudoherd_cattle.R'
+    'pseudoherd_output_econ_alloc.R'
+    'pseudoherd_poultry.R'
+    'pseudoherd_swine.R'
+    'validate_estimates.R'
+    'zzz.R'

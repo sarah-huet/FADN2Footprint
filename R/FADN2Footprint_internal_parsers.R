@@ -89,6 +89,7 @@
 #' @importFrom tidyr any_of
 #'
 #' @export
+#' @concept data-preparation
 #'
 #' @keywords internal
 
@@ -277,6 +278,7 @@
 #' @importFrom tidyr pivot_longer pivot_wider extract
 #'
 #' @export
+#' @concept data-preparation
 #'
 #' @keywords internal
 
@@ -553,6 +555,7 @@
 #' @importFrom tidyr pivot_longer pivot_wider extract
 #'
 #' @export
+#' @concept data-preparation
 #'
 #' @keywords internal
 #'
@@ -776,8 +779,8 @@
 #' @importFrom dplyr select filter mutate left_join coalesce starts_with
 #'   any_of all_of pick where summarise
 #'
-#' @concept data-preparation
 #' @export
+#' @concept data-preparation
 #'
 #' @keywords internal
 #'
@@ -1005,6 +1008,7 @@
 #' @importFrom tidyr pivot_longer pivot_wider extract separate_longer_delim
 #'
 #' @export
+#' @concept data-preparation
 #'
 #' @keywords internal
 #'

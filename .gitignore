@@ -14,6 +14,9 @@ tmp*.csv
 # User-specific files
 .Ruserdata
 
+# R Environment Variables
+.Renviron
+
 # Example code in package build process
 *-Ex.R
 
@@ -27,6 +30,10 @@ tmp*.csv
 *.Rproj
 .Rproj.user
 .Rproj.user/
+.Rprofile
+
+.DS_Store
+.quarto
 
 # produced vignettes
 #vignettes/*.html
@@ -43,8 +50,6 @@ tmp*.csv
 *.utf8.md
 *.knit.md
 
-# R Environment Variables
-.Renviron
 
 # pkgdown site
 inst/doc

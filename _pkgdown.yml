@@ -1,0 +1,106 @@
+url: ~ # Fill in when you deploy (e.g., GitHub Pages)
+
+template:
+  bootstrap: 5
+  bootswatch: flatly # Clean, professional look
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    intro:
+      text: "Get Started"
+      href: articles/fadn2footprint.html
+    articles:
+      text: "Methodology & Guides"
+      menu:
+        - text: "User Tutorials"
+          href: articles/A1-FADN2Footprint-basics.html
+        - text: "Data Preparation for National FADN and LPIS"
+          href: articles/A2-data-preparation.html
+        - text: "Inferring Agricultural Practices from FADN"
+          href: articles/A3-practice-inference.html
+        - text: "Computing Environmental Footprints from FADN"
+          href: articles/A4-footprint-models.html
+        - text: "------------------"
+        - text: "Scientific Method (The Models)"
+        - text: "Agricultural Practices Inference"
+          href: articles/B1-method-practice-inference.html
+        - text: "Environmental Footprint Computation"
+          href: articles/B2-method-footprint-models.html
+
+articles:
+  - title: "Get started"
+    navbar: ~
+    contents:
+      - "A1-FADN2Footprint-basics"
+  - title: "User Tutorials"
+    desc: "Step-by-step guides for using the package."
+    contents:
+      - "A2-data-preparation"
+      - "A3-practice-inference"
+      - "A4-footprint-models"
+  - title: "Scientific Methodology"
+    desc: "Deep dive into the equations, assumptions, and LCA standards."
+    contents:
+      - "B1-method-practice-inference"
+      - "B2-method-footprint-models"
+
+reference:
+  - title: "Data"
+    contents:
+      - data_extra
+      - dict_FADN
+      - EF_electricity
+      - EUROSTAT_elec_price
+      - EUROSTAT_gaz_price
+      - EUROSTAT_input_price
+      - ref_fuel_wob
+      - UNFCCC_data
+
+  - title: "Data Preparation"
+    desc: Loading, validating and harmonising input data
+    contents:
+      - FADN2Footprint-class
+      - accessors
+      - has_concept("data-preparation")
+
+  - title: "Practice Inference — Crops"
+    desc: Infer crop management practices from FADN
+    contents:
+      - has_concept("practice-crop")
+
+  - title: "Practice Inference — Livestock"
+    desc: Infer herding practices from FADN
+    contents:
+      - has_concept("practice-herding")
+
+  - title: "Practice Inference — Pseudoherd"
+    desc: Estimate pseudoherd from FADN
+    contents:
+      - has_concept("practice-pseudoherd")
+
+  - title: "Practice Inference — Landscape"
+    desc: Landscape indicators from LPIS and maps
+    contents:
+      - has_concept("practice-landscape")
+
+  - title: "Environmental Footprint - GHGE"
+    desc: Compute GHG emissions from FADN, biodiversity, water
+    contents:
+      - has_concept("footprint-ghge")
+
+  - title: "Environmental Footprint - Biodiversity"
+    desc: Compute biodiversity impact from FADN
+    contents:
+      - has_concept("footprint-biodiv")
+
+  - title: "Helpers"
+    contents:
+      - has_concept("utils")
+
+  - title: "Other"
+    contents:
+      - starts_with("")
+

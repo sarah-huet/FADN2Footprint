@@ -175,7 +175,9 @@ f_GHGE_herd_output <- function(object,
 
   herd_activities = f_herd_activities(object, overwrite = overwrite)
 
-## 3.1. COW MILK ----
+  # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ## 3.1. COW MILK ----
+  # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   ### Herd impact ----
   cow_milk_herd_impact <- herd_activities |>
@@ -215,7 +217,7 @@ f_GHGE_herd_output <- function(object,
   tmp_GHGE_fuels = GHGE_fuels(object)
   tmp_GHGE_fuels_alloc = tmp_econ_alloc$herd_outputs |> # select economic allocation
     # select activity
-    dplyr::filter(activity == "milk") |>
+    dplyr::filter(species == "cattle" & activity == "milk") |>
     dplyr::left_join(
       tmp_GHGE_fuels,
       by = id_cols
@@ -223,7 +225,7 @@ f_GHGE_herd_output <- function(object,
     # GHG kg CO2-eq/MJ with an economic allocation to the herd output
     dplyr::summarise(
       ghg_heat_fuel_kgCO2e_activity = sum(ghg_heat_fuel_kgCO2e * econ_alloc_ratio_herd, na.rm = T),
-      .by = id_cols
+      .by = dplyr::all_of(id_cols)
     )
 
   #### Electricity ----
@@ -231,7 +233,7 @@ f_GHGE_herd_output <- function(object,
   # select economic allocation across outputs
   tmp_GHGE_elec_alloc = tmp_econ_alloc$all_outputs |>
     # select activity
-    dplyr::filter(activity == "milk") |>
+    dplyr::filter(species == "cattle" & activity == "milk") |>
     # add activity data
     dplyr::left_join(
       tmp_GHGE_elec,
@@ -240,10 +242,10 @@ f_GHGE_herd_output <- function(object,
     # GHG kg CO2-eq/MJ with an economic allocation to the crop
     dplyr::summarise(
       ghg_elec_kgCO2e_activity = sum(ghg_elec_kgCO2e * econ_alloc_ratio_farm, na.rm = T),
-      .by = id_cols
+      .by = dplyr::all_of(id_cols)
     )
 
-### Combine herd and energy impacts ----
+  ### Combine herd and energy impacts ----
 
   cow_milk_impact_tot <- cow_milk_herd_impact |>
     # add heating fuels
@@ -256,9 +258,9 @@ f_GHGE_herd_output <- function(object,
   ### Compute per ha and per t impact ----
 
   co2_cols_act = names(cow_milk_impact_tot |>
-                        dplyr::select(dplyr::matches("kgCO2e")
-                                      & dplyr::matches("_activity$")
-                        ))
+                         dplyr::select(dplyr::matches("kgCO2e")
+                                       & dplyr::matches("_activity$")
+                         ))
 
   ### Calculate per ha and per t for each CO2e variable
   cow_milk_impact <- cow_milk_impact_tot |>
@@ -289,12 +291,12 @@ f_GHGE_herd_output <- function(object,
     dplyr::mutate(
       # per ha farm
       dplyr::across(dplyr::all_of(co2_cols_act[-grep("feed_pseudofarm_|pseudofarm_ghge_",co2_cols_act)]),
-                    list(per_ha_farm = ~ (.x * econ_alloc_ratio_herd_activity) / feed_farm_area_ha_activity),
+                    list(per_ha_farm = ~ (.x * econ_alloc_ratio_herd_activity) / dplyr::na_if(feed_farm_area_ha_activity, 0)), # considered null areas as NAs
                     .names = "{str_replace(.col, '_activity$', '')}_{.fn}"  # Remove "_activity" and append {.fn}
       ),
       # per ha pseudofarm
       dplyr::across(dplyr::all_of(co2_cols_act[-grep("feed_farm_|^farm_ghge_",co2_cols_act)]),
-                    list(per_ha_pseudofarm = ~ (.x * econ_alloc_ratio_herd_activity) / feed_pseudofarm_area_ha_activity),
+                    list(per_ha_pseudofarm = ~ (.x * econ_alloc_ratio_herd_activity) / dplyr::na_if(feed_pseudofarm_area_ha_activity, 0)), # considered null areas as NAs
                     .names = "{str_replace(.col, '_activity$', '')}_{.fn}"  # Remove "_activity" and append {.fn}
       ),
       # per t of milk
@@ -306,7 +308,10 @@ f_GHGE_herd_output <- function(object,
     ) |>
     dplyr::select(-dplyr::matches("_activity$"))
 
+
+  # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   ## 3.2. BEEF ----
+  # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   ### Herd impact ----
   cow_meat_herd_impact <- herd_activities |>
@@ -336,7 +341,7 @@ f_GHGE_herd_output <- function(object,
       Qobs_meat_LU = sum(Qobs_meat * livestock_unit_coef, na.rm = T),
       feed_farm_area_ha_activity = sum(feed_farm_area_ha_livcat, na.rm = T),
       feed_pseudofarm_area_ha_activity = sum(feed_pseudofarm_area_ha_livcat, na.rm = T),
-      .by = id_cols
+      .by = dplyr::all_of(id_cols)
     )
 
   ### Energy impact ----
@@ -346,7 +351,7 @@ f_GHGE_herd_output <- function(object,
   tmp_GHGE_fuels = GHGE_fuels(object)
   tmp_GHGE_fuels_alloc = tmp_econ_alloc$herd_outputs |> # select economic allocation
     # select activity
-    dplyr::filter(activity == "meat") |>
+    dplyr::filter(species == "cattle" & activity == "meat") |>
     dplyr::left_join(
       tmp_GHGE_fuels,
       by = id_cols
@@ -354,7 +359,7 @@ f_GHGE_herd_output <- function(object,
     # GHG kg CO2-eq/MJ with an economic allocation to the herd output
     dplyr::summarise(
       ghg_heat_fuel_kgCO2e_activity = sum(ghg_heat_fuel_kgCO2e * econ_alloc_ratio_herd, na.rm = T),
-      .by = id_cols
+      .by = dplyr::all_of(id_cols)
     )
 
   #### Electricity ----
@@ -362,7 +367,7 @@ f_GHGE_herd_output <- function(object,
   # select economic allocation across outputs
   tmp_GHGE_elec_alloc = tmp_econ_alloc$all_outputs |>
     # select activity
-    dplyr::filter(activity == "meat") |>
+    dplyr::filter(species == "cattle" & activity == "meat") |>
     # add activity data
     dplyr::left_join(
       tmp_GHGE_elec,
@@ -371,7 +376,7 @@ f_GHGE_herd_output <- function(object,
     # GHG kg CO2-eq/MJ with an economic allocation to the crop
     dplyr::summarise(
       ghg_elec_kgCO2e_activity = sum(ghg_elec_kgCO2e * econ_alloc_ratio_farm, na.rm = T),
-      .by = id_cols
+      .by = dplyr::all_of(id_cols)
     )
 
   ### Combine herd and energy impacts ----
@@ -387,9 +392,9 @@ f_GHGE_herd_output <- function(object,
   ### Compute per ha and per t impact ----
 
   co2_cols_act = names(cow_meat_impact_tot |>
-                        dplyr::select(dplyr::matches("kgCO2e")
-                                      & dplyr::matches("_activity$")
-                        ))
+                         dplyr::select(dplyr::matches("kgCO2e")
+                                       & dplyr::matches("_activity$")
+                         ))
 
   ### Calculate per ha and per t for each CO2e variable
   cow_meat_impact <- cow_meat_impact_tot |>
@@ -415,12 +420,12 @@ f_GHGE_herd_output <- function(object,
     dplyr::mutate(
       # per ha farm
       dplyr::across(dplyr::all_of(co2_cols_act[-grep("feed_pseudofarm_|pseudofarm_ghge_",co2_cols_act)]),
-                    list(per_ha_farm = ~ (.x * econ_alloc_ratio_herd_activity) / feed_farm_area_ha_activity),
+                    list(per_ha_farm = ~ (.x * econ_alloc_ratio_herd_activity) / dplyr::na_if(feed_farm_area_ha_activity, 0)), # considered null areas as NAs
                     .names = "{str_replace(.col, '_activity$', '')}_{.fn}"  # Remove "_activity" and append {.fn}
       ),
       # per ha pseudofarm
       dplyr::across(dplyr::all_of(co2_cols_act[-grep("feed_farm_|^farm_ghge_",co2_cols_act)]),
-                    list(per_ha_pseudofarm = ~ (.x * econ_alloc_ratio_herd_activity) / feed_pseudofarm_area_ha_activity),
+                    list(per_ha_pseudofarm = ~ (.x * econ_alloc_ratio_herd_activity) / dplyr::na_if(feed_pseudofarm_area_ha_activity, 0)), # considered null areas as NAs
                     .names = "{str_replace(.col, '_activity$', '')}_{.fn}"  # Remove "_activity" and append {.fn}
       ),
       # per t of meat
@@ -438,6 +443,7 @@ f_GHGE_herd_output <- function(object,
     dplyr::filter(output == "milk")
 
   meat_impact <- cow_meat_impact |>
+    # add cull cow meat
     dplyr::bind_rows(
       cow_milk_impact |>
         dplyr::filter(output == "meat_cull_cow")

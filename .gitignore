@@ -66,3 +66,6 @@ old/
 Test/
 data_raw/
 doc/
+
+# Heavy unneeded folder
+inst/ext_data/

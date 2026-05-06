@@ -178,12 +178,12 @@ f_BVIAS_herd_output <- function(object,
     dplyr::left_join(
       tmp_econ_alloc$herd_outputs |>
         dplyr::filter(species == "cattle" & output == "milk") |>
-        dplyr::select(dplyr::all_of(object@traceability$id_cols),species,activity,output, econ_alloc_ratio),
+        dplyr::select(dplyr::all_of(object@traceability$id_cols),species,activity,output, econ_alloc_ratio_herd),
       by = object@traceability$id_cols
     ) |>
     # allocate impact to output
     dplyr::mutate(
-      BVI_t = (sum_BVI_ha_feed * econ_alloc_ratio) / prod_t
+      BVI_t = (sum_BVI_ha_feed * econ_alloc_ratio_herd) / prod_t
     )
 
   return(list(

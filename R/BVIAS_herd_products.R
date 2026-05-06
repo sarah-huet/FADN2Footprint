@@ -108,23 +108,6 @@ f_BVIAS_herd_output <- function(object,
 
     tmp_econ_alloc = f_output_econ_alloc(object)
 
-  } else {
-
-    herd_onfarm_output = f_output_econ_alloc(object)
-    herd_offfarm_output = f_pseudoherd_output_econ_alloc(object)
-
-    tmp_econ_alloc = list(
-      outputs = bind_rows(
-        herd_onfarm_output$outputs |>
-          dplyr::mutate(animals = "on_farm"),
-        herd_offfarm_output$outputs
-      ),
-      econ_alloc_ratio = bind_rows(
-        herd_onfarm_output$econ_alloc_ratio |>
-          dplyr::mutate(animals = "on_farm"),
-        herd_offfarm_output$econ_alloc_ratio
-      )
-    )
   }
 
   # 2. Estimate herd feed impact ------------------------------------------------------------------------------

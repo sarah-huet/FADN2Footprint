@@ -637,17 +637,33 @@ h_pivot_national_fadn <- function(raw_tables,
 
   }
 
-  # ── Join all product tables ──
-  if (length(pivoted_tables) == 0) {
-    stop("No product tables were successfully pivoted.")
+  # ── Build base skeleton: union of all farm-year ids ──
+  # Priority: tables referenced in manual_matches (farm register), then product tables
+  base_tables <- unique(c(
+    if (!is.null(mm)) intersect(unique(mm$national_table), names(raw_tables)) else character(0),
+    unname(vapply(table_config, function(x) x$table, character(1)))
+  ))
+
+  id_skeleton <- purrr::map_dfr(base_tables, function(tn) {
+    tdat <- raw_tables[[tn]]
+    if (all(id_cols %in% colnames(tdat))) {
+      dplyr::distinct(dplyr::select(tdat, dplyr::all_of(id_cols)))
+    } else {
+      NULL
+    }
+  }) |>
+    dplyr::distinct()
+
+  if (nrow(id_skeleton) == 0) {
+    stop("Could not build farm-year skeleton: no table contains all id_cols.")
   }
 
-  result <- pivoted_tables[[1]]
-  if (length(pivoted_tables) > 1) {
-    for (k in 2:length(pivoted_tables)) {
-      result <- dplyr::left_join(result, pivoted_tables[[k]], by = id_cols)
-    }
+  # ── Join all pivoted product tables onto the skeleton ──
+  result <- id_skeleton
+  for (k in seq_along(pivoted_tables)) {
+    result <- dplyr::left_join(result, pivoted_tables[[k]], by = id_cols)
   }
+
 
   # ── Add manual matches (farm-level variables) ──
   if (!is.null(mm) && nrow(mm) > 0) {

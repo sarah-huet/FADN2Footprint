@@ -2,10 +2,10 @@
 title: "Data Preparation for National FADN and LPIS"
 output: rmarkdown::html_vignette
 vignette: >
-%\VignetteIndexEntry{Data Preparation for National FADN and LPIS}
-    %\VignetteEngine{knitr::rmarkdown}
-    %\VignetteEncoding{UTF-8}
-    bibliography: references.bib
+  %\VignetteIndexEntry{Data Preparation for National FADN and LPIS}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
 link-citations: true
 editor_options: 
   markdown: 
@@ -27,17 +27,28 @@ library(dplyr)
 library(tidyr)
 library(readxl)
 library(gt)
+
+options(tibble.width = Inf)
 ```
 
 ## Overview
 
-National FADN databases differ from the EU FADN in three ways:
+The purpose of this script is to convert national FADN data into EU FADN data. It builds
+on the example of the French FADN (RICA) and has been tested on it for year 2020.
+Your national FADN may be structure so differently from RICA that our function to convert it
+into the EU FADN variables does not work. If so, you may write your own script to do the conversion.
+You only need to make sure that you end up with an single wide table which is structure like the
+mock data set (looking like the EU FADN, except that not all existing EU FADN variables are needed:
+see mock data set for the list of necessary variables XX c'est ça, tu as fait le tri ?).
+This single wide table can then be fed to the `data_4FADN2Footprint()` function (see vignette A1).
 
-1. **Table structure** — National FADNs use **long product tables** (one row per
+National FADN databases may differ from the EU FADN in three ways:
+
+1. **Table structure** — National FADNs may use **long product tables** (one row per
 farm × product) while the EU FADN is a **single wide table** (one row per farm).
 2. **Variable naming** — Different suffixes encode the same concept (e.g., `SUPER3`
-in RICA = `TA` in FADN = total area).
-3. **Category codes** — Products are identified by national codes (e.g., RICA code
+in French FADN = `TA` in FADN = total area).
+3. **Category codes** — Products are identified by national codes (e.g., French FADN code
 `111` = FADN code `CWHTC`).
 
 The conversion is driven by **three user-filled tables**:
@@ -77,7 +88,7 @@ Here is the structure the user must fill:
 
 **Key observations from the RICA example:**
 
-- Some FADN suffixes have **no RICA equivalent** (e.g., livestock suffixes like `SSN`, `SSV`, `SRN`, `SRV`). These are left     with an empty `pattern_national` cell.
+- Some FADN suffixes have **no RICA equivalent** (e.g., livestock suffixes like `SSN`, `SSV`, `SRN`, `SRV`). These are left with an empty `pattern_national` cell.
 - Some RICA suffixes have **no FADN equivalent** — these can be included with an
 empty `pattern_FADN` cell if the user wants to preserve them.
 - The `Group` column determines which raw table and code column to use:
@@ -104,7 +115,7 @@ dict_conversion$variable_pattern |> gt()
 Each row maps one **national product code** to one **FADN product code**.
 When several national codes map to the same FADN code, they will be **summed**
 during aggregation (many-to-one). When one national code maps to several FADN
-codes, an **allocation key** is needed (one-to-many).
+codes, an **allocation key** is needed (one-to-many). XX la colonne description n'est pas là dans les fichiers .xlsx. La rajouter
 
 | Column | Description | Example |
 |---|---|---|
@@ -136,7 +147,7 @@ dict_conversion$category_pattern |> gt()
 The manual_matches sheet handles **farm-level variables** that do not follow
 the prefix–suffix logic of the category_pattern and variable_pattern sheets.
 These are typically variables stored directly in the main farm table (e.g.,
-the French rica table) rather than in product-specific tables (veg, ani,
+the French FADN table) rather than in product-specific tables (veg, ani,
 pan). Examples include geographic identifiers, farm typologies, fuel and
 electricity consumption, mineral fertiliser use, and purchased feed values.
 Each row maps one FADN variable to one national variable, with an
@@ -179,7 +190,7 @@ dict_conversion$manual_matches |> gt()
 
 ### Step 1 – Load raw national data
 
-We will use the French RICA as an example. In the French RICA, we have several tables: a farm-leval variable table and tables for products (crops, animals, animal products).
+We will use the French FADN (RICA) as an example. In the RICA, we have several tables: a farm-level variable table and tables for products (crops, animals, animal products).
 
 We gather the table in one list with the following structure:
 
@@ -272,12 +283,12 @@ RICA_18_raw_std <- stats::setNames(
 ### Step 2 – Generate the dictionary
 
 The `FADN2Footprint`package provide a pre-filled conversion dictionary to convert
-French RICA to FADN. We strongly recommend to use this pre-filled file if your
-using French RICA or to replicate it for your own national FADN otherwise.
+RICA to FADN. We strongly recommend to use this pre-filled file if you are
+using RICA or to replicate it for your own national FADN otherwise.
 
-#### French RICA
+#### French FADN (RICA)
 
-We strongly recommend to use this pre-filled dictionary for French RICA.
+We strongly recommend to use this pre-filled dictionary for RICA.
 
 ```{r french-dict}
 # Load

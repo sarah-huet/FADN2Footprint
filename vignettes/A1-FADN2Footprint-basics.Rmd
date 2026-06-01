@@ -23,11 +23,11 @@ library(tidyr)
 library(readxl)
 library(gt)
 
-# Install package
-require("pak")
+
 pak::pak("sarah-huet/FADN2Footprint")
 library(FADN2Footprint)
 
+options(tibble.width = Inf)
 
 ```
 
@@ -43,7 +43,7 @@ acknowledge and cite FADN2Footprint in your publications:
 
 **FADN2Footprint: an R package to infer agricultural practices and
 compute farms environmental footprints from FADN data**. Huet, Ayouba &
-Bellassen (in prep.)
+Bellassen (in prep.) XX réduire la taille du logo
 
 ![FADN2Footprint](logo.jpg)
 
@@ -52,8 +52,8 @@ This package depends on R (>= 4.1.0).
 --------------------------------------------------------------------------------
 /!\ CAUTION /!\
 This package have been tested for cereals and milk productions.
-Make sure you filter farms in field crops and dairy farming types.
 Estimates for other productions are not reliable yet.
+Make sure you filter farms in field crops and dairy farming types.
 --------------------------------------------------------------------------------
 
 # Overview
@@ -67,36 +67,21 @@ a standardized internal representation that can be used to compute:
     density, ground cover, livestock density, feed intake, manure
     systems, etc.)
 
--   Environmental footprints (e.g., greenhouse gas emissions,
-    biodiversity impacts, water consumption/pollution)
+-   Environmental footprint: greenhouse gas emissions,
+    biodiversity impacts (upcoming: water consumption/pollution)
 
--   Economic performance (e.g., price premium, added value, operating
-    margin, labour-to-product ratio)
+-   Economic performance (price premium, value-added per annual working unit,
+    operating margin per non-salaried AWU, return on assets)
 
--   Social performance (e.g., generational renewal, farmer education)
-
-FADN2Footprint bridges the gap between farm-level accounting data and
-sustainability assessment by:
-
--   Harmonizing heterogeneous FADN data sources (EU-wide or national)
-
--   Inferring agricultural practices
-
--   Estimating greenhouse gas emissions, biodiversity impacts, water
-    use, and socioeconomic indicators
-
--   Informing multiple scales: country, NUTS2, farm, activity, and
-    product-level analysis
+-   Social performance (employment, generational renewal, farmer education)
 
 The package follows a life cycle assessment (LCA) spirit with Scope 3
 boundaries.
 
-The core entry point is the S4 class `FADN2Footprint`, created with the
-constructor function `data_4FADN2Footprint()`.
-
 # The FADN2Footprint S4 class
 
-At the heart of the package is the `FADN2Footprint` S4 class, which
+At the heart of the package is the `FADN2Footprint` S4 class object,
+created with the constructor function `data_4FADN2Footprint()`. It
 stores your input data, intermediate calculations, and final results in
 a structured, traceable manner.
 
@@ -135,8 +120,9 @@ slots:
 
 Constructing a valid `FADN2Footprint` object requires three main steps:
 
-1.  Prepare your data and your variable dictionary to map your column
-    names to the package's standard
+1.  Prepare your data (and, if you are using national FADN data),
+    your variable dictionary to map your column names to the package's
+    standard. This variable dictionary is provided for the French FADN.XX indiquer comment on y accède
 
 2.  Call the constructor function `data_4FADN2Footprint()`
 
@@ -161,8 +147,10 @@ To build a `FADN2Footprint` object you need:
 
 ## Build from a FADN dataset already matching the internal dictionary
 
-If your data already uses the expected names (or you rely on version
-inference via `var_dict`), you can build the object directly.
+If your data already uses the variable names of FADN 2018 (or if you rely on version
+inference via `var_dict` for earlier FADN vintagesXX c'est ça que tu veux dire?), you can build the object directly.
+XX moi je fournirai plutôt le mock data sous format excel, comme tu le fais pour les tables de conversion en A2. C'est ce que les utilisateurs auront,
+donc ça leur permet de s'y retrouver. J'y laisserai notamment la description des variables, et je limiterais aux variables effectivement utilisées par le package.
 
 ```{r dict_built_in}
 
@@ -206,7 +194,7 @@ my_object_GHGE = FADN2Footprint::compute_footprint_ghg(my_object_w_practices)
 data("data_extra", package = "FADN2Footprint")
 # These are default parameter values for the BVIAS model.
 # These parameters have been calibrated on in situ measurement from the literature.
-# See Huet, S., Diallo, A., Regolo, J., Ihasusta, A., Arnaud, L., Bellassen, V., 2025. Estimating Biodiversity Impact from Agricultural Statistics: An Application to Food Quality Schemes in France. https://doi.org/10.2139/ssrn.5217233
+# See Huet, S., Diallo, A., Regolo, J., Ihasusta, A., Arnaud, L., Bellassen, V., 2026. Biodiversity impact of agricultural products in France: Greater differences across product types than food quality schemes. Ecological Economics. XX doi
 
 my_object_biodiv = FADN2Footprint::compute_footprint_biodiv(
   my_object_w_practices,

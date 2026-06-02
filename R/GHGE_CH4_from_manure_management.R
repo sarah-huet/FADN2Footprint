@@ -145,8 +145,7 @@
 #' \code{\link{f_feed_offfarm}}, \code{\link{GWP}},
 #' \code{\link{UNFCCC_data}}, \code{\link{FADN2Footprint-class}}
 #'
-#' @importFrom dplyr left_join filter select rename inner_join mutate group_by
-#'   summarise across all_of bind_rows case_when join_by distinct summarise
+#' @importFrom dplyr left_join filter select rename inner_join mutate group_by summarise across all_of bind_rows case_when join_by distinct summarise
 #'
 #' @importFrom stringr str_detect
 #'

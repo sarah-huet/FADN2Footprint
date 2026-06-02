@@ -103,8 +103,7 @@
 #'
 #' @export
 #' @concept footprint-ghge
-#' @importFrom dplyr select summarise across where matches mutate coalesce
-#'   left_join all_of bind_rows
+#' @importFrom dplyr select summarise across where matches mutate coalesce left_join all_of bind_rows
 #' @importFrom stringr str_replace
 
 

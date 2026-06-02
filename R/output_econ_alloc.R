@@ -127,8 +127,7 @@
 #' }
 #'
 #' @export
-#' @importFrom dplyr mutate case_when if_else bind_rows summarise left_join
-#'   select rename coalesce all_of
+#' @importFrom dplyr mutate case_when if_else bind_rows summarise left_join select rename coalesce all_of
 #' @importFrom stringr str_detect
 
 #'

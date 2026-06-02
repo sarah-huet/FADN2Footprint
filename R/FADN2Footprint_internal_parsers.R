@@ -273,8 +273,7 @@
 #' \code{\link{.parse_farm_data}}, \code{\link{.parse_livestock_data}},
 #' \code{\link{data_4FADN2Footprint}}, \code{\link{data_extra}}
 #'
-#' @importFrom dplyr select filter mutate rename left_join summarise coalesce
-#'   pick where any_of all_of matches join_by
+#' @importFrom dplyr select filter mutate rename left_join summarise coalesce pick where any_of all_of matches join_by
 #' @importFrom tidyr pivot_longer pivot_wider extract
 #'
 #' @export
@@ -550,8 +549,7 @@
 #' \code{\link{.parse_farm_data}}, \code{\link{.parse_crop_data}},
 #' \code{\link{data_4FADN2Footprint}}, \code{\link{data_extra}}
 #'
-#' @importFrom dplyr select filter mutate left_join coalesce pull all_of
-#'   matches case_when
+#' @importFrom dplyr select filter mutate left_join coalesce pull all_of matches case_when
 #' @importFrom tidyr pivot_longer pivot_wider extract
 #'
 #' @export
@@ -776,8 +774,7 @@
 #' \code{\link{.parse_herd_data}}, \code{\link{data_4FADN2Footprint}},
 #' \code{\link{data_extra}}
 #'
-#' @importFrom dplyr select filter mutate left_join coalesce starts_with
-#'   any_of all_of pick where summarise
+#' @importFrom dplyr select filter mutate left_join coalesce starts_with any_of all_of pick where summarise
 #'
 #' @export
 #' @concept data-preparation
@@ -1003,8 +1000,7 @@
 #' \code{\link{.parse_farm_data}}, \code{\link{new_FADN2Footprint}},
 #' \code{\link{data_extra}}
 #'
-#' @importFrom dplyr select filter mutate left_join rename coalesce
-#'   case_when if_else all_of matches starts_with pull
+#' @importFrom dplyr select filter mutate left_join rename coalesce case_when if_else all_of matches starts_with pull
 #' @importFrom tidyr pivot_longer pivot_wider extract separate_longer_delim
 #'
 #' @export

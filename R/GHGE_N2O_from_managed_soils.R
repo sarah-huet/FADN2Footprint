@@ -142,8 +142,7 @@
 #' \code{\link{data_extra}}, \code{\link{GWP}},
 #' \code{\link{FADN2Footprint-class}}
 #'
-#' @importFrom dplyr select left_join filter mutate summarise across all_of
-#'   starts_with if_else case_when join_by distinct where
+#' @importFrom dplyr select left_join filter mutate summarise across all_of starts_with if_else case_when join_by distinct where
 #' @importFrom tidyr separate_longer_delim pivot_wider
 #'
 #' @concept footprint-ghge

@@ -119,8 +119,7 @@
 #'
 #' @concept footprint-ghge
 #' @export
-#' @importFrom dplyr select left_join summarise across matches mutate
-#'   rename_with starts_with ends_with all_of pick cur_column
+#' @importFrom dplyr select left_join summarise across matches mutate rename_with starts_with ends_with all_of pick cur_column
 #' @importFrom tidyr pivot_wider
 #' @importFrom stringr str_replace
 

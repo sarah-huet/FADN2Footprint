@@ -81,8 +81,7 @@
 #' \code{\link{GHGE_fuels}}, \code{\link{f_GHGE_crops}},
 #' \code{\link{f_GHGE_livestock}}, \code{\link{FADN2Footprint-class}}
 #'
-#' @importFrom dplyr select left_join mutate across starts_with if_else
-#'   join_by distinct
+#' @importFrom dplyr select left_join mutate across starts_with if_else join_by distinct
 #'
 #' @concept footprint-ghge
 #' @export

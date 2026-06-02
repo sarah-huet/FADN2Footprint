@@ -87,8 +87,7 @@
 #' \code{\link{UNFCCC_data}}, \code{\link{infer_practices}},
 #' \code{\link{FADN2Footprint-class}}
 #'
-#' @importFrom dplyr select left_join mutate across starts_with if_else
-#'   all_of distinct join_by
+#' @importFrom dplyr select left_join mutate across starts_with if_else all_of distinct join_by
 #'
 #' @concept footprint-ghge
 #' @export

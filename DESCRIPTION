@@ -54,7 +54,6 @@ Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
-RoxygenNote: 7.3.3
 Collate: 
     'BVIAS_crops.R'
     'BVIAS_data.R'
@@ -111,3 +110,4 @@ Collate:
     'pseudoherd_swine.R'
     'validate_estimates.R'
     'zzz.R'
+Config/roxygen2/version: 8.0.0

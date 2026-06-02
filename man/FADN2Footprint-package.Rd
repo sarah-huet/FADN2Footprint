@@ -20,5 +20,10 @@ Useful links:
 \author{
 \strong{Maintainer}: Sarah Huet \email{sarah.huet@inrae.fr}
 
+Authors:
+\itemize{
+  \item Sarah Huet \email{sarah.huet@inrae.fr}
+}
+
 }
 \keyword{internal}

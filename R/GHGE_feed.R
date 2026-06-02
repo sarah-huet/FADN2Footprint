@@ -135,8 +135,7 @@
 #' \code{\link{f_feed_onfarm}}, \code{\link{f_feed_offfarm}},
 #' \code{\link{h_average_practices}}, \code{\link{FADN2Footprint-class}}
 #'
-#' @importFrom dplyr left_join filter select mutate across all_of bind_rows
-#'   summarise distinct anti_join matches case_when
+#' @importFrom dplyr left_join filter select mutate across all_of bind_rows summarise distinct anti_join matches case_when
 #' @importFrom tidyr separate_longer_delim
 #'
 #' @concept footprint-ghge

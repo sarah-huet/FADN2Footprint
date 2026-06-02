@@ -133,7 +133,9 @@
 
 # estimate GHGE per ha and per t of crops
 f_GHGE_crops <- function(object,
-                         overwrite = FALSE) {
+                         overwrite = FALSE,
+                         account_pseudoherd = FALSE,
+                         ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -156,122 +158,49 @@ f_GHGE_crops <- function(object,
 
   tmp_GHGE_ferti_prod = GHGE_ferti_prod(object, overwrite = overwrite)
 
-
-  # Economic allocation for crops ----
-  # for diesel and electricity allocation
-
-  ## We estimate economic allocation ratios
-  tmp_econ_alloc = f_output_econ_alloc(object)
-
-
   # Fuels ----
 
-  tmp_GHGE_fuels = GHGE_fuels(object)
-
-  ## Heating fuels ----
-  tmp_GHGE_heating_fuels_p_crop = tmp_econ_alloc$all_outputs |>
-    # select economic allocation across crop outputs
-    dplyr::filter(activity == "crop") |>
-    # add activity data
-    dplyr::left_join(
-      tmp_GHGE_fuels,
-      by = id_cols
-    ) |>
-    # GHG kg CO2-eq/MJ with an economic allocation to the crop
-    dplyr::mutate(
-      ghg_heat_fuel_crop_kgCO2e = ghg_heat_fuel_kgCO2e * econ_alloc_ratio_farm
-    )
-
-  ## Off-road diesel ----
-  # We estimate the quantity of off-road diesel (L/ha) used for ploughing
-  # and allocate the remain according to crop area
-  ## Tillage
-  tmp_tillage = f_tillage(object, overwrite = overwrite)
-  ## Area allocation
-  tmp_area_alloc = object@crop |>
-    dplyr::mutate(sum_farm_area_ha = sum(area_ha, na.rm = T),
-                  .by = dplyr::all_of(id_cols)) |>
-    dplyr::reframe(area_alloc_ratio = area_ha / sum_farm_area_ha,
-                   .by = c(dplyr::all_of(id_cols), 'FADN_code_letter'))
-  ## Allocate
-  tmp_GHGE_diesel_p_crop =  Reduce(
-    x = list(object@crop |>
-               dplyr::select(dplyr::all_of(id_cols), FADN_code_letter,
-                             area_ha,prod_t,sales_t),
-             tmp_tillage,
-             tmp_area_alloc),
-    f = function(x,y) dplyr::left_join(x, y, by = c(id_cols,"FADN_code_letter"))
-  ) |>
-    # add activity data
-    dplyr::left_join(tmp_GHGE_fuels,
-                     by = id_cols) |>
-    # Diesel for tillage
-    dplyr::mutate(
-      # Diesel used for tillage per crop
-      ## set at zeros for crops without tillage
-      diesel_tillage_l = dplyr::coalesce(tillage,0) * area_ha
-    ) |>
-    dplyr::mutate(
-      # Total diesel used for tillage per farm
-      diesel_tillage_tot_farm_l = sum(tillage * area_ha, na.rm = T),
-      .by = id_cols) |>
-    # Remaining diesel
-    dplyr::mutate(diesel_remain_tot_farm_l = diesel_l - diesel_tillage_tot_farm_l,
-                  diesel_remain_l = diesel_remain_tot_farm_l * area_alloc_ratio) |>
-    # share of total GHGE from diesel
-    dplyr::mutate(
-      ghg_diesel_tillage_crop_kgCO2e = ghg_diesel_kgCO2e * (diesel_tillage_l / diesel_l),
-      ghg_diesel_remain_crop_kgCO2e = ghg_diesel_kgCO2e * (diesel_remain_l / diesel_l),
-      ghg_diesel_crop_kgCO2e = ghg_diesel_tillage_crop_kgCO2e + ghg_diesel_remain_crop_kgCO2e
-    )
-
-  # Check
-  # tmp = tmp_GHGE_diesel_p_crop |> mutate(test = sum(ghg_diesel_tillage_kgCO2e + ghg_diesel_remain_kgCO2e), .by = id_cols)
-  # plot(tmp$ghg_diesel_kgCO2e, tmp$test)
+  tmp_GHGE_fuels = GHGE_fuels(object, account_pseudoherd = account_pseudoherd)
 
   # Electricity ----
   tmp_GHGE_elec = GHGE_elec(object)
-  # select economic allocation across crop outputs
-  tmp_GHGE_elec_p_crop = tmp_econ_alloc$all_outputs |>
-    # select crops
-    dplyr::filter(activity == "crop") |>
-    # add activity data
-    dplyr::left_join(
-      tmp_GHGE_elec,
-      by = id_cols
-    ) |>
-    # GHG kg CO2-eq/MJ with an economic allocation to the crop
-    dplyr::mutate(
-      ghg_elec_crop_kgCO2e = ghg_elec_kgCO2e * econ_alloc_ratio_farm
-    )
-
-  # TODO: add land use with other practices such as hedge density, ground cover, grasslands, etc.
 
   # Combine components ----
-  duplicated_columns = setdiff(colnames(object@crop), c(id_cols,"FADN_code_letter"))
 
   crop_impact_tot <- Reduce(
     x = list(object@crop,
-             tmp_GHGE_n2o_msoils |> dplyr::select(-dplyr::matches(duplicated_columns)),
-             tmp_GHGE_ferti_prod |> dplyr::select(-dplyr::matches(duplicated_columns)),
-             tmp_GHGE_heating_fuels_p_crop |> dplyr::select(-dplyr::matches(duplicated_columns)),
-             tmp_GHGE_diesel_p_crop |> dplyr::select(-dplyr::matches(duplicated_columns)),
-             tmp_GHGE_elec_p_crop |> dplyr::select(-dplyr::matches(duplicated_columns))),
-    f = function(x,y) dplyr::left_join(x, y, by = c(id_cols,"FADN_code_letter"))
+
+             tmp_GHGE_n2o_msoils |>
+               dplyr::select(dplyr::matches(id_cols), FADN_code_letter, dplyr::matches("_kgCO2e")),
+
+             tmp_GHGE_ferti_prod |>
+               dplyr::select(dplyr::matches(id_cols), FADN_code_letter, dplyr::matches("_kgCO2e")),
+
+             tmp_GHGE_fuels$alloc_GHGE_fuels |>
+               dplyr::filter(activity == "crop") |>
+               dplyr::select(dplyr::matches(id_cols), FADN_code_letter, dplyr::matches("_kgCO2e")),
+
+             tmp_GHGE_elec$alloc_GHGE_electricity |>
+               dplyr::filter(activity == "crop") |>
+               dplyr::select(dplyr::matches(id_cols), FADN_code_letter, dplyr::matches("_kgCO2e"))
+             ),
+
+    f = function(x,y) dplyr::left_join(x, y,
+                                       by = c(id_cols,"FADN_code_letter"))
   ) |>
     dplyr::select(
       dplyr::all_of(id_cols),
       FADN_code_letter,
       area_ha, prod_t,
       N2O_d_kgCO2e, N2O_ATD_kgCO2e, N2O_L_kgCO2e,
-      ghg_ferti_prod_kgCO2e, ghg_heat_fuel_crop_kgCO2e, ghg_diesel_crop_kgCO2e, ghg_elec_crop_kgCO2e
+      ghg_ferti_prod_kgCO2e, ghg_heat_fuel_kgCO2e, ghg_diesel_tillage_kgCO2e, ghg_diesel_remain_kgCO2e, ghg_elec_kgCO2e
     ) |>
     dplyr::mutate(
       total_ghg_crop_kgCO2e =  rowSums(dplyr::across(c(N2O_d_kgCO2e, N2O_ATD_kgCO2e, N2O_L_kgCO2e,
                                                        ghg_ferti_prod_kgCO2e,
-                                                       ghg_heat_fuel_crop_kgCO2e,
-                                                       ghg_diesel_crop_kgCO2e,
-                                                       ghg_elec_crop_kgCO2e)), na.rm = TRUE)
+                                                       ghg_heat_fuel_kgCO2e,
+                                                       ghg_diesel_tillage_kgCO2e, ghg_diesel_remain_kgCO2e,
+                                                       ghg_elec_kgCO2e)), na.rm = TRUE)
     )
 
   # Compute per ha and per t impact ----

@@ -93,14 +93,18 @@
 #' @export
 
 
-GHGE_fuels <- function(object){
+GHGE_fuels <- function(object,
+                       account_pseudoherd = FALSE,
+                       ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
+  id_cols = object@traceability$id_cols
+
   # Activity data ----
   data_fuels <- object@input |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
+    dplyr::select(dplyr::all_of(id_cols),
                   diesel_l,heating_fuels_l,
                   diesel_MJ,heating_fuels_MJ
     ) |>
@@ -112,9 +116,40 @@ GHGE_fuels <- function(object){
       by = dplyr::join_by(COUNTRY == country_FADN)
     )
 
-  # Estimate emissions ----
+  # For diesel specifically, we estimate the quantity used for ploughing
+  ## Estimate tillage in L/ha
+  tmp_tillage = f_tillage(object)
+  ## Estimate L used for tillage per crop
+  tmp_diesel_tillage <- tmp_tillage |>
+    # add crop area
+    dplyr::left_join(
+      object@crop |>
+        dplyr::select(dplyr::all_of(id_cols),
+                      FADN_code_letter,
+                      area_ha
+        ),
+      by = c(id_cols, 'FADN_code_letter')
+    ) |>
+    dplyr::mutate(
+      diesel_tillage_l = tillage * area_ha
+    )
+
+  # Estimate total emissions ----
 
   GHGE_fuels <- data_fuels |>
+    # add diesel use for tillage
+    dplyr::left_join(
+      tmp_diesel_tillage |>
+        dplyr::summarise(
+          diesel_tillage_tot_l = sum(diesel_tillage_l, na.rm = TRUE),
+          .by = dplyr::all_of(id_cols)
+        ),
+      by = id_cols
+    ) |>
+    dplyr::mutate(
+      diesel_tillage_tot_MJ = dplyr::coalesce(diesel_tillage_tot_l * (diesel_MJ / diesel_l), 0),
+      diesel_remain_MJ = diesel_MJ - diesel_tillage_tot_MJ
+    ) |>
     # add EF
     dplyr::left_join(
       UNFCCC_data$EF_fuel,
@@ -133,12 +168,55 @@ GHGE_fuels <- function(object){
     ) |>
     # estimate CO2 emissions
     dplyr::mutate(
-      ghg_diesel_kgCO2e = diesel_MJ * EF_fuel_CO2_kgCO2MJ,
-      ghg_heat_fuel_kgCO2e = heating_fuels_MJ * EF_fuel_CO2_kgCO2MJ,
-      ghg_all_fuels_kgCO2e = ghg_diesel_kgCO2e + ghg_heat_fuel_kgCO2e
+      farm_ghg_diesel_kgCO2e = diesel_MJ * EF_fuel_CO2_kgCO2MJ,
+      farm_ghg_diesel_tillage_kgCO2e = diesel_tillage_tot_MJ * EF_fuel_CO2_kgCO2MJ,
+      farm_ghg_diesel_remain_kgCO2e = diesel_remain_MJ * EF_fuel_CO2_kgCO2MJ,
+
+      farm_ghg_heat_fuel_kgCO2e = heating_fuels_MJ * EF_fuel_CO2_kgCO2MJ,
+      farm_ghg_all_fuels_kgCO2e = farm_ghg_diesel_kgCO2e + farm_ghg_heat_fuel_kgCO2e
     )
 
-  return(GHGE_fuels)
+  # Allocate emissions ----
+
+  # We use an economic allocation to allocate farm level emissions to outputs
+  #For diesel specifically, we first allocate emissions related to ploughing to crops than economically allocate the remaining emissions to outputs
+
+  ## Output economic allocation ratio
+  if (account_pseudoherd == F) {
+
+    tmp_econ_alloc = f_output_econ_alloc(object)
+
+  } else {
+
+    tmp_econ_alloc = f_output_econ_alloc(object)
+    # TODO: add pseudofarm estimation
+  }
+
+  tmp_GHGE_fuels_alloc = tmp_econ_alloc$all_outputs |>
+    dplyr::filter(econ_alloc_ratio_farm >0) |>
+    # add GHGE
+    dplyr::left_join(
+      GHGE_fuels,
+      by = id_cols
+    ) |>
+    # add tillage activity
+    dplyr::left_join(
+      tmp_diesel_tillage,
+      by = c(id_cols, 'FADN_code_letter')
+    ) |>
+    # GHG kg CO2-eq/MJ with an economic allocation to output
+    dplyr::summarise(
+
+      ghg_diesel_tillage_kgCO2e = sum(farm_ghg_diesel_kgCO2e * (diesel_tillage_l / diesel_l), na.rm = TRUE),
+      ghg_diesel_remain_kgCO2e = sum(farm_ghg_diesel_remain_kgCO2e * econ_alloc_ratio_farm, na.rm = TRUE),
+
+      ghg_heat_fuel_kgCO2e = sum(farm_ghg_heat_fuel_kgCO2e * econ_alloc_ratio_farm, na.rm = TRUE),
+
+      .by = c(dplyr::all_of(id_cols), activity, output, FADN_code_letter, FADN_code_letter_output)
+    )
+
+  return(list(total_GHGE_fuels = GHGE_fuels,
+              alloc_GHGE_fuels = tmp_GHGE_fuels_alloc))
 
 
 }

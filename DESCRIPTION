@@ -111,3 +111,5 @@ Collate:
     'validate_estimates.R'
     'zzz.R'
 Config/roxygen2/version: 8.0.0
+Depends: 
+    R (>= 3.5)

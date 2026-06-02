@@ -161,13 +161,8 @@ f_output_econ_alloc <- function(object) {
   )) |>
     dplyr::mutate(
       activity = dplyr::case_when(
-        str_detect(output, "milk")       ~ "milk",
         FADN_code_letter == "LCOWDAIR"   ~ "milk",
-        str_detect(output, "meat")       ~ "meat",
-        str_detect(output, "eggs")       ~ "eggs",
-        str_detect(output, "wool")       ~ "wool",
-        # TODO: check for wool, honey, etc
-        .default = "farm"
+        .default = output
       )
     ) |>
     dplyr::mutate(

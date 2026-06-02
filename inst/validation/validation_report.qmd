@@ -38,9 +38,8 @@ library(tidyr)
 library(stringr)
 library(gt)
 
-#devtools::document()
-#devtools::load_all()
-library(FADN2Footprint)
+devtools::load_all()
+#library(FADN2Footprint)
 
 ```
 
@@ -526,6 +525,7 @@ tmp_ghge_beef <- tmp_object_beef@footprints$GHGE$GHGE_meat |>
 tmp_ghge_beef_compo_long <- tmp_ghge_beef |>
   dplyr::select(
     dplyr::all_of(tmp_object_beef@traceability$id_cols),
+    FADN_code_letter, Qobs_LU,
     dplyr::matches("per_ha_pseudofarm|per_t$"),   # keep pseudofarm and per-tonne estimates
     -dplyr::matches("total_ghg|ghge_herd|feed_farm") # drop aggregated/herd-level columns
   ) |>

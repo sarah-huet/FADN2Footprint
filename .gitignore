@@ -68,4 +68,7 @@ data_raw/
 doc/
 
 # Heavy unneeded folder
-inst/ext_data/
+inst/ext_data/EF_parameters/
+inst/ext_data/EUROSTAT_prices/
+inst/ext_data/ref_fuel/
+inst/ext_data/UNFCCC_ghg_inventories/

@@ -4,7 +4,7 @@
 \alias{f_GHGE_herd}
 \title{Compute greenhouse gas emissions from livestock and their feed}
 \usage{
-f_GHGE_herd(object, overwrite = FALSE, account_pseudoherd = F, ...)
+f_GHGE_herd(object, overwrite = FALSE, account_pseudoherd = FALSE, ...)
 }
 \arguments{
 \item{object}{An S4 object of class "FADN2Footprint" prepared by the

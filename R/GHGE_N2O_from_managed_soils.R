@@ -149,7 +149,7 @@
 #' @export
 #'
 
-GHGE_n2o_msoils <- function(object,
+f_GHGE_n2o_msoils <- function(object,
                             overwrite = FALSE){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")

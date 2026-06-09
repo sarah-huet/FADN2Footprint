@@ -89,6 +89,8 @@
 load("../FADN2Footprint/data_raw/FADN_16_18.RData")
 fadn_data = FADN_16_18
 
+# TODO: recalculate averages using SYS02 variable
+
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # --- Share of rearing vs slaughter sales by livestock category ----
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -182,14 +184,30 @@ if (any(remaining_nas > 0)) {
 View(sales_shares)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# --- Gross Energy (GE) intake per animal per day by livestock category ----
+# --- Feed averages ----
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # ---- Create object ---
 object = data_4FADN2Footprint(fadn_data)
 
+## Yields per feed type ----
+
+feed_produced <- f_feed_onfarm(object, overwrite = overwrite)
+
+feed_yield <- feed_produced |>
+  dplyr::summarise(
+    yield = mean(yield, na.rm = TRUE),
+    .by = c(Sailley_feed, COUNTRY)
+  )
+
+FADN_averages = list(
+  feed_yield = feed_yield
+)
+
 # --- Estimate herd feed ---
 herd_feed <- f_herd_feed(object, overwrite = overwrite)
+
+## Gross Energy (GE) intake per animal per day by livestock category ----
 
 # --- Compute GE mean and sd at farm level by livestock category ---
 tmp_GE <- herd_feed$feed_intake$total |>
@@ -257,12 +275,15 @@ if (any(remaining_nas > 0)) {
 
 View(tmp_mean_GE)
 
+
+
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # --- Export data ----
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 FADN_averages = list(
   sales_shares = sales_shares,
+  feed_yield = feed_yield,
   GE_MJ_anim_day = tmp_mean_GE
 )
 

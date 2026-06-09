@@ -1160,7 +1160,7 @@
     # add animal live weights
     dplyr::left_join(
       livestock_weights,
-      by = c("FADN_code_letter", 'Country_ISO_3166_1_A3')) |>
+      by = c("FADN_code_letter", 'species', 'Country_ISO_3166_1_A3')) |>
     # define output
     dplyr::mutate(
       # Categorize Output

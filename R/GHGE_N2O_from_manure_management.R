@@ -129,7 +129,7 @@
 #' @export
 
 
-GHGE_n2o_manure <- function(object,
+f_GHGE_n2o_manure <- function(object,
                             overwrite = F,
                             ...){
   if (!inherits(object, "FADN2Footprint")) {

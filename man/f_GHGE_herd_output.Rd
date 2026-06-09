@@ -4,7 +4,7 @@
 \alias{f_GHGE_herd_output}
 \title{Estimate Greenhouse Gas Emissions for Herd Outputs}
 \usage{
-f_GHGE_herd_output(object, overwrite = FALSE, account_pseudoherd = F, ...)
+f_GHGE_herd_output(object, overwrite = FALSE, account_pseudoherd = FALSE, ...)
 }
 \arguments{
 \item{object}{A valid \code{FADN2Footprint} S4 object, as created by

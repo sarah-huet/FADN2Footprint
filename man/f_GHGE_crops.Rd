@@ -4,7 +4,7 @@
 \alias{f_GHGE_crops}
 \title{Estimate Greenhouse Gas Emissions for Crop Activities}
 \usage{
-f_GHGE_crops(object, overwrite = FALSE)
+f_GHGE_crops(object, overwrite = FALSE, account_pseudoherd = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}

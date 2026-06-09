@@ -51,7 +51,8 @@ devtools::load_all()
 #source("validation_FADN_data.R")
 #source("validation_FADN_data_offline.R")
 ## 
-load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
+#load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
 
 cat("FADN dataset loaded:", nrow(my_object_GHGE@farm), "farm-year observations\n")
 cat("Countries covered:", paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "), "\n")

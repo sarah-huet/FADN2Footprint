@@ -153,7 +153,7 @@
 #' @export
 
 
-GHGE_ch4_manure <- function(object,
+f_GHGE_ch4_manure <- function(object,
                             overwrite = F,
                             ...){
   if (!inherits(object, "FADN2Footprint")) {
@@ -187,36 +187,9 @@ GHGE_ch4_manure <- function(object,
   # 2. Estimate livestock intake of feed (both produced and purchased) ---------------------------------------------------------------------------------
 
   # feed
-  feed_produced = f_feed_onfarm(object, overwrite = overwrite)
-
-  feed_purchased = f_feed_offfarm(object, overwrite = overwrite)
-
-  # overall herd feed
-  herd_feed <- dplyr::bind_rows(
-    feed_produced |>
-      mutate(feed_origin = "feed_produced"),
-    feed_purchased |>
-      mutate(feed_origin = "feed_purchased")
-  ) |>
-    # add number of animals
-    dplyr::left_join(
-      herd_data |>
-        dplyr::select(dplyr::all_of(object@traceability$id_cols),FADN_code_letter,species,Qobs),
-      by = c(object@traceability$id_cols, "FADN_code_letter")
-    )
-
-  # feed intake per animal
-
-  feed_intake <- herd_feed |>
-    # estimate feed intake per animal
-    dplyr::group_by(dplyr::across(dplyr::all_of(object@traceability$id_cols)),FADN_code_letter) |>
-    dplyr::summarise(
-      DM_t_animal = sum(DM_t_livcat/Qobs),
-      GE_MJ_animal = sum(GE_MJ_livcat/Qobs),
-      # add crude protein content
-      CP_p100 = (sum(CP_t_livcat/Qobs) / DM_t_animal)*100,
-      Ash_p100 = (sum(Ash_t_livcat/Qobs) / DM_t_animal)*100,
-      .groups = "drop")
+  feed_intake = f_herd_feed(object, overwrite = overwrite)
+  feed_intake = feed_intake$feed_intake$total |>
+    dplyr::select(-dplyr::matches("Qobs"))
 
   # Number of climate regions by country ----
 
@@ -248,13 +221,11 @@ GHGE_ch4_manure <- function(object,
   # Animal waste management system (manure management systems) data have been collected for regions and countries by the FAO and average manure fractions treated by different management systems are presented in Annex 10A.2, Tables 10A.6 to 10A.9.
 
   tmp_CH4_MM <- herd_data |>
-    # filter cattle
-    #dplyr::filter(species == "cattle") |>
 
     # add feed intake data
     dplyr::inner_join(
       feed_intake,
-      by = c(object@traceability$id_cols,"FADN_code_letter")) |>
+      by = c(object@traceability$id_cols, "FADN_code_letter", 'species')) |>
 
     # add UNFCCC country specific values for:
     ## Bo = maximum methane producing capacity for manure produced by livestock category T, m3 CH4 kg-1 of VS excreted
@@ -288,40 +259,6 @@ GHGE_ch4_manure <- function(object,
           .by = c(UNFCCC_cat,Country_ISO_3166_1_A3)),
       by = dplyr::join_by(UNFCCC_cat, Country_ISO_3166_1_A3)) |>
 
-    # Digestibility
-    ## DE: digestibility of feed expressed as a fraction of gross energy (digestible energy/gross energy*100, i.e. DE%)
-    ### DE per country
-    dplyr::left_join(
-      UNFCCC_data$table3As2 |>
-        # add population size
-        dplyr::left_join(
-          UNFCCC_data$table3Bas1 |>
-            dplyr::select(Country_ISO_3166_1_A3,Animal_cat,UNFCCC_cat,species,Population__size),
-          by = join_by(Animal_cat, Country_ISO_3166_1_A3, species, UNFCCC_cat)) |>
-        dplyr::filter(!is.na(`Digestibility of feed`) & !is.na(Population__size)) |>
-        # summarize DE
-        dplyr::summarise(DE = weighted.mean(`Digestibility of feed`,Population__size),
-                         .by = c(Country_ISO_3166_1_A3,UNFCCC_cat)),
-      by = join_by(UNFCCC_cat, Country_ISO_3166_1_A3)
-    ) |>
-    ### missing DE
-    dplyr::left_join(
-      UNFCCC_data$table3As2 |>
-        # add population size
-        dplyr::left_join(
-          UNFCCC_data$table3Bas1 |>
-            dplyr::select(Country_ISO_3166_1_A3,Animal_cat,UNFCCC_cat,species,Population__size),
-          by = join_by(Animal_cat, Country_ISO_3166_1_A3, species, UNFCCC_cat)) |>
-        dplyr::filter(!is.na(`Digestibility of feed`) & !is.na(Population__size)) |>
-        # summarize DE
-        dplyr::summarise(missing_DE = weighted.mean(`Digestibility of feed`,Population__size),
-                         .by = c(UNFCCC_cat)),
-      by = join_by(UNFCCC_cat)
-    ) |>
-    dplyr::mutate(
-      DE = ifelse(is.na(DE),missing_DE,DE)
-    ) |>
-
     # estimate
     dplyr::mutate(
 
@@ -341,7 +278,7 @@ GHGE_ch4_manure <- function(object,
       # EQUATION 10.24 VOLATILE SOLID EXCRETION RATES
       ## VS = volatile solid excretion per day on a dry-organic matter basis, kg VS day-1
       ## GE = gross energy intake, MJ day-1
-      GE = GE_MJ_animal /365,
+      GE = GE_MJ_anim /365,
       ## DE% = digestibility of the feed in percent (e.g. 60%)
       ## (UE •GE) = urinary energy expressed as fraction of GE. Typically 0.04GE can be considered urinary energy excretion by most ruminants (reduce to 0.02 for ruminants fed with 85 percent or more grain in the diet or for swine). Use country-specific values where available.
       UE_GE = 0.04,

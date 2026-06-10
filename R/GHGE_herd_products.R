@@ -123,8 +123,7 @@
 #' National Greenhouse Gas Inventories}, Volume 4. IPCC.
 #'
 #' @concept footprint-ghge
-#' @importFrom dplyr select filter mutate left_join inner_join across
-#'   all_of matches starts_with ends_with summarise rename_with bind_rows
+#' @importFrom dplyr select filter mutate left_join inner_join across all_of matches starts_with ends_with summarise rename_with bind_rows
 
 
 
@@ -138,7 +137,8 @@
 # estimate BVI per ha and per t for herds
 f_GHGE_herd_output <- function(object,
                                overwrite = FALSE,
-                               account_pseudoherd = F, ...) {
+                               account_pseudoherd = FALSE,
+                               ...) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -148,306 +148,169 @@ f_GHGE_herd_output <- function(object,
   }
 
   id_cols = object@traceability$id_cols
-  # 1. Estimate herd outputs ------------------------------------------------------------------------------
 
-  ## output economic allocation ratio
-  if (account_pseudoherd == F) {
+  # 1. Estimate herd activities and outputs ------------------------------------------------------------------------------
 
-    tmp_econ_alloc = f_output_econ_alloc(object)
+  ## Distribute animals across activities ----
+  herd_activities = f_herd_activities(object, overwrite = overwrite) |>
+    # add livestock unit coefficients
+    dplyr::left_join(
+      data_extra$livestock |>
+        dplyr::select(FADN_code_letter, livestock_unit_coef),
+      by = 'FADN_code_letter'
+    ) |>
+    # pivot longer to have one row per activity
+    tidyr::pivot_longer(
+      cols = dplyr::matches("Qobs_"),
+      names_to = "activity",
+      values_to = "Qobs_activity"
+    ) |>
+    dplyr::mutate(
+      activity = gsub("Qobs_", "", activity)
+    ) |>
+    dplyr::filter(Qobs_activity > 0) |>
+    # convert to livestock units
+    dplyr::mutate(
+      Qobs_LU = Qobs * livestock_unit_coef,
+      Qobs_activity_LU = Qobs_activity * livestock_unit_coef
+    ) |>
+    # total LU per activity
+    dplyr::mutate(
+      Qobs_activity_LU_sum = sum(Qobs_activity_LU, na.rm = TRUE),
+      .by = c(dplyr::all_of(id_cols), activity)
+    )
 
-  } else {
+  ## Estimate activity area ----
+  # TODO: check how I estimate feed area => I should do it through avrg_FADN
+  ## estimated in f_GHGE_herd and following code
 
-    tmp_econ_alloc = f_output_econ_alloc(object)
-    # TODO add pseudofarm estimation
-  }
 
-  # 2. Estimate herd and feed impact ------------------------------------------------------------------------------
+  # 2. Estimate herd impact ------------------------------------------------------------------------------
 
-  herd_impact = f_GHGE_herd(object, overwrite =  overwrite)
+  GHGE_herd = f_GHGE_herd(object, overwrite =  overwrite)
 
-  # Identify CO2e columns
-  co2_cols <- names(herd_impact |>
-                      dplyr::select(dplyr::matches("kgCO2e")
-                                    & dplyr::matches("_livcat$")
-                      ))
+  GHGE_elec = f_GHGE_elec(object, overwrite = overwrite)
+
+  GHGE_fuels = f_GHGE_fuels(object, overwrite = overwrite)
 
   # 3. Allocate impact to activity outputs ------------------------------------------------------------------------------
 
-  herd_activities = f_herd_activities(object, overwrite = overwrite)
-
-  # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  ## 3.1. COW MILK ----
-  # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  ### Herd impact ----
-  cow_milk_herd_impact <- herd_activities |>
-    # farms with dairy cattle activity
-    dplyr::filter(species == "cattle" & Qobs_milk >0) |>
-    dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,
-                  dplyr::matches("Qobs")) |>
-    # add animals and feed impact
-    dplyr::left_join(
-      herd_impact |>
-        dplyr::select(-dplyr::matches("Qobs")),
-      by = c(id_cols, 'FADN_code_letter')
+  ## Combine herd activities and impacts
+  herd_act_impact <- herd_activities |>
+    dplyr:: left_join(
+      GHGE_herd |>
+        dplyr::select(dplyr::all_of(id_cols),
+                      FADN_code_letter,
+                      dplyr::matches('kgCO2e|area_ha|DM_t')),
+      by = c(id_cols, 'FADN_code_letter')) |>
+    # Allocate impact across activities for each livestock category
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::matches("kgCO2e_livcat$|area_ha|DM_t"),
+        list(act_livcat = ~ .x * (Qobs_activity / Qobs)),
+        .names = "{stringr::str_replace(.col, '_livcat$', '')}_{.fn}"
+      )
     ) |>
-    # add livestock unit coefficient
-    dplyr::left_join(
-      data_extra$livestock |>
-        dplyr::select(FADN_code_letter,livestock_unit_coef),
-      by = 'FADN_code_letter'
-    ) |>
-    # total animals and feed impact for activity
+    # sum impact per activity
     dplyr::summarise(
-      dplyr::across(dplyr::all_of(co2_cols),
-                    list(activity = ~ sum(.x * (Qobs_milk / Qobs), na.rm = T)),
-                    .names = "{str_replace(.col, '_livcat$', '')}_{.fn}"  # Remove "_livcat" and append {.fn}
+      dplyr::across(
+        dplyr::matches("_act_livcat$"),
+        list(act = ~ sum(.x, na.rm = TRUE)),
+        .names = "{stringr::str_replace(.col, '_act_livcat$', '')}_{.fn}"
       ),
-      Qobs_LU = sum(Qobs * livestock_unit_coef, na.rm = T),
-      Qobs_milk_LU = sum(Qobs_milk * livestock_unit_coef, na.rm = T),
-      feed_farm_area_ha_activity = sum(feed_farm_area_ha_livcat, na.rm = T),
-      feed_pseudofarm_area_ha_activity = sum(feed_pseudofarm_area_ha_livcat, na.rm = T),
-      .by = dplyr::all_of(id_cols)
+      .by = c(dplyr::all_of(id_cols), 'activity', 'species')
     )
 
-  ### Energy impact ----
+  ## Output economic allocation ratio
+  tmp_econ_alloc = f_output_econ_alloc(object, account_pseudoherd = account_pseudoherd)
 
-  #### Heating fuel ----
-  ## We assume that no diesel and all heating fuel is allocated to herd
-  tmp_GHGE_fuels = GHGE_fuels(object)
-  tmp_GHGE_fuels_alloc = tmp_econ_alloc$herd_outputs |> # select economic allocation
-    # select activity
-    dplyr::filter(species == "cattle" & activity == "milk") |>
-    dplyr::left_join(
-      tmp_GHGE_fuels,
-      by = id_cols
+  ## Outputs
+
+  herd_outputs <- tmp_econ_alloc$herd_outputs
+
+  ## allocate herd impact to outputs
+
+  herd_output_impact <- herd_outputs |>
+    dplyr::select(
+      dplyr::all_of(id_cols),
+      activity, FADN_code_letter, FADN_code_letter_output, output, species,
+      sales_nb, prod_t, sales_t, sales_e, output_e, TO_e, sum_sales_e_farm, sum_sales_e_activity, econ_alloc_ratio_herd, econ_alloc_ratio_herd_activity
     ) |>
-    # GHG kg CO2-eq/MJ with an economic allocation to the herd output
-    dplyr::summarise(
-      ghg_heat_fuel_kgCO2e_activity = sum(ghg_heat_fuel_kgCO2e * econ_alloc_ratio_herd, na.rm = T),
-      .by = dplyr::all_of(id_cols)
-    )
-
-  #### Electricity ----
-  tmp_GHGE_elec = GHGE_elec(object)
-  # select economic allocation across outputs
-  tmp_GHGE_elec_alloc = tmp_econ_alloc$all_outputs |>
-    # select activity
-    dplyr::filter(species == "cattle" & activity == "milk") |>
-    # add activity data
+    # add impact
     dplyr::left_join(
-      tmp_GHGE_elec,
-      by = id_cols
+      herd_act_impact ,
+      by = c(id_cols, 'activity', 'species')
     ) |>
-    # GHG kg CO2-eq/MJ with an economic allocation to the crop
-    dplyr::summarise(
-      ghg_elec_kgCO2e_activity = sum(ghg_elec_kgCO2e * econ_alloc_ratio_farm, na.rm = T),
-      .by = dplyr::all_of(id_cols)
-    )
+    # allocate
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::matches("_act$"),
+        list(output = ~ .x * econ_alloc_ratio_herd_activity),
+        .names = "{stringr::str_replace(.col, '_act$', '')}_{.fn}"
+      )
+    ) #|>
+    # add energy impact
+    ## remove energy variables
+    ## we keep variables of GHGE from energy as estimated in the energy functions (f_GHGE_elec, f_GHGE_fuels)
+    #dplyr::select(-dplyr::matches("elec|fuel|diesel")) |>
+    #dplyr::left_join(
+    #  GHGE_elec$alloc_GHGE_electricity,
+    #  by = join_by(ID, YEAR, COUNTRY, activity, FADN_code_letter, FADN_code_letter_output, output, species)
+    #) |>
+    ### plot(herd_output_impact$ghg_elec_kgCO2e_output.x,herd_output_impact$ghg_elec_kgCO2e_output.y)
+    #dplyr::left_join(
+    #  GHGE_fuels$alloc_GHGE_fuels,
+    #  by = join_by(ID, YEAR, COUNTRY, activity, FADN_code_letter, FADN_code_letter_output, output, species)
+    #)
+ ## plot(herd_output_impact$ghg_heat_fuel_kgCO2e_output.x,herd_output_impact$ghg_heat_fuel_kgCO2e_output.y)
 
-  ### Combine herd and energy impacts ----
+  # nrow(herd_output_impact) == nrow(herd_output_impact |> select(ID, COUNTRY,YEAR, FADN_code_letter, output) |> distinct())
 
-  cow_milk_impact_tot <- cow_milk_herd_impact |>
-    # add heating fuels
-    dplyr::left_join(tmp_GHGE_fuels_alloc,
-                     by = id_cols) |>
-    # add electricity
-    dplyr::left_join(tmp_GHGE_elec_alloc,
-                     by = id_cols)
 
-  ### Compute per ha and per t impact ----
+  # 4. Sum impact per output ----
 
-  co2_cols_act = names(cow_milk_impact_tot |>
-                         dplyr::select(dplyr::matches("kgCO2e")
-                                       & dplyr::matches("_activity$")
-                         ))
+  co2_cols = names(herd_output_impact)[grepl("kgCO2e_output$", names(herd_output_impact))]
 
   ### Calculate per ha and per t for each CO2e variable
-  cow_milk_impact <- cow_milk_impact_tot |>
-    # add economic allocation ratios for milk (to distribute impact among milk and cull cow meat)
-    dplyr::left_join(
-      tmp_econ_alloc$herd_outputs |>
-        dplyr::filter(species == "cattle" & activity == "milk") |>
-        dplyr::select(dplyr::all_of(id_cols),
-                      FADN_code_letter, FADN_code_letter_output, activity, output,
-                      econ_alloc_ratio_herd_activity),
-      by = c(id_cols)
-    ) |>
-    # add milk and cull cow meat production
-    dplyr::inner_join(
-      bind_rows(
-        object@output$other_herd_products |>
-          dplyr::filter(species == "cattle" & output == "milk") |>
-          dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, output, prod_t),
-        object@output$meat |>
-          dplyr::filter(species == "cattle" & output == "meat_cull_cow") |>
-          dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, output, prod_t)
+  herd_output_impact_ha_t <- herd_output_impact |>
+    # change cull cow meat as beef output
+    dplyr::mutate(output = ifelse(output == "meat_cull_cow", "meat_beef", output)) |>
+    # sum up impact per output
+    dplyr::summarise(
+      dplyr::across(
+        dplyr::all_of(c(co2_cols, 'feed_farm_area_ha_output', 'feed_pseudofarm_area_ha_output', 'prod_t')),
+        list(sum = ~sum(.x, na.rm = TRUE)),
+        .names = "{.col}"
       ),
-      by = c(id_cols, 'FADN_code_letter', 'output')
+      .by = dplyr::all_of(c(id_cols, 'activity', 'output', 'species'))
     ) |>
-    # filter out farms without milk production
-    dplyr::filter(prod_t >0) |>
-    # allocate impact to output
+    # allocate impact per ha and per ton
     dplyr::mutate(
       # per ha farm
-      dplyr::across(dplyr::all_of(co2_cols_act[-grep("feed_pseudofarm_|pseudofarm_ghge_",co2_cols_act)]),
-                    list(per_ha_farm = ~ (.x * econ_alloc_ratio_herd_activity) / dplyr::na_if(feed_farm_area_ha_activity, 0)), # considered null areas as NAs
-                    .names = "{str_replace(.col, '_activity$', '')}_{.fn}"  # Remove "_activity" and append {.fn}
+      dplyr::across(dplyr::all_of(co2_cols),
+                    list(per_ha_farm = ~ .x / feed_farm_area_ha_output),
+                    .names = "{str_replace(.col, '_output$', '')}_{.fn}"  # Remove "_output" and append {.fn}
       ),
       # per ha pseudofarm
-      dplyr::across(dplyr::all_of(co2_cols_act[-grep("feed_farm_|^farm_ghge_",co2_cols_act)]),
-                    list(per_ha_pseudofarm = ~ (.x * econ_alloc_ratio_herd_activity) / dplyr::na_if(feed_pseudofarm_area_ha_activity, 0)), # considered null areas as NAs
-                    .names = "{str_replace(.col, '_activity$', '')}_{.fn}"  # Remove "_activity" and append {.fn}
+      dplyr::across(dplyr::all_of(co2_cols),
+                    list(per_ha_pseudofarm = ~ .x / feed_pseudofarm_area_ha_output),
+                    .names = "{str_replace(.col, '_output$', '')}_{.fn}"  # Remove "_output" and append {.fn}
       ),
       # per t of milk
-      dplyr::across(dplyr::all_of(co2_cols_act),
-                    list(per_t  = ~ (.x * econ_alloc_ratio_herd_activity) / prod_t),
-                    .names = "{str_replace(.col, '_activity$', '')}_{.fn}"  # Remove "_activity" and append {.fn}
-      ),
-
-    ) |>
-    dplyr::select(-dplyr::matches("_activity$"))
-
-
-  # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  ## 3.2. BEEF ----
-  # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  ### Herd impact ----
-  cow_meat_herd_impact <- herd_activities |>
-    # farms with meat cattle activity
-    dplyr::filter(species == "cattle" & Qobs_meat >0) |>
-    dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,
-                  dplyr::matches("Qobs")) |>
-    # add animals and feed impact
-    dplyr::left_join(
-      herd_impact |>
-        dplyr::select(-dplyr::matches("Qobs")),
-      by = c(id_cols, 'FADN_code_letter')
-    ) |>
-    # add livestock unit coefficient
-    dplyr::left_join(
-      data_extra$livestock |>
-        dplyr::select(FADN_code_letter,livestock_unit_coef),
-      by = 'FADN_code_letter'
-    ) |>
-    # total animals and feed impact for activity
-    dplyr::summarise(
       dplyr::across(dplyr::all_of(co2_cols),
-                    list(activity = ~ sum(.x * (Qobs_meat / Qobs), na.rm = T)),
-                    .names = "{str_replace(.col, '_livcat$', '')}_{.fn}"  # Remove "_livcat" and append {.fn}
+                    list(per_t  = ~ .x / prod_t),
+                    .names = "{str_replace(.col, '_output$', '')}_{.fn}"  # Remove "_output" and append {.fn}
       ),
-      Qobs_LU = sum(Qobs * livestock_unit_coef, na.rm = T),
-      Qobs_meat_LU = sum(Qobs_meat * livestock_unit_coef, na.rm = T),
-      feed_farm_area_ha_activity = sum(feed_farm_area_ha_livcat, na.rm = T),
-      feed_pseudofarm_area_ha_activity = sum(feed_pseudofarm_area_ha_livcat, na.rm = T),
-      .by = dplyr::all_of(id_cols)
+
     )
 
-  ### Energy impact ----
+# 5. Per product type tables ------------------------------------------------------------------------------
 
-  #### Heating fuel ----
-  ## We assume that no diesel and all heating fuel is allocated to herd
-  tmp_GHGE_fuels = GHGE_fuels(object)
-  tmp_GHGE_fuels_alloc = tmp_econ_alloc$herd_outputs |> # select economic allocation
-    # select activity
-    dplyr::filter(species == "cattle" & activity == "meat") |>
-    dplyr::left_join(
-      tmp_GHGE_fuels,
-      by = id_cols
-    ) |>
-    # GHG kg CO2-eq/MJ with an economic allocation to the herd output
-    dplyr::summarise(
-      ghg_heat_fuel_kgCO2e_activity = sum(ghg_heat_fuel_kgCO2e * econ_alloc_ratio_herd, na.rm = T),
-      .by = dplyr::all_of(id_cols)
-    )
-
-  #### Electricity ----
-  tmp_GHGE_elec = GHGE_elec(object)
-  # select economic allocation across outputs
-  tmp_GHGE_elec_alloc = tmp_econ_alloc$all_outputs |>
-    # select activity
-    dplyr::filter(species == "cattle" & activity == "meat") |>
-    # add activity data
-    dplyr::left_join(
-      tmp_GHGE_elec,
-      by = id_cols
-    ) |>
-    # GHG kg CO2-eq/MJ with an economic allocation to the crop
-    dplyr::summarise(
-      ghg_elec_kgCO2e_activity = sum(ghg_elec_kgCO2e * econ_alloc_ratio_farm, na.rm = T),
-      .by = dplyr::all_of(id_cols)
-    )
-
-  ### Combine herd and energy impacts ----
-
-  cow_meat_impact_tot <- cow_meat_herd_impact |>
-    # add heating fuels
-    dplyr::left_join(tmp_GHGE_fuels_alloc,
-                     by = id_cols) |>
-    # add electricity
-    dplyr::left_join(tmp_GHGE_elec_alloc,
-                     by = id_cols)
-
-  ### Compute per ha and per t impact ----
-
-  co2_cols_act = names(cow_meat_impact_tot |>
-                         dplyr::select(dplyr::matches("kgCO2e")
-                                       & dplyr::matches("_activity$")
-                         ))
-
-  ### Calculate per ha and per t for each CO2e variable
-  cow_meat_impact <- cow_meat_impact_tot |>
-    # add economic allocation ratios for meat (to distribute impact among meat and cull cow meat)
-    dplyr::left_join(
-      tmp_econ_alloc$herd_outputs |>
-        dplyr::filter(species == "cattle" & activity == "meat") |>
-        dplyr::select(dplyr::all_of(id_cols),
-                      FADN_code_letter, FADN_code_letter_output, activity, output,
-                      econ_alloc_ratio_herd_activity),
-      by = c(id_cols)
-    ) |>
-    # add meat production
-    dplyr::inner_join(
-      object@output$meat |>
-        dplyr::filter(species == "cattle") |>
-        dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, output, prod_t),
-      by =  c(id_cols, 'FADN_code_letter', 'output')
-    ) |>
-    # filter out farms without meat production
-    dplyr::filter(prod_t >0) |>
-    # allocate impact to output
-    dplyr::mutate(
-      # per ha farm
-      dplyr::across(dplyr::all_of(co2_cols_act[-grep("feed_pseudofarm_|pseudofarm_ghge_",co2_cols_act)]),
-                    list(per_ha_farm = ~ (.x * econ_alloc_ratio_herd_activity) / dplyr::na_if(feed_farm_area_ha_activity, 0)), # considered null areas as NAs
-                    .names = "{str_replace(.col, '_activity$', '')}_{.fn}"  # Remove "_activity" and append {.fn}
-      ),
-      # per ha pseudofarm
-      dplyr::across(dplyr::all_of(co2_cols_act[-grep("feed_farm_|^farm_ghge_",co2_cols_act)]),
-                    list(per_ha_pseudofarm = ~ (.x * econ_alloc_ratio_herd_activity) / dplyr::na_if(feed_pseudofarm_area_ha_activity, 0)), # considered null areas as NAs
-                    .names = "{str_replace(.col, '_activity$', '')}_{.fn}"  # Remove "_activity" and append {.fn}
-      ),
-      # per t of meat
-      dplyr::across(dplyr::all_of(co2_cols_act),
-                    list(per_t  = ~ (.x * econ_alloc_ratio_herd_activity) / prod_t),
-                    .names = "{str_replace(.col, '_activity$', '')}_{.fn}"  # Remove "_activity" and append {.fn}
-      ),
-
-    ) |>
-    dplyr::select(-dplyr::matches("_activity$"))
-
-  # 4. Per product type tables ------------------------------------------------------------------------------
-
-  milk_impact <- cow_milk_impact |>
+  milk_impact <- herd_output_impact_ha_t |>
     dplyr::filter(output == "milk")
 
-  meat_impact <- cow_meat_impact |>
-    # add cull cow meat
-    dplyr::bind_rows(
-      cow_milk_impact |>
-        dplyr::filter(output == "meat_cull_cow")
-    )
+  meat_impact <- herd_output_impact_ha_t |>
+    dplyr::filter(activity == "meat")
 
 
   return(list(

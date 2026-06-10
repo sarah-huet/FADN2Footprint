@@ -106,7 +106,7 @@
 
 
 
-GHGE_ch4_enteric <- function(object,
+f_GHGE_ch4_enteric <- function(object,
                              overwrite = F,
                              ...){
   if (!inherits(object, "FADN2Footprint")) {
@@ -140,7 +140,10 @@ GHGE_ch4_enteric <- function(object,
 
   # 2. Estimate livestock intake of feed (both produced and purchased) ---------------------------------------------------------------------------------
 
-  feed_intake <- object@practices$herding$feed$feed_intake$total
+  # feed
+  feed_intake = f_herd_feed(object, overwrite = overwrite)
+  feed_intake = feed_intake$feed_intake$total |>
+    dplyr::select(-dplyr::matches("Qobs"))
 
   # 3. Calculate the total CH4 emissions from enteric fermentation in accordance with IPCC recommendations (IPCC, 2019, 2006)  ---------------------------------------------------------------------------------
 
@@ -149,17 +152,17 @@ GHGE_ch4_enteric <- function(object,
   # For swine, we use a Tier 1 method with a default emission factor (Table 10.10, IPCC 2019) as we do not have Ym nor MY
   # For poultry, IPCC do not provide any emission factor
 
-
   activity_data <- herd_data |>
     dplyr::select(dplyr::all_of(object@traceability$id_cols),
-                  FADN_code_letter,species,IPCC_mix_cat,
-                  Qobs,milk_t_anim) |>
+                  FADN_code_letter, species, IPCC_mix_cat,
+                  Qobs, milk_t_anim) |>
     # add feed intake data
     dplyr::inner_join(
       feed_intake |>
-        dplyr::select(dplyr::all_of(object@traceability$id_cols),FADN_code_letter,
-                      GE_MJ_anim,DM_t_anim,CP_p100),
+        dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter,
+                      GE_MJ_anim, DE, DM_t_anim, CP_p100),
       by = c(object@traceability$id_cols, "FADN_code_letter"))
+
   ## CATTLE ----
 
   ### Tier 2
@@ -172,21 +175,6 @@ GHGE_ch4_enteric <- function(object,
     dplyr::filter(species == "cattle") |>
     # estimate CH4 emission from enteric fermentation
     dplyr::mutate(
-
-      ## Digestibility
-
-      ## DE: digestibility of feed expressed as a fraction of gross energy (digestible energy/gross energy*100, i.e. DE%)
-      ## Tables 10A.1 & 10A.2
-      DE = dplyr::case_when(
-        #        str_detect(output,"milk") ~ "milk",
-        stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") ~ 71,
-        stringr::str_detect(IPCC_mix_cat,"bulls_breed") ~ 60,
-        stringr::str_detect(IPCC_mix_cat,"other_mature_cattle") ~ 60, # as mature males
-        stringr::str_detect(IPCC_mix_cat,"growing_cattle_postweaning") ~ 65,
-        stringr::str_detect(IPCC_mix_cat,"growing_cattle") ~ 65,
-        stringr::str_detect(IPCC_mix_cat,"calves_preweaning") ~ (95+73)/2, # average of calves on milk and calves on forage
-      ),
-      # WIP !!! we could estimate DE = qté aliment - prod lait
 
       #  Ym = methane conversion factor, per cent of gross energy in feed converted to methane (Table 10.12)
       ## In Table 10.12, the MY of dairy cows is linked to annual milk production levels and to feed quantity and quality
@@ -346,12 +334,37 @@ GHGE_ch4_enteric <- function(object,
 
     )
 
+  ## POULTRY ----
+
+  # IPCC do not estimate enteric fermentation for poultry
+  poultry_CH4_EF <-  activity_data |>
+    # filter poultry
+    dplyr::filter(species == "poultry") |>
+    # estimate CH4 emission from enteric fermentation
+    dplyr::mutate(
+
+
+      # TABLE 10.10 (UPDATED)2,3 ENTERIC FERMENTATION EMISSION FACTORS FOR TIER 1 METHOD (KG CH4 HEAD-1 YR-1)
+      # Insufficient data for calculation
+      EF = NA,
+
+      # "To estimate total emissions, the selected emission factors are multiplied by the associated animal population [...]. As described above under Tier 1, the emissions estimates should be reported in gigagrams (Gg)." (IPCC Guidelines 2019 Refinements)
+      ## CH4_enteric_kgCH4 = kg CH4 yr-1
+      CH4_enteric_kgCH4 = 0,
+
+      ### Conversion of CH4 to CO2 equivalents
+      CH4_enteric_kgCO2e_livcat = 0
+
+    )
+
+
   # Output ----
 
   CH4_enteric <- Reduce(x = list(cattle_CH4_EF,
                                  sheep_CH4_EF,
                                  goats_CH4_EF,
-                                 swine_CH4_EF),
+                                 swine_CH4_EF,
+                                 poultry_CH4_EF),
                         f = function(x,y) dplyr::bind_rows(x,y)
   ) |>
     dplyr::select(dplyr::all_of(object@traceability$id_cols),

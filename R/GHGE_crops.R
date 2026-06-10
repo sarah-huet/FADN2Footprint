@@ -35,17 +35,17 @@
 #' where:
 #' \itemize{
 #'   \item \eqn{N2O_d} = direct N2O emissions from managed soils
-#'     (kg CO2-eq, from \code{\link{GHGE_n2o_msoils}})
+#'     (kg CO2-eq, from \code{\link{f_GHGE_n2o_msoils}})
 #'   \item \eqn{N2O_{ATD}} = indirect N2O emissions from atmospheric deposition
-#'     (kg CO2-eq, from \code{\link{GHGE_n2o_msoils}})
+#'     (kg CO2-eq, from \code{\link{f_GHGE_n2o_msoils}})
 #'   \item \eqn{N2O_L} = indirect N2O emissions from leaching and run-off
-#'     (kg CO2-eq, from \code{\link{GHGE_n2o_msoils}})
+#'     (kg CO2-eq, from \code{\link{f_GHGE_n2o_msoils}})
 #'   \item \eqn{ghg_{ferti\_prod}} = upstream emissions from fertilizer production
-#'     (kg CO2-eq, from \code{\link{GHGE_ferti_prod}})
+#'     (kg CO2-eq, from \code{\link{f_GHGE_ferti_prod}})
 #'   \item \eqn{ghg_{diesel}} = off-road diesel combustion emissions allocated to
-#'     the crop (kg CO2-eq, from \code{\link{GHGE_fuels}})
+#'     the crop (kg CO2-eq, from \code{\link{f_GHGE_fuels}})
 #'   \item \eqn{ghg_{elec}} = electricity consumption emissions allocated to the
-#'     crop (kg CO2-eq, from \code{\link{GHGE_elec}})
+#'     crop (kg CO2-eq, from \code{\link{f_GHGE_elec}})
 #' }
 #'
 #' ## Intensity Indicators
@@ -119,8 +119,8 @@
 #' IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{GHGE_n2o_msoils}}, \code{\link{GHGE_ferti_prod}},
-#' \code{\link{GHGE_fuels}}, \code{\link{GHGE_elec}},
+#' \code{\link{f_GHGE_n2o_msoils}}, \code{\link{f_GHGE_ferti_prod}},
+#' \code{\link{f_GHGE_fuels}}, \code{\link{f_GHGE_elec}},
 #' \code{\link{f_GHGE_livestock}}, \code{\link{FADN2Footprint-class}}
 #'
 #' @importFrom dplyr left_join select mutate across all_of
@@ -152,18 +152,18 @@ f_GHGE_crops <- function(object,
   ### see EQUATION 11.1 (IPCC Guidelines, 2006, 2019)
   ### TODO: add mineralisation of soil organic matter in land use
   ## Indirect emissions from atmospheric deposition and leaching/run-off
-  tmp_GHGE_n2o_msoils = GHGE_n2o_msoils(object, overwrite = overwrite)
+  tmp_GHGE_n2o_msoils = f_GHGE_n2o_msoils(object, overwrite = overwrite)
 
   # Emissions from fertilizer production ----
 
-  tmp_GHGE_ferti_prod = GHGE_ferti_prod(object, overwrite = overwrite)
+  tmp_GHGE_ferti_prod = f_GHGE_ferti_prod(object, overwrite = overwrite)
 
   # Fuels ----
 
-  tmp_GHGE_fuels = GHGE_fuels(object, account_pseudoherd = account_pseudoherd)
+  tmp_GHGE_fuels = f_GHGE_fuels(object, account_pseudoherd = account_pseudoherd)
 
   # Electricity ----
-  tmp_GHGE_elec = GHGE_elec(object)
+  tmp_GHGE_elec = f_GHGE_elec(object)
 
   # Combine components ----
 
@@ -183,7 +183,7 @@ f_GHGE_crops <- function(object,
              tmp_GHGE_elec$alloc_GHGE_electricity |>
                dplyr::filter(activity == "crop") |>
                dplyr::select(dplyr::matches(id_cols), FADN_code_letter, dplyr::matches("_kgCO2e"))
-             ),
+    ),
 
     f = function(x,y) dplyr::left_join(x, y,
                                        by = c(id_cols,"FADN_code_letter"))
@@ -193,7 +193,13 @@ f_GHGE_crops <- function(object,
       FADN_code_letter,
       area_ha, prod_t,
       N2O_d_kgCO2e, N2O_ATD_kgCO2e, N2O_L_kgCO2e,
-      ghg_ferti_prod_kgCO2e, ghg_heat_fuel_kgCO2e, ghg_diesel_tillage_kgCO2e, ghg_diesel_remain_kgCO2e, ghg_elec_kgCO2e
+      ghg_ferti_prod_kgCO2e, ghg_heat_fuel_kgCO2e_output, ghg_diesel_tillage_kgCO2e_output, ghg_diesel_remain_kgCO2e_output, ghg_elec_kgCO2e_output
+    ) |>
+    dplyr::rename(
+      ghg_heat_fuel_kgCO2e = ghg_heat_fuel_kgCO2e_output,
+      ghg_diesel_tillage_kgCO2e = ghg_diesel_tillage_kgCO2e_output,
+      ghg_diesel_remain_kgCO2e = ghg_diesel_remain_kgCO2e_output,
+      ghg_elec_kgCO2e = ghg_elec_kgCO2e_output
     ) |>
     dplyr::mutate(
       total_ghg_crop_kgCO2e =  rowSums(dplyr::across(c(N2O_d_kgCO2e, N2O_ATD_kgCO2e, N2O_L_kgCO2e,

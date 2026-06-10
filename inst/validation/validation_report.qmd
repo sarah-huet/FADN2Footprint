@@ -51,8 +51,8 @@ devtools::load_all()
 #source("validation_FADN_data.R")
 #source("validation_FADN_data_offline.R")
 ## 
-load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
-#load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+#load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
+load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
 
 cat("FADN dataset loaded:", nrow(my_object_GHGE@farm), "farm-year observations\n")
 cat("Countries covered:", paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "), "\n")
@@ -526,7 +526,7 @@ tmp_ghge_beef <- tmp_object_beef@footprints$GHGE$GHGE_meat |>
 tmp_ghge_beef_compo_long <- tmp_ghge_beef |>
   dplyr::select(
     dplyr::all_of(tmp_object_beef@traceability$id_cols),
-    FADN_code_letter, Qobs_LU,
+    output, species,
     dplyr::matches("per_ha_pseudofarm|per_t$"),   # keep pseudofarm and per-tonne estimates
     -dplyr::matches("total_ghg|ghge_herd|feed_farm") # drop aggregated/herd-level columns
   ) |>

@@ -138,30 +138,115 @@ f_herd_feed <- function(object,
 
   # 3. Combine herd structure with feed ---------------------------------------------------------------------------------
 
-  herd_feed_detail <- left_join(
+  ## Feed per feed type and livestock category ----
+  herd_feed_detail0 <- left_join(
     feed_intake,
     herd_activity,
     by = c(object@traceability$id_cols, "FADN_code_letter")
   ) |>
+    # area for livestock category
+    dplyr::mutate(
+      area_ha_livcat = DM_t_livcat / yield) |>
     # DM of each crop by animal: t DM animal-1 y-1
     dplyr::mutate(
-      DM_t_anim = DM_t_livcat / Qobs,
-      GE_MJ_anim = GE_MJ_livcat / Qobs,
-      GE_kcal_anim = GE_kcal_livcat / Qobs,
-      CP_t_anim = CP_t_livcat / Qobs,
-      Ash_t_anim = Ash_t_livcat / Qobs
+      dplyr::across(
+        dplyr::matches("_livcat$"),
+        list(anim = ~ .x / Qobs),
+        .names = "{stringr::str_replace(.col, '_livcat$', '')}_{.fn}"
+      )
     )
 
+  ## Digestibility ----
+  ## DE: digestibility of feed expressed as a fraction of gross energy (digestible energy/gross energy*100, i.e. DE%)
+  # « Feed digestibility (DE): The portion of gross energy (GE) in the feed not excreted in the faeces is known as digestible energy expressed as a percentage (percent). » ([Gavrilova et al., 2019, p. 20]
+  ### DE per country
+  herd_feed_detail <- herd_feed_detail0 |>
+    # add IPCC and UNFCCC categories
+    dplyr::left_join(
+      data_extra$livestock |>
+        dplyr::select(FADN_code_letter, IPCC_mix_cat, UNFCCC_cat),
+      by = c('FADN_code_letter')
+    ) |>
+    # add country ISO codes
+    dplyr::left_join(
+      data_extra$country_names |>
+        dplyr::select(country_FADN, Country_ISO_3166_1_A3) |>
+        dplyr::distinct(),
+      by = dplyr::join_by(COUNTRY == country_FADN)
+    ) |>
+    # add DE data from UNFCCC
+    dplyr::left_join(
+      UNFCCC_data$table3As2 |>
+        # add population size
+        dplyr::left_join(
+          UNFCCC_data$table3Bas1 |>
+            dplyr::select(Country_ISO_3166_1_A3,Animal_cat,UNFCCC_cat,species,Population__size),
+          by = c('Animal_cat', 'Country_ISO_3166_1_A3', 'species', 'UNFCCC_cat')) |>
+        dplyr::filter(!is.na(`Digestibility of feed`) & !is.na(Population__size)) |>
+        # summarize DE
+        dplyr::summarise(DE = weighted.mean(`Digestibility of feed`,Population__size),
+                         .by = c(Country_ISO_3166_1_A3,UNFCCC_cat)),
+      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3')
+    ) |>
+    ### missing DE
+    dplyr::left_join(
+      UNFCCC_data$table3As2 |>
+        # add population size
+        dplyr::left_join(
+          UNFCCC_data$table3Bas1 |>
+            dplyr::select(Country_ISO_3166_1_A3,Animal_cat,UNFCCC_cat,species,Population__size),
+          by = c('Animal_cat', 'Country_ISO_3166_1_A3', 'species', 'UNFCCC_cat')) |>
+        dplyr::filter(!is.na(`Digestibility of feed`) & !is.na(Population__size)) |>
+        # summarize DE
+        dplyr::summarise(missing_DE = weighted.mean(`Digestibility of feed`, Population__size),
+                         .by = c(UNFCCC_cat)),
+      by = c('UNFCCC_cat')
+    ) |>
+    dplyr::mutate(
+      DE = ifelse(is.na(DE),missing_DE,DE)
+    ) |>
+    dplyr::select(-missing_DE) |>
+    # no value for poultry in any country in UNFCCC data
+    # we take values from IPCC 2019 Guidelines (Vol. 4, Ch. 10, Table 10.2)
+    # we consider that poultry is confined
+    dplyr::mutate(
+      DE = dplyr::case_when(
+        FADN_code_letter == 'LHENSLAY' ~ (70+80)/2,
+        FADN_code_letter == 'LPLTRBROYL' ~ (85+93)/2,
+        FADN_code_letter == 'LPLTROTH' ~ (80+93)/2,
+        .default = DE
+      )
+    )
+
+
+  ## Digestibility as estimated in IPCC Guidelines for cattle
+  #  ## DE: digestibility of feed expressed as a fraction of gross energy (digestible energy/gross energy*100, i.e. DE%)
+  #  ## Tables 10A.1 & 10A.2
+  #  DE = dplyr::case_when(
+  #    #        str_detect(output,"milk") ~ "milk",
+  #    stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") ~ 71,
+  #    stringr::str_detect(IPCC_mix_cat,"bulls_breed") ~ 60,
+  #    stringr::str_detect(IPCC_mix_cat,"other_mature_cattle") ~ 60, # as mature males
+  #    stringr::str_detect(IPCC_mix_cat,"growing_cattle_postweaning") ~ 65,
+  #    stringr::str_detect(IPCC_mix_cat,"growing_cattle") ~ 65,
+  #    stringr::str_detect(IPCC_mix_cat,"calves_preweaning") ~ (95+73)/2, # average of calves on milk and calves on forage
+  #  ),
+  #  # WIP !!! we could estimate DE = qté aliment - prod lait
+
+
+  ## Total feed per livestock category ----
   feed_intake <- herd_feed_detail |>
     # estimate total feed intake per animal
     dplyr::group_by(dplyr::across(object@traceability$id_cols),
                     FADN_code_letter,species,
                     dplyr::across(dplyr::matches("Qobs"))) |>
     dplyr::summarise(
+      DE = weighted.mean(DE, GE_MJ_anim, na.rm = TRUE),
       GE_MJ_anim = sum(GE_MJ_anim,na.rm = T),
       DM_t_anim = sum(DM_t_anim,na.rm = T),
       # add crude protein content
       CP_p100 = sum(CP_t_livcat,na.rm = T) / sum(DM_t_livcat,na.rm = T) * 100,
+      Ash_p100 = sum(Ash_t_livcat,na.rm = T) / sum(DM_t_livcat,na.rm = T) * 100,
       .groups = "drop"
     )
 
@@ -173,7 +258,7 @@ f_herd_feed <- function(object,
     'feed_intake' = list(
       'detail' = herd_feed_detail,
       'total' = feed_intake))
-    )
+  )
 
 }
 

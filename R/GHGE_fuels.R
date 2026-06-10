@@ -93,7 +93,7 @@
 #' @export
 
 
-GHGE_fuels <- function(object,
+f_GHGE_fuels <- function(object,
                        account_pseudoherd = FALSE,
                        ...){
   if (!inherits(object, "FADN2Footprint")) {
@@ -179,18 +179,10 @@ GHGE_fuels <- function(object,
   # Allocate emissions ----
 
   # We use an economic allocation to allocate farm level emissions to outputs
-  #For diesel specifically, we first allocate emissions related to ploughing to crops than economically allocate the remaining emissions to outputs
+  #For diesel specifically, we first allocate emissions related to ploughing to crops than economically allocate the remaining emissions to all outputs
 
   ## Output economic allocation ratio
-  if (account_pseudoherd == F) {
-
-    tmp_econ_alloc = f_output_econ_alloc(object)
-
-  } else {
-
-    tmp_econ_alloc = f_output_econ_alloc(object)
-    # TODO: add pseudofarm estimation
-  }
+  tmp_econ_alloc = f_output_econ_alloc(object, account_pseudoherd = account_pseudoherd)
 
   tmp_GHGE_fuels_alloc = tmp_econ_alloc$all_outputs |>
     dplyr::filter(econ_alloc_ratio_farm >0) |>
@@ -207,12 +199,12 @@ GHGE_fuels <- function(object,
     # GHG kg CO2-eq/MJ with an economic allocation to output
     dplyr::summarise(
 
-      ghg_diesel_tillage_kgCO2e = sum(farm_ghg_diesel_kgCO2e * (diesel_tillage_l / diesel_l), na.rm = TRUE),
-      ghg_diesel_remain_kgCO2e = sum(farm_ghg_diesel_remain_kgCO2e * econ_alloc_ratio_farm, na.rm = TRUE),
+      ghg_diesel_tillage_kgCO2e_output = sum(farm_ghg_diesel_kgCO2e * (diesel_tillage_l / diesel_l), na.rm = TRUE),
+      ghg_diesel_remain_kgCO2e_output = sum(farm_ghg_diesel_remain_kgCO2e * econ_alloc_ratio_farm, na.rm = TRUE),
 
-      ghg_heat_fuel_kgCO2e = sum(farm_ghg_heat_fuel_kgCO2e * econ_alloc_ratio_farm, na.rm = TRUE),
+      ghg_heat_fuel_kgCO2e_output = sum(farm_ghg_heat_fuel_kgCO2e * econ_alloc_ratio_farm, na.rm = TRUE),
 
-      .by = c(dplyr::all_of(id_cols), activity, output, FADN_code_letter, FADN_code_letter_output)
+      .by = c(dplyr::all_of(id_cols), activity, species, output, FADN_code_letter, FADN_code_letter_output)
     )
 
   return(list(total_GHGE_fuels = GHGE_fuels,

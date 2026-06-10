@@ -283,11 +283,11 @@ f_GHGE_herd <- function(object,
     # convert to livestock units
     dplyr::mutate(
       Qobs_LU = Qobs * livestock_unit_coef,
-      Qobs_activity_LU = Qobs_activity * livestock_unit_coef
+      Qobs_LU_act = Qobs_activity * livestock_unit_coef
     ) |>
     # total LU per activity
     dplyr::mutate(
-      Qobs_activity_LU_sum = sum(Qobs_activity_LU, na.rm = TRUE),
+      Qobs_LU_act_sum = sum(Qobs_LU_act, na.rm = TRUE),
       .by = c(dplyr::all_of(id_cols), activity)
     )
 
@@ -305,9 +305,9 @@ f_GHGE_herd <- function(object,
     ) |>
     # allocate energy impact to livestock category in each activity
     dplyr::mutate(
-      ghg_diesel_remain_kgCO2e_act_livcat = ghg_diesel_remain_kgCO2e_activity * (Qobs_activity_LU / Qobs_activity_LU_sum),
-      ghg_heat_fuel_kgCO2e_act_livcat = ghg_heat_fuel_kgCO2e_activity * (Qobs_activity_LU / Qobs_activity_LU_sum),
-      ghg_elec_kgCO2e_act_livcat = ghg_elec_kgCO2e_activity * (Qobs_activity_LU / Qobs_activity_LU_sum)
+      ghg_diesel_remain_kgCO2e_act_livcat = ghg_diesel_remain_kgCO2e_activity * (Qobs_LU_act / Qobs_LU_act_sum),
+      ghg_heat_fuel_kgCO2e_act_livcat = ghg_heat_fuel_kgCO2e_activity * (Qobs_LU_act / Qobs_LU_act_sum),
+      ghg_elec_kgCO2e_act_livcat = ghg_elec_kgCO2e_activity * (Qobs_LU_act / Qobs_LU_act_sum)
     ) |>
     # sum emissions per livestock category, regardless activity
     dplyr::summarise(

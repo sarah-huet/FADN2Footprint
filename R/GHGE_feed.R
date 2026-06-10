@@ -329,7 +329,7 @@ f_GHGE_feed <- function(object,
   ) |>
     dplyr::select(dplyr::all_of(object@traceability$id_cols),
                   FADN_code_letter,
-                  dplyr::matches("Qobs"),
+                  Qobs,
                   Sailley_feed,FADN_code_feed,feed_origin,
                   DM_t_livcat,area_ha_livcat,
                   dplyr::matches("per_ha$|per_t$"))

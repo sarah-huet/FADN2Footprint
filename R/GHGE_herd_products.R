@@ -287,12 +287,12 @@ f_GHGE_herd_output <- function(object,
     # allocate impact per ha and per ton
     dplyr::mutate(
       # per ha farm
-      dplyr::across(dplyr::all_of(co2_cols),
+      dplyr::across(dplyr::all_of(co2_cols[-grep("feed_pseudofarm_|^pseudofarm_ghge_",co2_cols)]),
                     list(per_ha_farm = ~ .x / feed_farm_area_ha_output),
                     .names = "{str_replace(.col, '_output$', '')}_{.fn}"  # Remove "_output" and append {.fn}
       ),
       # per ha pseudofarm
-      dplyr::across(dplyr::all_of(co2_cols),
+      dplyr::across(dplyr::all_of(co2_cols[-grep("feed_farm_|^farm_ghge_",co2_cols)]),
                     list(per_ha_pseudofarm = ~ .x / feed_pseudofarm_area_ha_output),
                     .names = "{str_replace(.col, '_output$', '')}_{.fn}"  # Remove "_output" and append {.fn}
       ),

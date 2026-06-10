@@ -60,6 +60,34 @@ cat("Years covered:", paste(sort(unique(my_object_GHGE@farm$YEAR)), collapse = "
 
 ```
 
+```{r check_LU}
+
+object = my_object_GHGE
+
+id_cols = object@traceability$id_cols
+
+
+tmp_farm_LU = object@farm |>
+      dplyr::select(dplyr::all_of(id_cols),SE080)
+
+tmp_herd_LU = object@herd |>
+  dplyr::summarise(
+    tot_LU = sum(ALU, na.rm = T),
+    .by =  dplyr::all_of(id_cols)
+  )
+
+tmp_LU = dplyr::left_join(
+  tmp_farm_LU,
+  tmp_herd_LU,
+  by = id_cols
+)
+
+plot(tmp_LU$SE080, tmp_LU$tot_LU)
+
+```
+
+
+
 # Literature references
 
 ```{r load_literature, message=FALSE}
@@ -229,7 +257,7 @@ lit_table <- dplyr::bind_rows(
         exploitation_otex == 1500 ~ "Field crop farms",
         exploitation_otex == 4500 ~ "Dairy farms",
         exploitation_otex == 4600 ~ "Beef farms" 
-        ),
+      ),
       area = "France", 
       lit_midpoint = mean,
       lit_min = pmax(mean - sd, 0, na.rm = T),
@@ -407,6 +435,8 @@ source ?
 
 ## GHGE
 
+### GHGE crops
+
 ```{r GHGE_output_wheat}
 
 (tmp_object_crop@footprints$GHGE$GHGE_crops)
@@ -457,12 +487,15 @@ tmp_ghge_wheat_compo <- tmp_ghge_wheat_compo_long |>
 
 ```
 
+### GHGE milk
+
 ```{r GHGE_output_milk}
 
 (tmp_object_milk@footprints$GHGE$GHGE_milk)
 
 # Retrieve GHGE estimates for milk, filtering to cow milk output only
-tmp_ghge_milk <- tmp_object_milk@footprints$GHGE$GHGE_milk
+tmp_ghge_milk <- tmp_object_milk@footprints$GHGE$GHGE_milk |>
+  dplyr::filter(species == "cattle")
 
 # Reshape GHGE milk data to long format, keeping only per-ha (pseudofarm) and per-t columns
 tmp_ghge_milk_compo_long <- tmp_ghge_milk |>
@@ -510,28 +543,28 @@ tmp_ghge_milk_compo <- tmp_ghge_milk_compo_long |>
 
 ```
 
-
+### GHGE beef
 ```{r GHGE_output_beef}
 
 # select meat farms in France
-tmp_object_beef = m_prune_farms(my_object_GHGE, TF8 == 1, COUNTRY == "FRA")
+tmp_object_beef = m_prune_farms(my_object_GHGE, TF14 == "49", COUNTRY == "FRA")
 
 (tmp_object_beef@footprints$GHGE$GHGE_meat)
 
 # Retrieve GHGE estimates for meat, filtering to cow meat output only
 tmp_ghge_beef <- tmp_object_beef@footprints$GHGE$GHGE_meat |>
-  dplyr::filter()
+  dplyr::filter(species == "cattle")
 
-# Reshape GHGE meat data to long format, keeping only per-ha (pseudofarm) and per-t columns
+# Reshape GHGE meat data to long format, keeping only per-ha (farm) and per-t columns
 tmp_ghge_beef_compo_long <- tmp_ghge_beef |>
   dplyr::select(
     dplyr::all_of(tmp_object_beef@traceability$id_cols),
     output, species,
-    dplyr::matches("per_ha_pseudofarm|per_t$"),   # keep pseudofarm and per-tonne estimates
+    dplyr::matches("per_ha_farm|per_t$"),   # keep pseudofarm and per-tonne estimates
     -dplyr::matches("total_ghg|ghge_herd|feed_farm") # drop aggregated/herd-level columns
   ) |>
   tidyr::pivot_longer(
-    cols = dplyr::matches("per_ha_pseudofarm|per_t$"),
+    cols = dplyr::matches("per_ha_farm|per_t$"),
     names_to = "component"
   ) |>
   dplyr::mutate(
@@ -549,12 +582,12 @@ tmp_ghge_beef_compo_long <- tmp_ghge_beef |>
     product = "cattle_meat",
     # Build a composite indicator label encoding both unit type and GHGE category
     indicator = dplyr::case_when(
-      grepl("per_ha_pseudofarm$", component) ~ paste("GHGE_kgCO2e_ha", Harmonized_Category, sep = "__"),
+      grepl("per_ha_farm$", component) ~ paste("GHGE_kgCO2e_ha", Harmonized_Category, sep = "__"),
       grepl("per_t$",            component) ~ paste("GHGE_kgCO2e_t",  Harmonized_Category, sep = "__")
     ),
     # Assign unit label based on whether the estimate is per ha or per tonne of product
     unit = dplyr::case_when(
-      grepl("per_ha_pseudofarm$", component) ~ "kgCO2e_per_ha",
+      grepl("per_ha_farm$", component) ~ "kgCO2e_per_ha",
       grepl("per_t$",            component) ~ "kgCO2e_per_t"
     )
   )
@@ -569,13 +602,13 @@ tmp_ghge_beef_compo <- tmp_ghge_beef_compo_long |>
 
 ```
 
-
+### GHGE farm
 
 ```{r GHGE_output_farms}
 
 (my_object_GHGE@footprints$GHGE$GHGE_farm)
 
-# Crop farms
+# Crop farms ----
 tmp_ghge_crop_farm <- tmp_object_crop@footprints$GHGE$GHGE_farm |>
   dplyr::select(
     dplyr::all_of(tmp_object_crop@traceability$id_cols),
@@ -609,7 +642,7 @@ tmp_ghge_crop_farm <- tmp_object_crop@footprints$GHGE$GHGE_farm |>
     indicator, unit, product, estimate
   )
 
-# Dairy farms
+# Dairy farms ----
 tmp_ghge_dairy_farm <- tmp_object_milk@footprints$GHGE$GHGE_farm |>
   dplyr::select(
     dplyr::all_of(tmp_object_milk@traceability$id_cols),
@@ -643,7 +676,7 @@ tmp_ghge_dairy_farm <- tmp_object_milk@footprints$GHGE$GHGE_farm |>
     indicator, unit, product, estimate
   )
 
-# Beef farms
+# Beef farms ----
 tmp_ghge_beef_farm <- tmp_object_beef@footprints$GHGE$GHGE_farm |>
   dplyr::select(
     dplyr::all_of(tmp_object_beef@traceability$id_cols),
@@ -726,6 +759,7 @@ F2F_output_ghge_compo <- dplyr::bind_rows(
   
   # Wheat: average each GHGE component across farms
   tmp_ghge_wheat_compo |>
+    dplyr::filter(is.finite(value)) |>
     dplyr::summarise(
       estimate = mean(value, na.rm = TRUE),
       .by = c(product, indicator, unit)
@@ -733,6 +767,7 @@ F2F_output_ghge_compo <- dplyr::bind_rows(
   
   # Milk: average each GHGE component across farms
   tmp_ghge_milk_compo |>
+    dplyr::filter(is.finite(value)) |>
     dplyr::summarise(
       estimate = mean(value, na.rm = TRUE),
       .by = c(product, indicator, unit)
@@ -740,6 +775,7 @@ F2F_output_ghge_compo <- dplyr::bind_rows(
   
   # Cattle Meat: average each GHGE component across farms
   tmp_ghge_beef_compo |>
+    dplyr::filter(is.finite(value)) |>
     dplyr::summarise(
       estimate = mean(value, na.rm = TRUE),
       .by = c(product, indicator, unit)

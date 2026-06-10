@@ -95,6 +95,8 @@ f_GHGE_elec <- function(object,
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
+  id_cols = object@traceability$id_cols
+
   # Emission factor ----
   EF_elec <- EF_electricity # EF for CO2 expressed in tCO2/MWh = kg CO2 / kWh
 

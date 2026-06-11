@@ -149,6 +149,21 @@ To build a `FADN2Footprint` object you need:
 -   Optionally: A landscape_metrics data.frame (e.g., hedge density,
     mean field size, ground cover), which is stored and can be used
     later to compute landscape-related indicators and footprints.
+    
+```{r load_data}
+# These are illustrative example objects.
+# Replace them with your real data.
+data("mock_data", package = "FADN2Footprint")
+data("dict_FADN", package = "FADN2Footprint")
+
+```
+
+```{r excerpt_mock_data}
+
+head(mock_data$fadn_fict) |> gt()
+
+```
+
 
 ## Build from a FADN dataset already matching the internal dictionary
 
@@ -160,10 +175,6 @@ utilisées par le package.
 
 ```{r dict_built_in}
 
-# These are illustrative example objects.
-# Replace them with your real data.
-data("mock_data", package = "FADN2Footprint")
-data("dict_FADN", package = "FADN2Footprint")
 
 my_object <- FADN2Footprint::data_4FADN2Footprint(
   df       = mock_data$fadn_fict,

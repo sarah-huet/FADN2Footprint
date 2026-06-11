@@ -25,7 +25,6 @@ library(tidyr)
 library(readxl)
 library(gt)
 
-
 # Install package
 require("pak")
 pak::pak("sarah-huet/FADN2Footprint")

@@ -204,19 +204,35 @@ f_herd_activities <- function(object,
   herd_sheep <- object@herd |>
     dplyr::filter(species == "sheep") |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs"))
+    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    # restrain to activity
+    dplyr::mutate(
+      # TODO: check activity for sheep
+      Qobs_milk = Qobs
+      )
 
   ## GOATS ----
   herd_goats <- object@herd |>
     dplyr::filter(species == "goats") |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs"))
+    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    # restrain to activity
+    dplyr::mutate(
+      # TODO: check activity for goats
+      Qobs_milk = Qobs
+    )
 
   ## HORSES ----
   herd_horse <- object@herd |>
     dplyr::filter(species == "horse") |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs"))
+    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    # restrain to activity
+    dplyr::mutate(
+      # TODO: check activity for horse
+      Qobs_meat = Qobs
+    )
+
 
   # combine tables ----
   herd <- Reduce(

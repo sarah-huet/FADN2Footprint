@@ -103,8 +103,7 @@
 #'
 #' @export
 #' @concept footprint-ghge
-#' @importFrom dplyr select summarise across where matches mutate coalesce
-#'   left_join all_of bind_rows
+#' @importFrom dplyr select summarise across where matches mutate coalesce left_join all_of bind_rows
 #' @importFrom stringr str_replace
 
 
@@ -141,7 +140,7 @@ f_GHGE_farm <- function(object,
         list(sum = ~ sum(.x, na.rm = TRUE)),
         .names = "crop_{.col}"
       ),
-      .by = id_cols
+      .by = dplyr::all_of(id_cols)
     )
 
   # 2. Estimate herd and purchased feed impact ------------------------------------------------------------------------------
@@ -156,55 +155,14 @@ f_GHGE_farm <- function(object,
         list(sum = ~ sum(.x, na.rm = TRUE)),
         .names = "herd_{str_replace(.col, '_livcat$', '')}"
       ),
-      .by = id_cols
+      .by = dplyr::all_of(id_cols)
     ) |>
     dplyr::mutate(
       # Purchased feed GHGE = difference between pseudo-farm and on-farm feed emissions
       herd_purchased_feed_ghge_kgCO2e = dplyr::coalesce(herd_feed_pseudofarm_total_ghg_crop_kgCO2e,0) - dplyr::coalesce(herd_feed_farm_total_ghg_crop_kgCO2e,0)
     )
 
-  # 3. Estimate herd energy use -------------------------------------------
-
-  tmp_econ_alloc = f_output_econ_alloc(object)
-
-  ## Heating fuel ----
-  ## heating fuel is allocated across all outputs
-  tmp_GHGE_fuels = GHGE_fuels(object)
-  # select economic allocation across outputs
-  tmp_GHGE_fuels_alloc = tmp_econ_alloc$all_outputs |>
-    # remove crops
-    dplyr::filter(activity != "crop") |>
-    # add activity data
-    dplyr::left_join(
-      tmp_GHGE_fuels,
-      by = id_cols
-    ) |>
-    # GHG kg CO2-eq/MJ with an economic allocation to the crop
-    dplyr::summarise(
-      herd_ghg_heat_fuel_kgCO2e = sum(ghg_heat_fuel_kgCO2e * econ_alloc_ratio_farm, na.rm = T),
-      .by = id_cols
-    )
-
-  ## Electricity ----
-  tmp_GHGE_elec = GHGE_elec(object)
-  # select economic allocation across outputs
-  tmp_GHGE_elec_alloc = tmp_econ_alloc$all_outputs |>
-    # remove crops
-    dplyr::filter(activity != "crop") |>
-    # add activity data
-    dplyr::left_join(
-      tmp_GHGE_elec,
-      by = id_cols
-    ) |>
-    # GHG kg CO2-eq/MJ with an economic allocation to the crop
-    dplyr::summarise(
-      herd_ghg_elec_kgCO2e = sum(ghg_elec_kgCO2e * econ_alloc_ratio_farm, na.rm = T),
-      .by = id_cols
-    )
-
-
-
-  # 4. Sum up GHGE at the farm scale ------------------------------------------------------------------------------
+  # 3.Sum up GHGE at the farm scale ------------------------------------------------------------------------------
 
 
   # TODO: check calculation
@@ -214,9 +172,8 @@ f_GHGE_farm <- function(object,
 
   farm_GHGE <- Reduce(
     x = list(crop_GHGE_sum,
-             herd_GHGE_sum,
-             tmp_GHGE_fuels_alloc,
-             tmp_GHGE_elec_alloc),
+             herd_GHGE_sum
+             ),
     f = function(x,y) dplyr::full_join(x, y,
                                        by = id_cols)
   ) |>
@@ -232,8 +189,10 @@ f_GHGE_farm <- function(object,
       farm_total_ghge_kgCO2e = (crop_N2O_d_kgCO2e
                                 + crop_N2O_ATD_kgCO2e
                                 + crop_N2O_L_kgCO2e
-                                + crop_ghg_diesel_crop_kgCO2e
-                                + crop_ghg_elec_crop_kgCO2e
+                                + crop_ghg_diesel_tillage_kgCO2e
+                                + crop_ghg_diesel_remain_kgCO2e
+                                + crop_ghg_heat_fuel_kgCO2e
+                                + crop_ghg_elec_kgCO2e
 
                                 + herd_CH4_enteric_kgCO2e
                                 + herd_CH4_MM_kgCO2e
@@ -241,6 +200,7 @@ f_GHGE_farm <- function(object,
                                 + herd_N2O_G_mm_kgCO2e
                                 + herd_N2O_L_mm_kgCO2e
                                 # livestock feed produced on farm is already accounted for in the crop footprint
+                                + herd_ghg_diesel_remain_kgCO2e
                                 + herd_ghg_heat_fuel_kgCO2e
                                 + herd_ghg_elec_kgCO2e
       ),
@@ -252,8 +212,11 @@ f_GHGE_farm <- function(object,
 
       # --- By gas ---
       # CO2: diesel (scope 1) + electricity (scope 2)
-      farm_total_CO2_kgCO2e = (crop_ghg_diesel_crop_kgCO2e
-                               + crop_ghg_elec_crop_kgCO2e
+      farm_total_CO2_kgCO2e = (crop_ghg_diesel_tillage_kgCO2e
+                               + crop_ghg_diesel_remain_kgCO2e
+                               + crop_ghg_heat_fuel_kgCO2e
+                               + crop_ghg_elec_kgCO2e
+                               + herd_ghg_diesel_remain_kgCO2e
                                + herd_ghg_heat_fuel_kgCO2e
                                + herd_ghg_elec_kgCO2e
       ),
@@ -262,8 +225,10 @@ f_GHGE_farm <- function(object,
                                      + crop_ghg_ferti_prod_kgCO2e
                                      # share of purchased feed C02
                                      + herd_feed_pseudofarm_ghg_ferti_prod_kgCO2e - herd_feed_farm_ghg_ferti_prod_kgCO2e
-                                     + herd_feed_pseudofarm_ghg_diesel_crop_kgCO2e - herd_feed_farm_ghg_diesel_crop_kgCO2e
-                                     + herd_feed_pseudofarm_ghg_elec_crop_kgCO2e - herd_feed_farm_ghg_elec_crop_kgCO2e
+                                     + herd_feed_pseudofarm_ghg_diesel_tillage_kgCO2e - herd_feed_farm_ghg_diesel_tillage_kgCO2e
+                                     + herd_feed_pseudofarm_ghg_diesel_remain_kgCO2e - herd_feed_farm_ghg_diesel_remain_kgCO2e
+                                     + herd_feed_pseudofarm_ghg_heat_fuel_kgCO2e - herd_feed_farm_ghg_heat_fuel_kgCO2e
+                                     + herd_feed_pseudofarm_ghg_elec_kgCO2e - herd_feed_farm_ghg_elec_kgCO2e
       ),
 
       # N2O: managed soils (scope 1) + manure management (scope 1)

@@ -273,8 +273,7 @@
 #' \code{\link{.parse_farm_data}}, \code{\link{.parse_livestock_data}},
 #' \code{\link{data_4FADN2Footprint}}, \code{\link{data_extra}}
 #'
-#' @importFrom dplyr select filter mutate rename left_join summarise coalesce
-#'   pick where any_of all_of matches join_by
+#' @importFrom dplyr select filter mutate rename left_join summarise coalesce pick where any_of all_of matches join_by
 #' @importFrom tidyr pivot_longer pivot_wider extract
 #'
 #' @export
@@ -550,8 +549,7 @@
 #' \code{\link{.parse_farm_data}}, \code{\link{.parse_crop_data}},
 #' \code{\link{data_4FADN2Footprint}}, \code{\link{data_extra}}
 #'
-#' @importFrom dplyr select filter mutate left_join coalesce pull all_of
-#'   matches case_when
+#' @importFrom dplyr select filter mutate left_join coalesce pull all_of matches case_when
 #' @importFrom tidyr pivot_longer pivot_wider extract
 #'
 #' @export
@@ -776,8 +774,7 @@
 #' \code{\link{.parse_herd_data}}, \code{\link{data_4FADN2Footprint}},
 #' \code{\link{data_extra}}
 #'
-#' @importFrom dplyr select filter mutate left_join coalesce starts_with
-#'   any_of all_of pick where summarise
+#' @importFrom dplyr select filter mutate left_join coalesce starts_with any_of all_of pick where summarise
 #'
 #' @export
 #' @concept data-preparation
@@ -803,11 +800,11 @@
       diesel_v  = "IFULS_V",   # Motor fuels and lubricants Value	in EUR
       heating_fuels_v = "IHFULS_V", # Heating fuels Value	in EUR
       elec_V    = "IELE_V",  # Farming overheads. Electricity. Value	in EUR
-    # Optional Quantities (may or may not exist in raw data)
-    dplyr::any_of(c(
-      diesel_l = "IFULS_Q",
-      heating_fuels_l = "IHFULS_Q"
-    ))
+      # Optional Quantities (may or may not exist in raw data)
+      dplyr::any_of(c(
+        diesel_l = "IFULS_Q",
+        heating_fuels_l = "IHFULS_Q"
+      ))
     ) |>
     ## create variable if they do not exist
     dplyr::mutate(
@@ -1003,8 +1000,7 @@
 #' \code{\link{.parse_farm_data}}, \code{\link{new_FADN2Footprint}},
 #' \code{\link{data_extra}}
 #'
-#' @importFrom dplyr select filter mutate left_join rename coalesce
-#'   case_when if_else all_of matches starts_with pull
+#' @importFrom dplyr select filter mutate left_join rename coalesce case_when if_else all_of matches starts_with pull
 #' @importFrom tidyr pivot_longer pivot_wider extract separate_longer_delim
 #'
 #' @export
@@ -1129,12 +1125,43 @@
   # Default animal weights
   #UNFCCC_data$table3As2
   livestock_weights <- data_extra$livestock |>
-    dplyr::select(FADN_code_letter, live_weight_kg) |>
-    dplyr::filter(!is.na(live_weight_kg))
+    dplyr::filter(!is.na(UNFCCC_cat)) |>
+    dplyr::select(FADN_code_letter, UNFCCC_cat) |>
+    # add UNFCCC data
+    dplyr::left_join(
+      UNFCCC_data$table3As2 |>
+        dplyr::filter(!is.na(UNFCCC_cat)) |>
+        dplyr::summarise(
+          live_weight_kg = mean(Weight, na.rm = TRUE),
+          .by = c(species,UNFCCC_cat,Country_ISO_3166_1_A3)
+        ),
+      by = 'UNFCCC_cat',
+      relationship = "many-to-many"
+    ) |>
+    # estimate average per livestock category
+    dplyr::mutate(
+      mean_live_weight_kg = mean(live_weight_kg, na.rm = TRUE),
+      .by = FADN_code_letter
+    ) |>
+    # replace missing values by average
+    dplyr::mutate(
+      live_weight_kg = dplyr::coalesce(live_weight_kg, mean_live_weight_kg)
+    )
 
   # Animals sold for slaughter
   output_herd_meat <- herd_data |>
-    dplyr::left_join(livestock_weights, by = "FADN_code_letter") |>
+    # add country iso names
+    dplyr::left_join(
+      data_extra$country_names |>
+        select(COUNTRY = country_FADN,
+               Country_ISO_3166_1_A3),
+      by = 'COUNTRY'
+    ) |>
+    # add animal live weights
+    dplyr::left_join(
+      livestock_weights,
+      by = c("FADN_code_letter", 'species', 'Country_ISO_3166_1_A3')) |>
+    # define output
     dplyr::mutate(
       # Categorize Output
       output = dplyr::case_when(

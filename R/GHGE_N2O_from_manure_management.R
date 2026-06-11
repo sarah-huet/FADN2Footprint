@@ -122,15 +122,14 @@
 #' \code{\link{GHGE_n2o_msoils}}, \code{\link{UNFCCC_data}},
 #' \code{\link{GWP}}, \code{\link{FADN2Footprint-class}}
 #'
-#' @importFrom dplyr select left_join filter mutate summarise group_by across
-#'   all_of case_when join_by distinct summarise
+#' @importFrom dplyr select left_join filter mutate summarise group_by across all_of case_when join_by distinct summarise
 #' @importFrom tidyr separate_longer_delim
 #'
 #' @concept footprint-ghge
 #' @export
 
 
-GHGE_n2o_manure <- function(object,
+f_GHGE_n2o_manure <- function(object,
                             overwrite = F,
                             ...){
   if (!inherits(object, "FADN2Footprint")) {

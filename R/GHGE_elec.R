@@ -81,17 +81,21 @@
 #' \code{\link{GHGE_fuels}}, \code{\link{f_GHGE_crops}},
 #' \code{\link{f_GHGE_livestock}}, \code{\link{FADN2Footprint-class}}
 #'
-#' @importFrom dplyr select left_join mutate across starts_with if_else
-#'   join_by distinct
+#' @importFrom dplyr select left_join mutate across starts_with if_else join_by distinct
 #'
 #' @concept footprint-ghge
 #' @export
 
 
-GHGE_elec <- function(object){
+f_GHGE_elec <- function(object,
+                      account_pseudoherd = FALSE,
+                      ...){
+
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
+
+  id_cols = object@traceability$id_cols
 
   # Emission factor ----
   EF_elec <- EF_electricity # EF for CO2 expressed in tCO2/MWh = kg CO2 / kWh
@@ -125,14 +129,37 @@ GHGE_elec <- function(object){
       elec_kWh = (elec_V/ euro_kWh)
     )
 
-  # Estimate emissions ----
+  # Estimate total emissions ----
 
   GHGE_elec <- data_elec |>
     dplyr::left_join(EF_elec, by = c('Country_ISO_3166_1_A3','YEAR')) |>
     # kg CO2 with an economic allocation to the crop
-    dplyr::mutate(ghg_elec_kgCO2e = elec_kWh * EF_elec)
+    dplyr::mutate(farm_ghg_elec_kgCO2e = elec_kWh * EF_elec)
 
-  return(GHGE_elec)
+  # Allocate emissions ----
+
+  # We use an economic allocation to allocate farm level emissions to outputs
+
+  ## Output economic allocation ratio
+  tmp_econ_alloc = f_output_econ_alloc(object, account_pseudoherd = account_pseudoherd)
+
+  ## Allocate
+  ### select economic allocation across outputs
+  tmp_GHGE_elec_alloc = tmp_econ_alloc$all_outputs |>
+    # add GHGE
+    dplyr::left_join(
+      GHGE_elec,
+      by = id_cols
+    ) |>
+    # GHG kg CO2-eq/MJ with an economic allocation to output
+    dplyr::summarise(
+      ghg_elec_kgCO2e_output = sum(farm_ghg_elec_kgCO2e * econ_alloc_ratio_farm, na.rm = TRUE),
+      .by = c(dplyr::all_of(id_cols), activity, species, output, FADN_code_letter, FADN_code_letter_output)
+    )
+
+
+  return(list(total_GHGE_electricity = GHGE_elec,
+              alloc_GHGE_electricity = tmp_GHGE_elec_alloc))
 
 
 }

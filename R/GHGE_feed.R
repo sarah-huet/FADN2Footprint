@@ -135,8 +135,7 @@
 #' \code{\link{f_feed_onfarm}}, \code{\link{f_feed_offfarm}},
 #' \code{\link{h_average_practices}}, \code{\link{FADN2Footprint-class}}
 #'
-#' @importFrom dplyr left_join filter select mutate across all_of bind_rows
-#'   summarise distinct anti_join matches case_when
+#' @importFrom dplyr left_join filter select mutate across all_of bind_rows summarise distinct anti_join matches case_when
 #' @importFrom tidyr separate_longer_delim
 #'
 #' @concept footprint-ghge
@@ -330,7 +329,7 @@ f_GHGE_feed <- function(object,
   ) |>
     dplyr::select(dplyr::all_of(object@traceability$id_cols),
                   FADN_code_letter,
-                  dplyr::matches("Qobs"),
+                  Qobs,
                   Sailley_feed,FADN_code_feed,feed_origin,
                   DM_t_livcat,area_ha_livcat,
                   dplyr::matches("per_ha$|per_t$"))

@@ -127,8 +127,7 @@
 #' }
 #'
 #' @export
-#' @importFrom dplyr mutate case_when if_else bind_rows summarise left_join
-#'   select rename coalesce all_of
+#' @importFrom dplyr mutate case_when if_else bind_rows summarise left_join select rename coalesce all_of
 #' @importFrom stringr str_detect
 
 #'
@@ -138,7 +137,9 @@
 #' @importFrom stringr str_detect
 
 
-f_output_econ_alloc <- function(object) {
+f_output_econ_alloc <- function(object,
+                                account_pseudoherd = FALSE,
+                                ...) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -149,6 +150,8 @@ f_output_econ_alloc <- function(object) {
   ##    a. Across ALL outputs (farm level)
   ##    b. Across CROP outputs only
   ##    c. Across HERD outputs only
+
+  # TODO: account for pseudoherd output
 
   id_cols <- object@traceability$id_cols
 
@@ -162,13 +165,12 @@ f_output_econ_alloc <- function(object) {
   )) |>
     dplyr::mutate(
       activity = dplyr::case_when(
-        str_detect(output, "milk")       ~ "milk",
         FADN_code_letter == "LCOWDAIR"   ~ "milk",
-        str_detect(output, "meat")       ~ "meat",
-        str_detect(output, "eggs")       ~ "eggs",
-        str_detect(output, "wool")       ~ "wool",
-        # TODO: check for wool, honey, etc
-        .default = "farm"
+        grepl("milk", output)       ~ "milk",
+        grepl("meat", output)       ~ "meat",
+        grepl("egg", output)       ~ "eggs",
+        grepl("wool", output)       ~ "wool",
+        .default = output
       )
     ) |>
     dplyr::mutate(
@@ -188,16 +190,16 @@ f_output_econ_alloc <- function(object) {
     # total DM_t per crop
     dplyr::summarise(
       feed_t_DM = sum(DM_t_livcat),
-      .by = c(id_cols, 'FADN_code_feed')
+      .by = c(dplyr::all_of(id_cols), 'FADN_code_feed')
     ) |>
     dplyr::mutate(farm_t_DM = sum(feed_t_DM, na.rm = T),
-                  .by = id_cols) |>
+                  .by = dplyr::all_of(id_cols)) |>
     dplyr::rename(FADN_code_letter = FADN_code_feed) |>
     # add herd product total output per farm
     dplyr::left_join(
       herd_output |>
         dplyr::summarise(feed_TO = sum(sales_e,na.rm = T),
-                         .by = id_cols),
+                         .by = dplyr::all_of(id_cols)),
       by = id_cols
     )|>
     # estimate farm use value
@@ -230,7 +232,7 @@ f_output_econ_alloc <- function(object) {
   all_output_econ_alloc <- all_output |>
     dplyr::mutate(
       sum_sales_e_farm = sum(sales_e, na.rm = TRUE),
-      .by = c(all_of(id_cols))
+      .by = dplyr::all_of(id_cols)
     ) |>
     dplyr::mutate(
       econ_alloc_ratio_farm = dplyr::if_else(
@@ -245,7 +247,7 @@ f_output_econ_alloc <- function(object) {
   crop_output_econ_alloc <- crop_output |>
     dplyr::mutate(
       sum_sales_e_farm = sum(TO_e, na.rm = TRUE),
-      .by = c(all_of(id_cols))
+      .by = dplyr::all_of(id_cols)
     ) |>
     dplyr::mutate(
       econ_alloc_ratio_crop = dplyr::if_else(
@@ -261,12 +263,12 @@ f_output_econ_alloc <- function(object) {
     # sum sales per farm
     dplyr::mutate(
       sum_sales_e_farm = sum(sales_e, na.rm = TRUE),
-      .by = c(all_of(id_cols))
+      .by = dplyr::all_of(id_cols)
     ) |>
     # sum sales per species and activity
     dplyr::mutate(
       sum_sales_e_activity = sum(sales_e, na.rm = TRUE),
-      .by = c(all_of(id_cols), species, activity)
+      .by = c(dplyr::all_of(id_cols), species, activity)
     ) |>
     # economic allocation ratio within or across herd activities
     dplyr::mutate(

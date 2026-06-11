@@ -119,8 +119,7 @@
 #'
 #' @concept footprint-ghge
 #' @export
-#' @importFrom dplyr select left_join summarise across matches mutate
-#'   rename_with starts_with ends_with all_of pick cur_column
+#' @importFrom dplyr select left_join summarise across matches mutate rename_with starts_with ends_with all_of pick cur_column
 #' @importFrom tidyr pivot_wider
 #' @importFrom stringr str_replace
 
@@ -135,7 +134,8 @@
 
 f_GHGE_herd <- function(object,
                         overwrite = FALSE,
-                        account_pseudoherd = F, ...) {
+                        account_pseudoherd = FALSE,
+                        ...) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -155,11 +155,11 @@ f_GHGE_herd <- function(object,
   ### N2O from manure management
   ### Heating fuels and electricity are accounted for per activity, in`f_GHGE_herd_output`
 
-  tmp_GHGE_ch4_enteric = GHGE_ch4_enteric(object, overwrite = overwrite)
+  tmp_GHGE_ch4_enteric = f_GHGE_ch4_enteric(object, overwrite = overwrite)
 
-  tmp_GHGE_ch4_manure = GHGE_ch4_manure(object, overwrite = overwrite)
+  tmp_GHGE_ch4_manure = f_GHGE_ch4_manure(object, overwrite = overwrite)
 
-  tmp_GHGE_n2o_manure = GHGE_n2o_manure(object, overwrite = overwrite)
+  tmp_GHGE_n2o_manure = f_GHGE_n2o_manure(object, overwrite = overwrite)
 
   herd_livestock_GHGE <- Reduce(x = list(tmp_GHGE_ch4_enteric,
                                          tmp_GHGE_ch4_manure,
@@ -200,7 +200,7 @@ f_GHGE_herd <- function(object,
       DM_t_livcat = sum(DM_t_livcat, na.rm = T),
       area_ha_livcat = sum(area_ha_livcat, na.rm = T),
 
-      .by = c(id_cols, 'FADN_code_letter', 'feed_origin')
+      .by = c(dplyr::all_of(id_cols), FADN_code_letter, feed_origin)
     ) |>
     # rename sums
     dplyr::rename_with(
@@ -239,7 +239,85 @@ f_GHGE_herd <- function(object,
                   FADN_code_letter,
                   dplyr::matches("farm|pseudofarm"))
 
-  # 3. Combine herd and feed impact -------------------------------------------
+  # 3. Estimate energy impact --------------------------------------------------
+
+  ### Heating fuel ----
+  tmp_GHGE_fuels = f_GHGE_fuels(object)
+  # sum emissions at activity scale
+  tmp_GHGE_fuels_alloc = tmp_GHGE_fuels$alloc_GHGE_fuels |>
+    dplyr::summarise(
+      ghg_diesel_remain_kgCO2e_activity = sum(ghg_diesel_remain_kgCO2e_output, na.rm = TRUE),
+      ghg_heat_fuel_kgCO2e_activity = sum(ghg_heat_fuel_kgCO2e_output, na.rm = TRUE),
+      .by = c(dplyr::all_of(id_cols), activity, species)
+    )
+
+  ### Electricity ----
+  tmp_GHGE_elec = f_GHGE_elec(object)
+  # sum emissions at activity scale
+  tmp_GHGE_elec_alloc = tmp_GHGE_elec$alloc_GHGE_electricity |>
+    dplyr::summarise(
+      ghg_elec_kgCO2e_activity = sum(ghg_elec_kgCO2e_output, na.rm = TRUE),
+      .by = c(dplyr::all_of(id_cols), activity, species)
+    )
+
+  ### Allocate energy impact at livestock category ----
+
+  ## Distribute animals across activities
+  herd_activities = f_herd_activities(object, overwrite = overwrite) |>
+    # add livestock unit coefficients
+    dplyr::left_join(
+      data_extra$livestock |>
+        dplyr::select(FADN_code_letter, livestock_unit_coef),
+      by = 'FADN_code_letter'
+    ) |>
+    # pivot longer to have one row per activity
+    tidyr::pivot_longer(
+      cols = dplyr::matches("Qobs_"),
+      names_to = "activity",
+      values_to = "Qobs_activity"
+    ) |>
+    dplyr::mutate(
+      activity = gsub("Qobs_", "", activity)
+    ) |>
+    dplyr::filter(Qobs_activity > 0) |>
+    # convert to livestock units
+    dplyr::mutate(
+      Qobs_LU = Qobs * livestock_unit_coef,
+      Qobs_LU_act = Qobs_activity * livestock_unit_coef
+    ) |>
+    # total LU per activity
+    dplyr::mutate(
+      Qobs_LU_act_sum = sum(Qobs_LU_act, na.rm = TRUE),
+      .by = c(dplyr::all_of(id_cols), activity)
+    )
+
+  ## Allocate
+  herd_energy_GHGE = herd_activities |>
+    # add fuel impact
+    dplyr::left_join(
+      tmp_GHGE_fuels_alloc,
+      by = c(id_cols, 'activity', 'species')
+    ) |>
+    # add electricity impact
+    dplyr::left_join(
+      tmp_GHGE_elec_alloc,
+      by = c(id_cols, 'activity', 'species')
+    ) |>
+    # allocate energy impact to livestock category in each activity
+    dplyr::mutate(
+      ghg_diesel_remain_kgCO2e_act_livcat = ghg_diesel_remain_kgCO2e_activity * (Qobs_LU_act / Qobs_LU_act_sum),
+      ghg_heat_fuel_kgCO2e_act_livcat = ghg_heat_fuel_kgCO2e_activity * (Qobs_LU_act / Qobs_LU_act_sum),
+      ghg_elec_kgCO2e_act_livcat = ghg_elec_kgCO2e_activity * (Qobs_LU_act / Qobs_LU_act_sum)
+    ) |>
+    # sum emissions per livestock category, regardless activity
+    dplyr::summarise(
+      ghg_diesel_remain_kgCO2e_livcat = sum(ghg_diesel_remain_kgCO2e_act_livcat, na.rm = TRUE),
+      ghg_heat_fuel_kgCO2e_livcat = sum(ghg_heat_fuel_kgCO2e_act_livcat, na.rm = TRUE),
+      ghg_elec_kgCO2e_livcat = sum(ghg_elec_kgCO2e_act_livcat, na.rm = TRUE),
+      .by = c(dplyr::all_of(id_cols), FADN_code_letter)
+    )
+
+  # 4. Combine impacts ---------------------------------------------------------
 
   herd_impact = Reduce(
     x = list(object@herd |>
@@ -248,7 +326,8 @@ f_GHGE_herd <- function(object,
                              species,FADN_code_letter,
                              Qobs),
              herd_livestock_GHGE,
-             herd_feed_GHGE
+             herd_feed_GHGE,
+             herd_energy_GHGE
              ),
     f = function(x,y) dplyr::left_join(x, y,
                                        by = c(id_cols, 'FADN_code_letter'))
@@ -257,10 +336,12 @@ f_GHGE_herd <- function(object,
     dplyr::mutate(
       farm_ghge_herd_kgCO2e_livcat = (feed_farm_total_ghg_crop_kgCO2e_livcat
                                       + CH4_enteric_kgCO2e_livcat + CH4_MM_kgCO2e_livcat
-                                      + N2O_D_MM_kgCO2e_livcat + N2O_G_mm_kgCO2e_livcat + N2O_L_mm_kgCO2e_livcat),
+                                      + N2O_D_MM_kgCO2e_livcat + N2O_G_mm_kgCO2e_livcat + N2O_L_mm_kgCO2e_livcat
+                                      + ghg_diesel_remain_kgCO2e_livcat + ghg_heat_fuel_kgCO2e_livcat + ghg_elec_kgCO2e_livcat),
       pseudofarm_ghge_herd_kgCO2e_livcat = (feed_pseudofarm_total_ghg_crop_kgCO2e_livcat
                                             + CH4_enteric_kgCO2e_livcat + CH4_MM_kgCO2e_livcat
-                                            + N2O_D_MM_kgCO2e_livcat + N2O_G_mm_kgCO2e_livcat + N2O_L_mm_kgCO2e_livcat),
+                                            + N2O_D_MM_kgCO2e_livcat + N2O_G_mm_kgCO2e_livcat + N2O_L_mm_kgCO2e_livcat
+                                            + ghg_diesel_remain_kgCO2e_livcat + ghg_heat_fuel_kgCO2e_livcat + ghg_elec_kgCO2e_livcat),
 
       farm_ghge_herd_kgCO2e_per_anim = farm_ghge_herd_kgCO2e_livcat / Qobs,
       pseudofarm_ghge_herd_kgCO2e_per_anim = pseudofarm_ghge_herd_kgCO2e_livcat / Qobs

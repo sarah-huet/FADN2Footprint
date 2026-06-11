@@ -92,7 +92,7 @@ plot(tmp_LU$SE080, tmp_LU$tot_LU)
 
 ```{r load_literature, message=FALSE}
 
-# TOTAL GHGE
+# TOTAL GHGE ----
 
 lit_GHGE_total <- readxl::read_excel(
   "validation_references.xlsx",
@@ -112,7 +112,7 @@ lit_GHGE_total <- readxl::read_excel(
   # add set
   dplyr::mutate(set = "GHG Emissions")
 
-# COMPONENTS OF GHGE
+# COMPONENTS OF GHGE ----
 
 lit_GHGE_components <- readxl::read_excel(
   "validation_references.xlsx",
@@ -147,7 +147,7 @@ lit_agri_pract <- readxl::read_excel(
   sheet = "summary_agri_practices"
 )
 
-# add EPK averages for wheat fertilization
+# add EPK averages for wheat fertilization ----
 tmp = data_extra$PKGC_N_ferti |>
   dplyr::filter(EPK_ferti_crop_name == "Ble_tendre" & ORGANIC == 0) |>
   dplyr::select(N_min,Nmin_sd_w,N_org,Norg_sd_w)
@@ -432,6 +432,18 @@ source ?
 
 ```
 
+### Yields
+
+```{r yields}
+
+mean(tmp_object_milk@output$other_herd_products |>
+  dplyr::filter(output == "milk" & species == "cattle") |>
+  dplyr::pull(yield))
+
+
+
+```
+
 
 ## GHGE
 
@@ -544,6 +556,7 @@ tmp_ghge_milk_compo <- tmp_ghge_milk_compo_long |>
 ```
 
 ### GHGE beef
+
 ```{r GHGE_output_beef}
 
 # select meat farms in France
@@ -553,15 +566,15 @@ tmp_object_beef = m_prune_farms(my_object_GHGE, TF14 == "49", COUNTRY == "FRA")
 
 # Retrieve GHGE estimates for meat, filtering to cow meat output only
 tmp_ghge_beef <- tmp_object_beef@footprints$GHGE$GHGE_meat |>
-  dplyr::filter(species == "cattle")
+  dplyr::filter(output == "meat_beef")
 
 # Reshape GHGE meat data to long format, keeping only per-ha (farm) and per-t columns
 tmp_ghge_beef_compo_long <- tmp_ghge_beef |>
   dplyr::select(
     dplyr::all_of(tmp_object_beef@traceability$id_cols),
     output, species,
-    dplyr::matches("per_ha_farm|per_t$"),   # keep pseudofarm and per-tonne estimates
-    -dplyr::matches("total_ghg|ghge_herd|feed_farm") # drop aggregated/herd-level columns
+    dplyr::matches("per_ha_farm$|per_t$"),   # keep farm and per-tonne estimates
+    -dplyr::matches("total_ghg|ghge_herd|^feed_pseudofarm") # drop aggregated/herd-level columns
   ) |>
   tidyr::pivot_longer(
     cols = dplyr::matches("per_ha_farm|per_t$"),

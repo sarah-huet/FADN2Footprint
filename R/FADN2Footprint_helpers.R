@@ -224,7 +224,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
       tbl <- data_extra[[nm]]
       if (is.null(tbl)) return(NULL)
       tbl %>%
-        dplyr::select(FADN_code_letter, national_code = !!rlang::sym(national_code_col)) %>%
+        dplyr::select(FADN_code_letter, FADN_code_description, national_code = !!rlang::sym(national_code_col)) %>%
         tidyr::separate_longer_delim(national_code, ";") %>%
         dplyr::mutate(
           Group = group_map[[nm]],
@@ -248,6 +248,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
           cat_pattern,
           data.frame(
             FADN_code_letter = NA_character_,
+            FADN_code_description = NA_character_,
             national_code = missing,
             allocation_key = NA_real_,
             Group = grp,

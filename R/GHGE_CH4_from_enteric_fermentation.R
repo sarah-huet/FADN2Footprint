@@ -231,7 +231,8 @@ f_GHGE_ch4_enteric <- function(object,
       CH4_EF_Ym = Qobs * EF_Ym,
       CH4_EF_MY = Qobs * EF_MY,
 
-      CH4_enteric_kgCH4 = (CH4_EF_Ym+CH4_EF_MY)/2,
+      #CH4_enteric_kgCH4 = (CH4_EF_Ym+CH4_EF_MY)/2,
+      CH4_enteric_kgCH4 = CH4_EF_Ym,
 
       ### Conversion to CO2 equivalents
       CH4_enteric_kgCO2e_livcat = CH4_enteric_kgCH4 * GWP[["CH4"]]

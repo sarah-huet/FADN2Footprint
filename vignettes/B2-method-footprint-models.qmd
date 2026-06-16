@@ -42,10 +42,9 @@ impact in two steps:
 
 The package combines three types of input data:
 
-1.  **Variables recorded at farm-level** (primary): animal inventories, crop areas and production, input amounts (synthetic fertiliser, energy, feed
+1.  **Farm-specific variables recorded in FADN** (primary): animal inventories, crop areas and production, input amounts (synthetic fertiliser, energy, feed
     purchases), landscape variables (for the national version of the package).
-2.  **Variables estimated at farm-level** (secondary): feed dry matter and nitrogen intake, organic fertiliser quantities, energy carrier physical
-    quantities back-calculated from expenditure data XXwhat is this?XX.
+2.  **Farm-specific variables estimated by FADN2Footprint** (secondary): feed dry matter and nitrogen intake, organic fertiliser quantities.
 3.  **Country-specific parameters from UNFCCC national inventories or IPCC defaults** (fallback): animal waste management system (AWMS) distributions,
     emission factors (EF1–EF5), fraction parameters (Frac_gas_mm, Frac_leach, Frac_gas_f), volatile solid excretion and B₀ values.
 
@@ -54,7 +53,7 @@ The package combines three types of input data:
 # Greenhouse gas emissions {#sec-method-ghge}
 
 The computation of greenhouse gas (GHG) emissions at farm level relies on a combination of data sources and methodological frameworks
-(@tbl-ghg-sources). IPCC 2006 Guidelines equations form the methodological backbone, covering enteric fermentation (Ch. 10), manure management (Ch.
+(@tbl-ghg-sources). IPCC 2006 Guidelines and 2019 Refinement equations form the methodological backbone, covering enteric fermentation (Ch. 10), manure management (Ch.
 10), managed soils (Ch. 11), and indirect CO~2~ emissions from energy use (Ch. 3).
 
 ::: {#tbl-ghg-sources}
@@ -99,7 +98,7 @@ emissions_data <- data.frame(
     "",
     "",
     "",
-    "Organic N fertilizers\nN in manure on pasture\u00b2\nN in crop residues",
+    "Organic N fertilizers\nN in manure on pasture\nN in crop residues",
     "",
     "Fuel, heating fuel, and electricity quantities"
   ),
@@ -155,7 +154,7 @@ emissions_data |>
 
 ```
 
-GHG sources estimated from the FADN2Footprint package XX<br> ?? pasture\^2??XX
+GHG sources estimated from the FADN2Footprint package
 :::
 
 ## CH~4~ Emissions from Enteric Fermentation
@@ -172,26 +171,19 @@ procedure consisted of three sequential steps:
 
 ### Cattle (Tier 2)
 
-For cattle, emission factors were derived using two complementary IPCC Tier 2 approaches, drawing on IPCC Table 10.12 and differentiated by livestock
-category (dairy cows by milk productivity level, other cattle by feed digestibility). XXthis looks like an unnecessary complexity, unless you show
-that the two result in very different estimates. I would go for the simplest, namely the second oneXX
-
-The first approach uses the methane conversion factor *Y*~m~ (%, proportion of gross energy converted to CH~4~), yielding an emission factor (kg CH~4~
+For cattle, emission factors are derived using IPCC Tier 2 approache, drawing on IPCC Table 10.12 and differentiated by livestock
+category (dairy cows by milk productivity level, other cattle by feed digestibility). We use the methane conversion factor
+ *Y*~m~ (%, proportion of gross energy converted to CH~4~), yielding an emission factor (kg CH~4~
 head⁻¹ yr^-1^) computed as (IPCC Equation 10.21):
 
-$$EF_{Y_m} = \frac{GE \times (Y_m / 100)}{55.65}$$
+$$EF = \frac{GE \times (Y_m / 100)}{55.65}$$
 
-where 55.65 MJ kg⁻¹ CH~4~ is the energy content of methane.
+where *GE* is the gross energy intake (MJ head⁻¹ day⁻¹; see xx ref to other vignette for GE estimation), *Ym* is the methane conversion factor derived from IPCC,
+ and *55.65 MJ kg⁻¹ CH~4~* is the energy content of methane.
 
-XX describe how you obtain GE XX
+The total cattle CH~4~ emission is calculated as:
 
-The second approach uses the methane yield *MY* (g CH~4~ kg DMI⁻¹), yielding an emission factor computed as (IPCC Equation 10.21A):
-
-$$EF_{MY} = DMI \times \frac{MY}{1000}$$
-
-The final cattle emission factor was taken as the arithmetic mean of the two estimates, and total cattle CH~4~ emissions were calculated as:
-
-$$CH_{4,enteric} = Q_{obs} \times \frac{EF_{Y_m} + EF_{MY}}{2}$$
+$$CH_{4,enteric} = Q_{obs} \times EF$$
 
 ### Sheep and Goats (Tier 2)
 
@@ -202,7 +194,13 @@ $$EF_{Y_m} = \frac{GE \times (Y_m / 100)}{55.65}$$
 
 $$CH_{4,enteric} = Q_{obs} \times EF_{Y_m}$$
 
-XX Swine and poultry to be addedXX
+### Swine (Tier 1)
+
+For swine, as suggested in the 2019 Refinements of the 2006 IPCC Guidelines, we use a Tier 1 approach with a default emission factor that we multiply by the number of animals to obtain the total methane emission from swine.
+
+### Poultry
+
+For poultry, no default emission factor exists in the 2019 Refinements of the 2006 IPCC Guidelines, so we do not account for enteric fermentation for poultry.
 
 ## CH~4~ Emissions from Manure Management
 
@@ -240,8 +238,7 @@ XX to be replaced with feed type-specific DE% value from New Zealand's method, p
 ### Country-Specific Parameters
 
 Country-specific values of the maximum methane producing capacity (*B*₀, m³ CH~4~ kg⁻¹ VS) were retrieved from UNFCCC national inventory submissions
-(Table 3.B(a)s1 XXwhat does s1 mean here?XX) and applied to the corresponding animal categories within each country XX I don't get the
-averaging/aggregating stuff. I would more simply go for my track-changed solutionXX. In principle, *B*₀ varies not only with species, but also diet.
+(Table 3.B(a)) and applied to the corresponding animal categories within each country. In principle, *B*₀ varies not only with species, but also diet.
 However, there is no obvious reference providing diet-specific values for *B*₀.
 
 The effective methane conversion factor, expressed as the population-weighted sum of MCF × AWMS products across all manure management systems (*S*)
@@ -275,7 +272,7 @@ where *N*~T~ is the observed number of animals of category *T* (*Q*~obs~).
 
 Nitrous oxide (N~2~O) emissions from manure management were estimated for all livestock categories following IPCC Tier 2/3 methodology [@IPCC2006;
 @IPCC2019], anchored on country-specific parameters reported to the UNFCCC. Three emission pathways were considered: direct N~2~O emissions, indirect
-N~2~O emissions from volatilisation, and indirect N~2~O emissions from leaching and runoff. The estimation procedure consisted of three sequential
+N~2~O emissions from volatilization, and indirect N~2~O emissions from leaching and runoff. The estimation procedure consisted of three sequential
 steps:
 
 1.  retrieval of the observed herd structure enriched with IPCC and UNFCCC category codes and country ISO codes,
@@ -286,9 +283,7 @@ steps:
 
 ### Nitrogen Excretion
 
-Total nitrogen excretion ($N_{ex}$, kg N yr^-1^) per livestock category was estimated using the `f_n_excr` function, which combines on-farm produced
-and purchased feed composition data to derive nitrogen intake and excretion for each livestock category. Species-specific outputs were row-bound after
-harmonisation of common columns across livestock groups. XX I don't understand XX
+Total nitrogen excretion ($N_{ex}$, kg N animal^-1^ yr^-1^) is derived from the estimated feed composition following IPCC Guidelines.
 
 ### Manure Management System Fractions
 
@@ -321,9 +316,7 @@ amount of nitrogen volatilised was first calculated as:
 $$N_{vol,MMS} = \sum_{T,S} N_{ex,T} \times AWMS_{T,S} \times Frac_{gasMS,T,S}$$
 
 where $Frac_{gasMS,T,S}$ is the fraction of managed manure nitrogen that volatilises as NH₃ and NO~x~ from management system $S$ for livestock
-category $T$ (IPCC Table 10.22). Animal types for $Frac_{gasMS}$ follows IPCC table 10.22: dairy cattle; other cattle, swine, poultry, and all
-remaining categories were attributed into their respective species groups or to "other animals" XX is this what you meant? XX. The resulting indirect
-N~2~O emissions were then computed as:
+category $T$ (IPCC Table 10.22). The resulting indirect N~2~O emissions were then computed as:
 
 $$N_2O_{G,mm} = N_{vol,MMS} \times EF_4 \times \frac{44}{28}$$
 
@@ -423,7 +416,7 @@ $$N_2O\text{-}N_{ATD} = \left(F_{SN} \times Frac_{GASF} + (F_{ON} + F_{PRP}) \ti
 $$N_2O_{ATD} = N_2O\text{-}N_{ATD} \times \frac{44}{28}$$
 
 where $Frac_{GASF} = 0.11$ is the fraction of synthetic fertiliser nitrogen that volatilises as NH₃ and NO~x~, $Frac_{GASM} = 0.21$ is the
-corresponding fraction for organic nitrogen amendments and grazing deposits (IPCC Table 11.3) XX why not recover them from UNFCCC table 3.D? XX, and
+corresponding fraction for organic nitrogen amendments and grazing deposits (IPCC Table 11.3) XX why not recover them from UNFCCC table 3.D? => TODO Table3.D (C32:C34)XX, and
 $EF_4$ is the emission factor for N~2~O from atmospheric deposition of volatilised nitrogen, sourced from UNFCCC submissions XX how do you do this?XX.
 
 ### Indirect N~2~O Emissions from Leaching and Runoff
@@ -435,7 +428,7 @@ $$N_2O\text{-}N_L = (F_{SN} + F_{ON} + F_{PRP} + F_{CR} + F_{SOM}) \times Frac_{
 $$N_2O_L = N_2O\text{-}N_L \times \frac{44}{28}$$
 
 where $Frac_{leach,H} = 0.24$ is the fraction of total nitrogen additions that is lost through leaching and runoff in regions where leaching occurs
-(IPCC Table 11.3)XX why not recover them from UNFCCC table 3.D? XX, and $EF_5$ is the emission factor for N~2~O from nitrogen leaching and runoff,
+(IPCC Table 11.3)XX why not recover them from UNFCCC table 3.D? => TODO Table3.D (C32:C34)XX, and $EF_5$ is the emission factor for N~2~O from nitrogen leaching and runoff,
 sourced from UNFCCC submissionsXX how do you do this?XX.
 
 ### Total N~2~O Emissions from Managed Soils
@@ -452,8 +445,10 @@ methodology [@IPCC2006energy], using country- and year-specific emission factors
 
 #### Activity Data
 
-On-farm fuel consumption was distinguished into two categories: - "motor fuels" (diesel consumed by farm machinery and field operations), - "heating
-fuels" consumed in farm buildings and livestock facilities. Fuel quantities, expressed in both litres and megajoules (MJ), were retrieved from the
+On-farm fuel consumption was distinguished into two categories: 
+- "motor fuels" (diesel consumed by farm machinery and field operations), 
+- "heating fuels" consumed in farm buildings and livestock facilities. 
+Fuel quantities, expressed in both litres and megajoules (MJ), were retrieved from the
 FADN, with the conversion from litres to MJ performed upstream during the farm practices inference step (`infer_practices`).
 
 #### Emission Factors
@@ -464,8 +459,7 @@ were converted from t CO~2~ TJ^-1^ to kg CO~2~ MJ^-1^ for calculation:
 
 $$EF_{fuel,CO_2} \; [\text{kg CO}_2 \text{ MJ}^{-1}] = EF_{fuel,CO_2} \; [\text{t CO}_2 \text{ TJ}^{-1}] \times 10^{-3}$$
 
-A single average emission factor was applied to both diesel and heating fuels. XXseems more complicated and less accurated than using a single default
-diesel EF for motor fuels and a single default heating oil EF for heating fuelsXX
+A single average emission factor was applied to both diesel and heating fuels.
 
 #### Emission Calculation
 
@@ -504,7 +498,7 @@ Total GHG emissions from electricity use were estimated as:
 $$ghg_{elec} = elec_{kWh} \times EF_{elec}$$
 
 where $EF_{elec}$ is the country- and year-specific electricity emission factor (kg CO~2~-eq kWh^-1^), reflecting the carbon intensity of the national
-electricity grid (XX quelle source? XX). When country- and year-specific emission factors were missing, the European average emission factor was
+electricity grid (Bastos et al., 2024). When country- and year-specific emission factors were missing, the European average emission factor was
 substituted.
 
 Emissions were expressed in kg CO~2~-eq yr^-1^ at the whole-farm level. Allocation of electricity emissions to specific farm activities (crops or
@@ -538,9 +532,8 @@ double-counted. Field-level N₂O emissions from fertiliser application were est
 
 ## Conversion to CO~2~ Equivalents
 
-All CH~4~ and N~2~O emission estimates (kg CH~4~ head⁻¹ yr^-1^) were multiplied by their global warming potential (GWP) from XX (precise the source, I
-remember we discussed this), as stored in the `GWP` parameter object, to obtain emissions expressed in kg CO~2~ equivalents per year (kg CO~2~e
-yr^-1^).
+All CH~4~ and N~2~O emission estimates (kg CH~4~ head⁻¹ yr^-1^) were multiplied by their global warming potential (GWP) from Myhre, G., et al. (2013),
+to obtain emissions expressed in kg CO~2~ equivalents per year (kg CO~2~e yr^-1^).
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 

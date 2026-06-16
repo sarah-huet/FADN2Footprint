@@ -362,6 +362,7 @@ f_GHGE_n2o_msoils <- function(object,
     dplyr::mutate(
 
       ## Volatilization ----
+      # TODO: retrieve Frac_GASF, Frac_GASM, and EF4 from UNFCCC data if available; otherwise, use IPCC default values (Table 11.3)
 
       ## EQUATION 11.11 N2O FROM ATMOSPHERIC DEPOSITION OF N VOLATILISED FROM MANAGED SOILS (TIER 2)
       ### N20N_ATD = annual amount of N2O–N produced from atmospheric deposition of N volatilized from managed soils, kg N2O–N yr-1

@@ -438,7 +438,8 @@ three rearing stage: juveniles, fattening, or breeders
 for which we have a least one animal in our whole dataset.
 
 ::: {#fig-herd-flows}
-![Cattle](FADN_prod_flow_cattle.png) ![Swine](FADN_prod_flow_swine.png)
+![Cattle](FADN_prod_flow_cattle.png)
+![Swine](FADN_prod_flow_swine.png)
 ![Poultry](FADN_prod_flow_poultry.png)
 
 Rearing process charts for cattle, swine and poultry. For each livestock
@@ -467,26 +468,25 @@ opening, closing, purchases, and sales numbers), we estimate flows of
 animals transiting through each livestock category as:
 
 $$
-F_{l}^{in} = \Delta \text{Stock}_{l} + F_{l}^{out}
-$$
+F_{l}^{in} = Q_{l}^{purchases} + \Delta \text{Stock}_{l} + F_{l}^{out}
+$$ {#eq-Fin}
 
 $$
 \Delta \text{Stock}_l = Q_{l}^{closing} - Q_{l}^{opening}
 $$ {#eq-delta_stock}
 
 $$
-F_{l-1}^{out} = Q_{l-1}^{sales} + \sum_L F_{l}^{in}
+F_{l-1}^{out} = Q_{l-1}^{sales} + \sum_L (F_{l}^{in}  - Q_{l}^{purchases})
 $$ {#eq-Fout}
 
-where $F$ are flows $in$ or $out$ the considered livestock category $l$
-(or upward category $l-1$), L is the ensemble of categories downward to
+where $F$ are flows $in$ or $out$ the considered livestock category $l$ ((encompassing all animals entering or leaving the category; upward category $l-1$), L is the ensemble of categories directly downward to
 $l-1$ and $Q$ are registered numbers of animals (i.e., $average$,
 $opening$, $closing$, $purchases$, or $sales$).
 
 Note that some farm can experience animal losses, resulting in negative
 flows. Losses are not recorded, so they are generally assumed to be
 null. The exception is when this assumption leads to negative inflows:
-this is impossible, so inflow is then set to zero and the negative .
+this is impossible, so inflow is then set to zero.
 
 #### Estimation of rearing parameters {#sec-method-practices-rearing-param}
 
@@ -513,7 +513,7 @@ where $F_{j}$ and $Q_j$ are juvenile flow and number of animals, and
 $Q_b$ are breeder numbers of animals.
 
 For cattle, we also estimate the average age at first calving as the
-average of the age plus residence time in
+average of the minimal age (i.e., 1 or 2 y.o.) plus residence time in
 may-have-but-have-not-yet-calved breeding categories (e.g., breeding
 part of the female bovine between 1 and 2 y.o. and heifers for breeding
 which are \>2 y.o.) weighted by the observed number of animals.
@@ -552,15 +552,10 @@ based on their proportion in the downward flow of animals (see Eq.
 animals for fattening).
 
 $$
-\bar{Q}_{F} = \bar{Q}_{FB} \cdot \frac{\sum_{L_F} F_{l+1}^{in} }{\sum_{L_{FB}} F_{l+1}^{in}} \\
-= \bar{Q}_{FB} \cdot \frac{\sum (\bar{Q}_{F+1} \cdot \frac{1}{t_{F+1}})}{ \sum (\bar{Q}_{F+1} \cdot \frac{1}{t_{F+1}}) + \sum (\bar{Q}_{B+1} \cdot \frac{1}{t_{B+1}}) }
-$$
+\bar{Q}_{l_F} = \bar{Q}_{l} \cdot \frac{\sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}})}{ \sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}}) + \sum (\bar{Q}_{l_B+1} \cdot \frac{1}{t_{l_B+1}}) }
+$$ {#eq-mixed_cat}
 
-where $L_F$ is the ensemble of fattening animal categories at level
-$l+1$ and $L_FB$ is the ensemble of all animal categories at level
-$l+1$.
-
-XX pour moi la partie suivante est redondante avec ce qui précèdeXX
+where $l_F$ are fattening animals and $l_B$ are breeders in category $l$.
 
 ### Estimation of pseudo-herd {#sec-method-practices-pseudoherd}
 
@@ -576,15 +571,27 @@ specific activity (e.g., slaughtered bovine, calves and suckler cows for
 beef; fattening pigs, piglets and breeding sows for pork; etc.), whether
 they are present on-farm or not (i.e., off-farm).
 
-First, we estimate animals involved in each activity (milk and meat)
-with Equation @eq-restrain_herd_act.
+#### Restrain pseudo-herd animals to farm activities
 
-Second, we estimate the pseudo herd by calculating the balanced number
-of animals (see next section).
+First, we estimate animals involved in each activity (i.e.,
+milk, eggs, and meat). 
 
+For cattle, we first estimate animals involved in 
+the dairy herd with Equation @eq-restrain_herd_act. We consider all 
+additional cattle as part of the meat activity (e.g. additional calves
+spawned from dairy cows).
+
+$$
+\sum \bar{Q}_{l-1, \; \text{milk}} = \sum (\frac{t_{l-1} \cdot \bar{Q}_{l-1}}{\bar{Q}_{l-1}}) \cdot \frac{\bar{Q}_{l, \; \text{milk}} }{t_{l}}
+$$ {#eq-restrain_herd_act}
+
+For swine, we consider all animals as involved in the meat activity.
 For poultry, we consider that all animals needed in the production of
 either eggs (i.e., laying hens) or meat (i.e., broilers and other
 poultry) are present on-farm, the pseudo-herd thus equaling the herd.
+
+Second, we estimate the pseudo herd by calculating the balanced number
+of animals (see next section).
 
 #### Balanced number of animals
 
@@ -747,11 +754,11 @@ $$ {#eq-Q_s_avg}
 
 $$
 t_s = \frac{\sum^{L_s}_{l=1} (age^{start} + t_l) \cdot  \bar{Q}_{l}}{\sum^{L_s}_{l=1} \bar{Q}_{l}}
-$$
+$$ {#eq-t_s}
 
 $$
 \widehat{Q}_{l} = \frac{\widehat{Q}_{s} - \bar{Q}_s}{L_s} + \bar{Q}_l
-$$
+$$ {#eq-Q_l_eq}
 
 \<--! XXIci attribution du nb de tête à l'équilibre = division simple
 entre catégories =\> à modifier (division pondérée par les tps de
@@ -797,7 +804,7 @@ amounts, sold amounts and purchased values. For their allocation to each
 animal category, we rely on a theoretical feed ration constructed for
 each farm’s livestock category. Theoretical rations are determined by
 combining the total dry matter intake requirements per livestock unit
-(derived from the AROPAJ model; (Jayet et al., 2023) with the
+(derived from the AROPAJ model; Jayet et al., 2023) with the
 species-specific volumes of each feed consumed nationally (Sailley et
 al., 2021; see “Sailley_2021_feed_flows” sheet of Appendix C in Huet et
 al., 2026).
@@ -848,16 +855,14 @@ Lindner et al. (2022).
 
 The fraction of manure handled by each manure management system (AWMS)
 on a farm is not measured directly in FADN for most countries. Instead
-AWMS fractions are inferred by combining the observed herd and farm
-characteristics from FADN with country (and where available
-climate‑region) AWMS allocations reported in UNFCCC CRF tables XX is it
-worth it? if so, explainXX. Those inferred AWMS fractions are then used
-together with IPCC/UNFCCC MCF and Bo parameters to compute CH4 and
+AWMS fractions are inferred from UNFCCC CRF tables together with 
+IPCC/UNFCCC MCF and Bo parameters to compute CH4 and
 (together with N excretion and EF) N2O from manure management.
 
 ## Animal weight estimation {#sec-method-practices-animal-weight}
 
-XX WORK IN PROGRESS
+Animal weights are not reported in FADN. We use the national animal liveweights
+reported in UNFCCC CRF tables.
 
 # Yields (observed vs. imputed) {#sec-method-practices-yields}
 

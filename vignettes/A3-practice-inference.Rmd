@@ -305,9 +305,9 @@ combined_plot
 
 Following the JRC ILCD handbook (JRC, 2010), we avoid allocation wherever
 possible by virtual subdivision of processes. In particular, we divide farms
-into a dairy workshop (with all animals required to sustain observed milk
+into a dairy activity (with all animals required to sustain observed milk
 production, including calves and heifers raised to renew dairy cows) and
-a meat workshop (with all animals dedicated to meat, including calves
+a meat activity (with all animals dedicated to meat, including calves
 and suckling cows necessary to renew fattening beefs).
 Based on FADN data, we reconstruct the cattle herd structure and model
 the rearing process by estimating animal flows between categories
@@ -335,7 +335,7 @@ variables for concentrated feedstuffs and coarse fodder (Section
 A.2.5.2). These expenditures are allocated to livestock species in proportion
 to their theoretical ration cost for each
 feedstuff (concentrates and roughage). The
-observed FADN expenditure is then allocated to specific feed types (XX donner des exemples)
+observed FADN expenditure is then allocated to specific feed types (e.g., wheat, barley, maize, soybean meal)
 according to these theoretical value shares. Finally, these allocated
 values per feed type and species are converted into physical quantities (tonnes) by dividing by
 the corresponding Eurostat unit prices.
@@ -343,7 +343,7 @@ the corresponding Eurostat unit prices.
 This estimation relies on a theoretical feed ration constructed for each
 livestock species. Theoretical rations are determined by
 combining the total dry matter intake requirements per livestock unit
-(derived from the AROPAJ model; (Jayet et al., 2023) with the
+(derived from the AROPAJ model; Jayet et al., 2023) with the
 species-specific volumes of each feed consumed nationally (Sailley et
 al., 2021; see `FADN2Footprint::data_extra$Sailley_2021_feed_flows`).
 
@@ -359,16 +359,13 @@ cows (since even low-producing dairy cows are unlikely to be sustained
 on less than a quarter of the average energy intake), or below 0.10 x
 the mean GE for non-dairy cow livestock categories (Table A4).
 
-XX beaucoup de redondance entre A3 et B1, et formattage difficile en Rmd. Esprit général de mes suppressions (à recaser dans B1 si elles n'y sont pas déjà) : A3 est synthétique, dans le but d'expliquer la structure générale du code, et B1 donne le détail (à mon avis sous un autre format que Rmd).
-
 Then, we estimate the crop practices implemented to produce the feed,
 and consider practices associated with both on-farm and purchased feed
 ([Method article](articles/practice-inference.html#sec-method-practices-feed-qty-qlty)). Farming practices associated with on-farm feed are
 obtained from farm-specific data (Sectionto XX?). Practices associated with
 purchased feed reflect in-study national crop averages, distinguishing
 organic vs conventional, except for soybean meal. The soybean meals are
-assumed to be imported from Brazil (Lindner et al. (2022;
-Section A.2.5.3).
+assumed to be imported from Brazil (Overmars et al., 20xx) and asociated practices are retrieved from Lindner et al. (2022).
 
 ## Manure management system
 
@@ -415,10 +412,9 @@ awms_plot
 
 ```
 
-## Animal weight estimation
+## Animal weights
 
-WORK IN PROGRESS
-see `UNFCCC_data[["table3As2"]]`
-
+Animal weights are not reported in FADN. We use the national animal weights
+reported in UNFCCC CRF tables.
 
 

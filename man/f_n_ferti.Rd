@@ -7,7 +7,7 @@
 f_n_ferti(object, overwrite = FALSE)
 }
 \arguments{
-\item{object}{An object of class `FADN2Footprint`. This object should contain
+\item{object}{An object of class \code{FADN2Footprint}. This object should contain
 farm data, crop data, input data, and farm-level organic certification status.}
 
 \item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
@@ -17,16 +17,16 @@ cached GHGE results are ignored and computations are re-run.}
 }
 \value{
 A data frame containing estimated nitrogen fertilization values for
-  each crop on each farm. The columns include:
-  \itemize{
-    \item `id_cols`: Farm identifier(s) as defined in `object@traceability$id_cols`.
-    \item `ORGANIC`: A logical value indicating if the farm is certified organic (TRUE) or not (FALSE).
-    \item `FADN_code_letter`: The FADN crop code.
-    \item `area_ha`: The area in hectares for the specific crop.
-    \item `N_ferti`: Total nitrogen fertilization in tons of N per hectare (kg N ha-1).
-    \item `N_ferti_min`: Mineral nitrogen fertilization in tons of N per hectare (kg N ha-1).
-    \item `N_ferti_org`: Organic nitrogen fertilization in tons of N per hectare (kg N ha-1).
-  }
+each crop on each farm. The columns include:
+\itemize{
+\item \code{id_cols}: Farm identifier(s) as defined in \code{object@traceability$id_cols}.
+\item \code{ORGANIC}: A logical value indicating if the farm is certified organic (TRUE) or not (FALSE).
+\item \code{FADN_code_letter}: The FADN crop code.
+\item \code{area_ha}: The area in hectares for the specific crop.
+\item \code{N_ferti}: Total nitrogen fertilization in tons of N per hectare (kg N ha-1).
+\item \code{N_ferti_min}: Mineral nitrogen fertilization in tons of N per hectare (kg N ha-1).
+\item \code{N_ferti_org}: Organic nitrogen fertilization in tons of N per hectare (kg N ha-1).
+}
 }
 \description{
 This function estimates the nitrogen (N) fertilization applied to crops and
@@ -37,36 +37,36 @@ taking into account organic farming practices and livestock presence on farms.
 \details{
 The function performs the following key steps:
 \enumerate{
-  \item **Data Validation**: Checks if the input `object` is of class `FADN2Footprint`.
-  \item **EPK Averages**: Retrieves average N fertilization (mineral and organic)
-    from the EPK (French Farming Practices Surveys; stored in \code{data_extra$PKGC_N_ferti}
-    and \code{data_extra$PKGC_N_ferti_org_thresholds}) 2017 dataset,
-    assigning these averages to crops based on FADN codes. It accounts for
-    organic certification, setting mineral N to zero for organic farms.
-  \item **EPK Organic Thresholds**: Fetches thresholds for organic N fertilization
-    from EPK data, which are used to cap N application on organic farms based on
-    livestock.
-  \item **Reference Value Combination**: Combines EPK averages and thresholds to
-    create a reference table (`EPK_ref`) for N fertilization. It handles missing
-    crop-specific values by using species averages or overall national averages.
-  \item **Livestock N Excretion**: Calls a helper function `f_n_excr` to estimate
-    the total N excreted from livestock on each farm.
-  \item **Data Joining**: Merges farm, crop, input, organic certification,
-    EPK reference values, and livestock N excretion data.
-  \item **N Fertilization Estimation**: Calculates theoretical N fertilization
-    based on EPK averages and farm area (stored in \code{data_extra$PKGC_N_ferti}). It then estimates actual N fertilization
-    (`N_ferti`) considering:
-    \itemize{
-      \item **Mineral N**: Applied based on theoretical values, but set to 0 for organic farms.
-      \item **Organic N**: Determined by livestock N excretion. If livestock is present,
-        the amount of N excreted is used, capped by estimated EPK N thresholds
-        (minimum and maximum; stored in \code{data_extra$PKGC_N_ferti_org_thresholds}). If no livestock is present, the EPK average organic N
-        is used.
-    }
-  \item **Output Formatting**: Selects and returns the relevant N fertilization
-    variables. Messages are printed to the console to inform about the number of
-    farms falling into different livestock categories (no livestock, not enough,
-    too much, sufficient).
+\item \strong{Data Validation}: Checks if the input \code{object} is of class \code{FADN2Footprint}.
+\item \strong{EPK Averages}: Retrieves average N fertilization (mineral and organic)
+from the EPK (French Farming Practices Surveys; stored in \code{data_extra$PKGC_N_ferti}
+and \code{data_extra$PKGC_N_ferti_org_thresholds}) 2017 dataset,
+assigning these averages to crops based on FADN codes. It accounts for
+organic certification, setting mineral N to zero for organic farms.
+\item \strong{EPK Organic Thresholds}: Fetches thresholds for organic N fertilization
+from EPK data, which are used to cap N application on organic farms based on
+livestock.
+\item \strong{Reference Value Combination}: Combines EPK averages and thresholds to
+create a reference table (\code{EPK_ref}) for N fertilization. It handles missing
+crop-specific values by using species averages or overall national averages.
+\item \strong{Livestock N Excretion}: Calls a helper function \code{f_n_excr} to estimate
+the total N excreted from livestock on each farm.
+\item \strong{Data Joining}: Merges farm, crop, input, organic certification,
+EPK reference values, and livestock N excretion data.
+\item \strong{N Fertilization Estimation}: Calculates theoretical N fertilization
+based on EPK averages and farm area (stored in \code{data_extra$PKGC_N_ferti}). It then estimates actual N fertilization
+(\code{N_ferti}) considering:
+\itemize{
+\item \strong{Mineral N}: Applied based on theoretical values, but set to 0 for organic farms.
+\item \strong{Organic N}: Determined by livestock N excretion. If livestock is present,
+the amount of N excreted is used, capped by estimated EPK N thresholds
+(minimum and maximum; stored in \code{data_extra$PKGC_N_ferti_org_thresholds}). If no livestock is present, the EPK average organic N
+is used.
+}
+\item \strong{Output Formatting}: Selects and returns the relevant N fertilization
+variables. Messages are printed to the console to inform about the number of
+farms falling into different livestock categories (no livestock, not enough,
+too much, sufficient).
 }
 }
 \references{

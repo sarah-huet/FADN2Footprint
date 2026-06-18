@@ -9,9 +9,9 @@ A tibble/data frame where each row is a (country, input) observation with one
 column per year.
 
 \describe{
-  \item{\code{Country_ISO_3166_1_A3}}{Country code (ISO 3166-1 alpha-3).}
-  \item{\code{2014}...\code{2024}}{Annual price in \emph{euros per tonne} (numeric).}
-  \item{\code{EUROSTAT_feedstuff}}{Input product name (sanitised, underscores) extracted from the sheet title cell.}
+\item{\code{Country_ISO_3166_1_A3}}{Country code (ISO 3166-1 alpha-3).}
+\item{\code{2014}...\code{2024}}{Annual price in \emph{euros per tonne} (numeric).}
+\item{\code{EUROSTAT_feedstuff}}{Input product name (sanitised, underscores) extracted from the sheet title cell.}
 }
 }
 \source{
@@ -24,7 +24,7 @@ data(EUROSTAT_input_price)
 }
 \description{
 Harmonised input price time series extracted from a custom EUROSTAT spreadsheet
-and transformed to support **FADN2Footprint** costing and allocation steps (e.g.,
+and transformed to support \strong{FADN2Footprint} costing and allocation steps (e.g.,
 feed cost proxies or price-based allocation keys).
 
 The dataset is built by reading selected sheets from an EUROSTAT Excel export,
@@ -38,13 +38,13 @@ processed table.
 \details{
 Processing steps (as implemented in the data-creation script):
 \enumerate{
-  \item Read the input/product label from cell \code{C7} of each selected sheet.
-  \item Read country-by-year prices from range \code{A9:W37}.
-  \item Keep \code{TIME} plus year columns 2014–2024; drop header rows.
-  \item Convert ":" to \code{NA} and coerce to numeric; multiply by 10 to convert
-  from \(€ / 100\ kg\) to \(€ / tonne\).
-  \item Join to \code{data_extra$country_names} to obtain ISO3 country codes.
-  \item Impute remaining missing numeric values by the mean (within each numeric column).
+\item Read the input/product label from cell \code{C7} of each selected sheet.
+\item Read country-by-year prices from range \code{A9:W37}.
+\item Keep \code{TIME} plus year columns 2014–2024; drop header rows.
+\item Convert ":" to \code{NA} and coerce to numeric; multiply by 10 to convert
+from \(€ / 100\ kg\) to \(€ / tonne\).
+\item Join to \code{data_extra$country_names} to obtain ISO3 country codes.
+\item Impute remaining missing numeric values by the mean (within each numeric column).
 }
 }
 \examples{

@@ -20,22 +20,22 @@ year identifiers (e.g., \code{c("FADN_ID", "YEAR")}).}
 A \code{\link[tibble]{tibble}} with one row per farm × year ×
 livestock category, containing:
 \describe{
-  \item{...}{Traceability identifier columns (\code{id_cols}).}
-  \item{FADN_code_letter}{\code{character}. FADN livestock category code.}
-  \item{species}{\code{character}. Livestock species from
-    \code{data_extra$livestock}.}
-  \item{livestock_unit_coef}{\code{numeric}. Livestock unit conversion
-    coefficient.}
-  \item{AN}{\code{numeric}. Average number of animals (head).}
-  \item{ALU}{\code{numeric}. Average livestock units (LU).}
-  \item{Qobs}{\code{numeric}. Observed number of animals (head), averaged
-    across available stock variables.}
-  \item{ON, CN}{\code{numeric}. Opening and closing number of animals
-    (head), where available.}
-  \item{SSN, SSV}{\code{numeric}. Slaughter sales: number (head) and value
-    (EUR), imputed from total sales if missing.}
-  \item{SRN, SRV}{\code{numeric}. Replacement sales: number (head) and
-    value (EUR), defaulting to \code{0} if missing.}
+\item{...}{Traceability identifier columns (\code{id_cols}).}
+\item{FADN_code_letter}{\code{character}. FADN livestock category code.}
+\item{species}{\code{character}. Livestock species from
+\code{data_extra$livestock}.}
+\item{livestock_unit_coef}{\code{numeric}. Livestock unit conversion
+coefficient.}
+\item{AN}{\code{numeric}. Average number of animals (head).}
+\item{ALU}{\code{numeric}. Average livestock units (LU).}
+\item{Qobs}{\code{numeric}. Observed number of animals (head), averaged
+across available stock variables.}
+\item{ON, CN}{\code{numeric}. Opening and closing number of animals
+(head), where available.}
+\item{SSN, SSV}{\code{numeric}. Slaughter sales: number (head) and value
+(EUR), imputed from total sales if missing.}
+\item{SRN, SRV}{\code{numeric}. Replacement sales: number (head) and
+value (EUR), defaulting to \code{0} if missing.}
 }
 }
 \description{
@@ -43,26 +43,29 @@ An internal function that extracts, reshapes, and enriches livestock herd
 variables from a harmonised FADN data frame into a tidy format with one row
 per farm × year × livestock category. The function handles:
 \enumerate{
-  \item Identification of valid FADN livestock codes from
-    \code{data_extra$livestock}.
-  \item Extraction and pivoting of herd variables from wide to long and
-    back to wide format.
-  \item Enrichment with livestock metadata (species, livestock unit
-    coefficients).
-  \item Calculation and imputation of average livestock units (\code{ALU})
-    and observed animal numbers (\code{Qobs}).
-  \item Imputation of missing sales variables using fallback business rules.
+\item Identification of valid FADN livestock codes from
+\code{data_extra$livestock}.
+\item Extraction and pivoting of herd variables from wide to long and
+back to wide format.
+\item Enrichment with livestock metadata (species, livestock unit
+coefficients).
+\item Calculation and imputation of average livestock units (\code{ALU})
+and observed animal numbers (\code{Qobs}).
+\item Imputation of missing sales variables using fallback business rules.
 }
 }
 \details{
-## Step 1 — Livestock Code Identification
+\subsection{Step 1 — Livestock Code Identification}{
+
 Valid livestock codes are extracted from \code{data_extra$livestock},
 retaining only entries with a non-missing \code{livestock_unit_coef}.
 Codes are sorted by decreasing length to ensure correct regex matching
 when codes share a common prefix. Aggregate codes ending in \code{_X} are
 excluded.
+}
 
-## Step 2 — Extraction and Reshaping
+\subsection{Step 2 — Extraction and Reshaping}{
+
 Columns matching recognised livestock codes are selected from
 \code{df_harmonized}, pivoted to long format, and the raw variable name
 is split into \code{FADN_code_letter} and \code{variable} suffix using
@@ -70,44 +73,51 @@ is split into \code{FADN_code_letter} and \code{variable} suffix using
 format, yielding one row per farm × year × livestock category. Standard
 FADN variable suffixes include:
 \itemize{
-  \item \code{AN}: average number of animals (head).
-  \item \code{ALU}: average livestock units.
-  \item \code{ON}: opening number of animals (head).
-  \item \code{CN}: closing number of animals (head).
-  \item \code{SN}, \code{SSN}: total sales number / slaughter sales number
-    (head).
-  \item \code{SV}, \code{SSV}: total sales value / slaughter sales value
-    (EUR).
-  \item \code{SRN}, \code{SRV}: replacement sales number / value.
+\item \code{AN}: average number of animals (head).
+\item \code{ALU}: average livestock units.
+\item \code{ON}: opening number of animals (head).
+\item \code{CN}: closing number of animals (head).
+\item \code{SN}, \code{SSN}: total sales number / slaughter sales number
+(head).
+\item \code{SV}, \code{SSV}: total sales value / slaughter sales value
+(EUR).
+\item \code{SRN}, \code{SRV}: replacement sales number / value.
+}
 }
 
-## Step 3 — Metadata Join
+\subsection{Step 3 — Metadata Join}{
+
 Livestock metadata (\code{livestock_unit_coef}, \code{species}) are joined
 from \code{data_extra$livestock} by \code{FADN_code_letter}.
+}
 
-## Step 4 — ALU and Qobs Calculation
+\subsection{Step 4 — ALU and Qobs Calculation}{
+
 \itemize{
-  \item \code{ALU} (Average Livestock Units): retained from the input if
-    available, otherwise computed as \code{AN × livestock_unit_coef}.
-  \item \code{Qobs} (Observed number of animals, head): estimated as the
-    row-wise mean of \code{AN}, \code{ALU / livestock_unit_coef},
-    \code{ON}, and \code{CN}, ignoring \code{NA} values. This averaging
-    strategy maximises data coverage across FADN datasets that report
-    different subsets of these variables.
+\item \code{ALU} (Average Livestock Units): retained from the input if
+available, otherwise computed as \code{AN × livestock_unit_coef}.
+\item \code{Qobs} (Observed number of animals, head): estimated as the
+row-wise mean of \code{AN}, \code{ALU / livestock_unit_coef},
+\code{ON}, and \code{CN}, ignoring \code{NA} values. This averaging
+strategy maximises data coverage across FADN datasets that report
+different subsets of these variables.
 }
 Records with \code{Qobs == 0} are removed.
+}
 
-## Step 5 — Sales Variable Imputation
+\subsection{Step 5 — Sales Variable Imputation}{
+
 Missing sales variables are imputed using the following fallback rules:
 \itemize{
-  \item \code{SSN}: imputed from \code{SN} if missing (all sales assumed
-    to be for slaughter).
-  \item \code{SSV}: imputed from \code{SV} if missing.
-  \item \code{SRN}, \code{SRV}: set to \code{0} if missing (no replacement
-    sales assumed).
+\item \code{SSN}: imputed from \code{SN} if missing (all sales assumed
+to be for slaughter).
+\item \code{SSV}: imputed from \code{SV} if missing.
+\item \code{SRN}, \code{SRV}: set to \code{0} if missing (no replacement
+sales assumed).
 }
 Columns are created with \code{NA} if absent from the input to avoid
 errors in \code{\link[dplyr]{coalesce}}.
+}
 }
 \note{
 Input livestock variables must be expressed in the units described in the

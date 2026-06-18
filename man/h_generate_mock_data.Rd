@@ -36,7 +36,9 @@ A data.frame.
 }
 \description{
 Handles three cases:
-  1. General stats (no grouping) → one block of n rows
-  2. Stats grouped by one or more factors (e.g., farm_type, country)
-     → generates rows per group proportionally or with explicit counts
+\enumerate{
+\item General stats (no grouping) → one block of n rows
+\item Stats grouped by one or more factors (e.g., farm_type, country)
+→ generates rows per group proportionally or with explicit counts
+}
 }

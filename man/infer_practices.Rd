@@ -3,7 +3,7 @@
 \name{infer_practices}
 \alias{infer_practices}
 \title{Function to estimate agricultural practices based on FADN data
-`infer_practices` Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'}
+\code{infer_practices} Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'}
 \usage{
 infer_practices(object, overwrite = FALSE)
 }
@@ -15,7 +15,7 @@ a tibble
 }
 \description{
 Function to estimate agricultural practices based on FADN data
-`infer_practices` Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'
+\code{infer_practices} Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'
 }
 \examples{
 data(fadn_fict)

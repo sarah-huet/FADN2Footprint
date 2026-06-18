@@ -7,15 +7,15 @@
 \format{
 a data frame (tibble) avec X lignes et 3 variables :
 \describe{
-  \item{COUNTRY}{Country code}
-  \item{YEAR}{Years from 1990 to 2021}
-  \item{EF_elec}{CoM emission factors for national electricity for EU member states, Iceland and Norway: Activity-based (IPCC) approach, CO2 emissions in tonnes CO2/MWh}
+\item{COUNTRY}{Country code}
+\item{YEAR}{Years from 1990 to 2021}
+\item{EF_elec}{CoM emission factors for national electricity for EU member states, Iceland and Norway: Activity-based (IPCC) approach, CO2 emissions in tonnes CO2/MWh}
 }
 }
 \source{
 Bastos, Joana; Monforti-Ferrario, Fabio; Melica, Giulia (2024):
 GHG Emission Factors for Electricity Consumption. European Commission,
-Joint Research Centre (JRC) [Dataset] PID: \url{http://data.europa.eu/89h/919df040-0252-4e4e-ad82-c054896e1641}
+Joint Research Centre (JRC) \verb{[Dataset]} PID: \url{http://data.europa.eu/89h/919df040-0252-4e4e-ad82-c054896e1641}
 }
 \usage{
 data(electricity_factors)

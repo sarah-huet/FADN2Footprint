@@ -116,10 +116,10 @@
 #'     \describe{
 #'       \item{NUTS2}{NUTS2 regional code (character).}
 #'       \item{COUNTRY}{Country code (character).}
-#'       \item{[PREFIX]_share_SSN}{Weighted average share of slaughter sales,
-#'         bounded in \eqn{[0, 1]}.}
-#'       \item{[PREFIX]_share_SRN}{Weighted average share of rearing sales,
-#'         bounded in \eqn{[0, 1]}.}
+#'       \item{`[PREFIX]`_share_SSN}{Weighted average share of slaughter sales,
+#'         bounded in \eqn{`[0, 1]`}.}
+#'       \item{`[PREFIX]`_share_SRN}{Weighted average share of rearing sales,
+#'         bounded in \eqn{`[0, 1]`}.}
 #'     }
 #'   }
 #'   \item{nuts2_GE}{A data frame with one row per NUTS2 region x livestock
@@ -652,7 +652,7 @@
 #' }
 #' @source Bastos, Joana; Monforti-Ferrario, Fabio; Melica, Giulia (2024):
 #' GHG Emission Factors for Electricity Consumption. European Commission,
-#' Joint Research Centre (JRC) [Dataset] PID: \url{http://data.europa.eu/89h/919df040-0252-4e4e-ad82-c054896e1641}
+#' Joint Research Centre (JRC) `[Dataset]` PID: \url{http://data.europa.eu/89h/919df040-0252-4e4e-ad82-c054896e1641}
 #' @usage data(electricity_factors)
 #' @docType data
 #' @keywords datasets

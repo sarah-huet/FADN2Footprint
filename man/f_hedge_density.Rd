@@ -3,7 +3,7 @@
 \name{f_hedge_density}
 \alias{f_hedge_density}
 \title{Function to estimate hedge density based on FADN and LPIS data
-`f_hedge_density` Create a tibble with the following variables:  'farm_id', 'land_use_type', 'hedge_density'}
+\code{f_hedge_density} Create a tibble with the following variables:  'farm_id', 'land_use_type', 'hedge_density'}
 \usage{
 f_hedge_density(object, overwrite = FALSE)
 }
@@ -17,11 +17,13 @@ cached GHGE results are ignored and computations are re-run.}
 }
 \value{
 A tibble with:
-- hedge_density: average of hedge linear meter per hectare
+\itemize{
+\item hedge_density: average of hedge linear meter per hectare
+}
 }
 \description{
 Function to estimate hedge density based on FADN and LPIS data
-`f_hedge_density` Create a tibble with the following variables:  'farm_id', 'land_use_type', 'hedge_density'
+\code{f_hedge_density} Create a tibble with the following variables:  'farm_id', 'land_use_type', 'hedge_density'
 }
 \examples{
 data(fadn_fict)

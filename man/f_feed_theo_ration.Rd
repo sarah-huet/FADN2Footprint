@@ -3,7 +3,7 @@
 \name{f_feed_theo_ration}
 \alias{f_feed_theo_ration}
 \title{Function to estimate theoretical rations of feed by livestock category
-`f_feed_theo_ration` Estimate the theoretical herd ration of the farm per livestock category and per crop using the total amount of dry matter per livestock category in AROPAJ and the total dry matter per crop in Sailley.}
+\code{f_feed_theo_ration} Estimate the theoretical herd ration of the farm per livestock category and per crop using the total amount of dry matter per livestock category in AROPAJ and the total dry matter per crop in Sailley.}
 \usage{
 f_feed_theo_ration(object)
 }
@@ -12,13 +12,15 @@ f_feed_theo_ration(object)
 }
 \value{
 a list with the following dataframes:
-- AROPAJ_ref_ration: reference total amount of feed per livestock category (in ton of dry matter per livestock unit per year)
-- Sailley_ref_feed_allocation: reference total amount of feed per crop and herd orientation (e.g., milk, meat) (in ton of dry matter per year)
-- th_feed_ration: the theoretical ration of each farm herd (for each crop, in total ton of dry matter per year and in ton of dry matter per livestock unit per year)
+\itemize{
+\item AROPAJ_ref_ration: reference total amount of feed per livestock category (in ton of dry matter per livestock unit per year)
+\item Sailley_ref_feed_allocation: reference total amount of feed per crop and herd orientation (e.g., milk, meat) (in ton of dry matter per year)
+\item th_feed_ration: the theoretical ration of each farm herd (for each crop, in total ton of dry matter per year and in ton of dry matter per livestock unit per year)
+}
 }
 \description{
 Function to estimate theoretical rations of feed by livestock category
-`f_feed_theo_ration` Estimate the theoretical herd ration of the farm per livestock category and per crop using the total amount of dry matter per livestock category in AROPAJ and the total dry matter per crop in Sailley.
+\code{f_feed_theo_ration} Estimate the theoretical herd ration of the farm per livestock category and per crop using the total amount of dry matter per livestock category in AROPAJ and the total dry matter per crop in Sailley.
 }
 \examples{
 data(fadn_fict)

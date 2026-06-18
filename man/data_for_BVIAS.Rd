@@ -3,7 +3,7 @@
 \name{data_for_BVIAS}
 \alias{data_for_BVIAS}
 \title{Intermediate functions n°1 for the estimation of BVI for crops
-`data_for_BVIAS` Create a tibble with the following variables: "farm_id", "crop",  "land_use_type", "metric_code", "value", "max", "x_norm", "org_farming"}
+\code{data_for_BVIAS} Create a tibble with the following variables: "farm_id", "crop",  "land_use_type", "metric_code", "value", "max", "x_norm", "org_farming"}
 \usage{
 data_for_BVIAS(object, ...)
 }
@@ -15,7 +15,7 @@ a tibble
 }
 \description{
 Intermediate functions n°1 for the estimation of BVI for crops
-`data_for_BVIAS` Create a tibble with the following variables: "farm_id", "crop",  "land_use_type", "metric_code", "value", "max", "x_norm", "org_farming"
+\code{data_for_BVIAS} Create a tibble with the following variables: "farm_id", "crop",  "land_use_type", "metric_code", "value", "max", "x_norm", "org_farming"
 }
 \examples{
 data(fadn_fict)

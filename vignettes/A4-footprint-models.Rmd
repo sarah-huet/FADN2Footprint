@@ -72,45 +72,50 @@ The package covers two main scopes of emissions and impacts:
 ![System boundary diagram](FADN2Footprint_system_bound.png)
 XX Bizarre, le diagramme a disparu .. En tous les cas, il faudrait visualiser farm, pseudo-farm et pseudo-herd dessus. Je peux le faire si tu me donnes le ppt.
 
-## Allocation strategy
+## Impact Allocation Strategy
 
 Most of our data is only available at the farm level and we are interested in the impact
-at the individual product level. Following the JRC ILCD handbook (JRC, 2010), we avoid allocation wherever
+at the individual product level. Following the JRC ILCD handbook (JRC, 2010), we avoid economic allocation wherever
 possible by virtual subdivision of processes. In particular, we divide farms
 into a dairy workshop (with all animals required to sustain observed milk
 production, including calves and heifers raised to renew dairy cows) and
 a meat workshop (with all animals dedicated to meat, including calves
 and suckling cows necessary to renew fattening beefs).
 
-### Economic Allocation of Shared Farm Emissions
-#### Crops
-##### Fertilizers and pesticides
-Fertilizers and pesticides virtually distributed to each crop through a national allocation 
+### Fertilizers and pesticides
+Fertilizers and pesticides are virtually distributed to each crop through a national allocation 
 key based on the crop practices survey. See XX for details.
 
-##### Off-road diesel
-Off-road diesel use was allocated to crops in two steps. First, diesel consumption for ploughing was estimated at crop level using tillage intensity in L/ha (see `f_tillage()`) multiplied by crop area, with crops not subject to tillage assigned zero tillage diesel. Second, the remaining farm-level diesel consumption, after subtracting tillage diesel, was distributed across crops in proportion to their share of total farm area. Farm-level greenhouse gas emissions associated with diesel use were then allocated to each crop proportionally to the quantity of diesel assigned to it, and total crop-level diesel emissions were calculated as the sum of the tillage-related and residual components.
+### Off-road diesel
+Off-road diesel use was allocated in two steps. 
+First, diesel consumption for ploughing was estimated at crop level using tillage intensity in L/ha (see `f_tillage()`) multiplied by crop area, with crops not subject to tillage assigned zero tillage diesel. 
+Second, the remaining farm-level diesel consumption, after subtracting tillage diesel, was economically allocated across crops and livestock outputs. Crop-level diesel emissions hence sum up the tillage-related and residual components.
+Diesel consumption values are then multiplied by a fixed emission factor retrieve from the UNFCCC CRF tables (see `f_ghg_diesel()`).
 
-##### Fuel and electricity emissions
-Fuel and electricity emissions are allocated
-to individual crops proportionally to each crop's contribution to total farm crop output
-value (turnover):
+### Heating fuel
 
-$$econ\_alloc_c = \frac{TO_c}{\sum_c TO_c}$$
+We consider that heating fuels are mostly used for heating greenhouses and livestock buildings. Indeed, in our test dataset, more than 80% of crop specialists do not consume any heating fuel.  
+Thus, we economically allocated heating fuel emissions between greenhouse and livestock outputs. Nonetheless, if a farm do not have any greenhouse or livestock but do consume heating fuel, we economically allocate heating fuels to crop outputs.
 
-where $TO_c$ is the economic output of crop $c$. The allocated diesel and electricity
-emissions for each crop were then:
+$$ghg_{heating fuel,o} = ghg_{heating fuel,farm} \times econ\_alloc_o$$
 
-$$ghg_{heating fuel,c} = ghg_{heating fuel,farm} \times econ\_alloc_c$$
-$$ghg_{elec,c} = ghg_{elec,farm} \times econ\_alloc_c$$
+### Electricity emissions
+Electricity emissions are economically allocated
+to individual products:
 
+$$econ\_alloc_p = \frac{TO_p}{\sum_o TO_p}$$
 
-#### Livestock products 
+where $TO_p$ is the economic output of product $p$. The allocated electricity
+emissions for each product were then:
+
+$$ghg_{elec,p} = ghg_{elec,farm} \times econ\_alloc_p$$
+
+### Livestock products 
+
 Animals are virtually distributed to the dairy herd or the
 meat herd, and **economic allocation** is applied to co-products within each herd (e.g., milk and
-cull cow meat from dairy cattle) [van der Werf et al., 2009, JRC - IES, 2010].
-The total herd impact is the sum of: (i) the per-hectare impact of all feed consumed (on-farm grown and purchased), 
-and (ii) direct on-farm emissions from manure management and enteric fermentation.
+cull cow meat from dairy herd) [van der Werf et al., 2009, JRC - IES, 2010].
+The total herd impact is the sum of: (i) the impact of all feed consumed (on-farm grown and purchased), (ii) direct on-farm emissions from animals (e.g., manure management, enteric fermentation), and (iii) energy consumption allocated to the products.
 
 ## Functional units
 
@@ -123,7 +128,69 @@ products** using multiple functional units:
 -   per kg of protein (e.g., kg CO~2~-eq kg protein^-1^, BVI~kg protein~)
 
 # Climate impact
+
+## Estimation of greenhouse gas emissions
+
+Greenhouse gas emissions are estimated based on IPCC tiers 2 guidelines [IPCC Task Force
+on National Greenhouse Gas Inventories et al., 2019] for the following emission sources
+([Method article](articles/method-footprint-models.html#sec-method-ghge)):
+
+-   CH4 from enteric fermentation
+
+-   CH4 from manure management
+
+-   N2O from manure management
+
+-   N2O from managed soils
+
+-   CO2 from energy use
+
+-   CO2 and N2O from fertilizer production
+
+-   CO2 from carbon stock changes (**not yet available in the current package version**).
+
+@tbl-ghg-source describes the emission sources included in our estimator for
+crops and animals.
+
+Our approach is consistent with previous work that adapted the IPCC framework for FADN
+data [Coderoni and Esposti, 2015, Dabkien˙e et al., 2020]. The package goes further on the 
+following aspects:
+-   The diet of animals is estimated at farm level, replacing fixed emission factors per animal
+    with estimates of enteric fermentation and nitrogen excretion which reflect the amounts
+    actually ingested by animals;
+-   Farms are made comparable to one another by using a consistent Scope 3 perimeter down to the first
+    processing stage (see Scope definition above);
+-   The package can be used with the European FADN, which is less detailed than the national FADNs;
+-   If used with a national FADN paired with the national LPIS, we estimate CO2 from carbon stock changes (**not yet available in the current package version**).
+
+Before 2014 or 2017 (depending on countries), fertilizer use and fuel use are approximated from their value. For more details see [Method article](articles/method-footprint-models.html#sec-method-ghge)).
+
+```{r}
+
+# Install the package
+#install.packages('FADN2Footprint')
+
+# Load your data (here we use the mock data and dictionary included in the package)
+data('mock_data')
+data('dict_FADN')
+
+# Build the S4 object
+my_object = FADN2Footprint::data_4FADN2Footprint(
+  df = mock_data$fadn_fict,
+  var_dict = dict_FADN,
+  id_cols = c("ID","YEAR","COUNTRY")
+)
+
+# Infer the practices
+my_object_w_practices <- FADN2Footprint::infer_practices(my_object)
+
+# Compute GHGE
+my_object_GHGE <- FADN2Footprint::compute_footprint_ghg(my_object_w_practices)
+
+```
+
 ## Output variables
+
 Table 1 maps each source-level GHG emission variable to the aggregate output 
 indicators computed by the package. XX A partir d'ici, ça devrait être dans la légende
 XX du tableau. Par ailleurs, il faut rajouter la définition des variables dans le tableau
@@ -409,65 +476,6 @@ df |>
 
 ```
 
-
-## Estimation of greenhouse gas emissions
-Greenhouse gas emissions are estimated based on IPCC tiers 2 guidelines [IPCC Task Force
-on National Greenhouse Gas Inventories et al., 2019] for the following emission sources
-([Method article](articles/method-footprint-models.html#sec-method-ghge)):
-
--   CH4 from enteric fermentation
-
--   CH4 from manure management
-
--   N2O from manure management
-
--   N2O from managed soils
-
--   CO2 from energy use
-
--   CO2 and N2O from fertilizer production
-
--   CO2 from carbon stock changes (**not yet available in the current package version**).
-
-@tbl-ghg-source describes the emission sources included in our estimator for
-crops and animals.
-
-Our approach is consistent with previous work that adapted the IPCC framework for FADN
-data [Coderoni and Esposti, 2015, Dabkien˙e et al., 2020]. The package goes further on the 
-following aspects:
--   The diet of animals is estimated at farm level, replacing fixed emission factors per animal
-    with estimates of enteric fermentation and nitrogen excretion which reflect the amounts
-    actually ingested by animals;
--   Farms are made comparable to one another by using a consistent Scope 3 perimeter down to the first
-    processing stage (see Scope definition above);
--   The package can be used with the European FADN, which is less detailed than the national FADNs;
--   If used with a national FADN paired with the national LPIS, we estimate CO2 from carbon stock changes (**not yet available in the current package version**).
-
-Before 2014 or 2017 (depending on countries), fertilizer use and fuel use are approximated from their value. For more details see [Method article](articles/method-footprint-models.html#sec-method-ghge)).
-
-```{r}
-
-# Install the package
-#install.packages('FADN2Footprint')
-
-# Load your data (here we use the mock data and dictionary included in the package)
-data('mock_data')
-data('dict_FADN')
-
-# Build the S4 object
-my_object = FADN2Footprint::data_4FADN2Footprint(
-  df = mock_data$fadn_fict,
-  var_dict = dict_FADN,
-  id_cols = c("ID","YEAR","COUNTRY")
-)
-
-# Infer the practices
-my_object_w_practices <- FADN2Footprint::infer_practices(my_object)
-
-# Compute GHGE
-my_object_GHGE <- FADN2Footprint::compute_footprint_ghg(my_object_w_practices)
-
-```
 
 ## Total Greenhouse Gas Emissions from Crop Production
 

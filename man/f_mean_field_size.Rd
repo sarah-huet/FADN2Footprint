@@ -3,7 +3,7 @@
 \name{f_mean_field_size}
 \alias{f_mean_field_size}
 \title{Function to estimate hedge density based on FADN and LPIS data
-`mean_field_size` Create a tibble with the following variables:  'farm_id', 'land_use_type', 'mean_field_size'}
+\code{mean_field_size} Create a tibble with the following variables:  'farm_id', 'land_use_type', 'mean_field_size'}
 \usage{
 f_mean_field_size(object, overwrite = FALSE)
 }
@@ -17,11 +17,13 @@ cached GHGE results are ignored and computations are re-run.}
 }
 \value{
 A tibble with:
-- mean_field_size: average of hedge linear meter per hectare
+\itemize{
+\item mean_field_size: average of hedge linear meter per hectare
+}
 }
 \description{
 Function to estimate hedge density based on FADN and LPIS data
-`mean_field_size` Create a tibble with the following variables:  'farm_id', 'land_use_type', 'mean_field_size'
+\code{mean_field_size} Create a tibble with the following variables:  'farm_id', 'land_use_type', 'mean_field_size'
 }
 \examples{
 data(fadn_fict)

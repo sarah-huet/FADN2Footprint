@@ -18,29 +18,29 @@ cached GHGE results are ignored and computations are re-run.}
 A \code{\link[tibble]{tibble}} containing one row per farm-crop
 combination, with the following columns:
 \describe{
-  \item{...}{Traceability identifier columns as defined in
-    \code{`object@traceability$id_cols`} (e.g., farm ID, year, NUTS2 region).}
-  \item{FADN_code_letter}{\code{character}. FADN crop category code.}
-  \item{area_ha}{\code{numeric}. Harvested crop area (ha).}
-  \item{prod_t}{\code{numeric}. Crop production (t).}
-  \item{N2O_d_kgCO2e}{\code{numeric}. Direct N2O emissions from managed soils
-    (kg CO2-eq yr\eqn{^{-1}}).}
-  \item{N2O_ATD_kgCO2e}{\code{numeric}. Indirect N2O emissions from atmospheric
-    deposition (kg CO2-eq yr\eqn{^{-1}}).}
-  \item{N2O_L_kgCO2e}{\code{numeric}. Indirect N2O emissions from leaching and
-    run-off (kg CO2-eq yr\eqn{^{-1}}).}
-  \item{ghg_ferti_prod_kgCO2e}{\code{numeric}. Upstream emissions from
-    fertilizer production (kg CO2-eq yr\eqn{^{-1}}).}
-  \item{ghg_diesel_crop_kgCO2e}{\code{numeric}. Off-road diesel emissions
-    allocated to the crop (kg CO2-eq yr\eqn{^{-1}}).}
-  \item{ghg_elec_crop_kgCO2e}{\code{numeric}. Electricity emissions allocated
-    to the crop (kg CO2-eq yr\eqn{^{-1}}).}
-  \item{total_ghg_crop_kgCO2e}{\code{numeric}. Total GHG emissions from crop
-    production (kg CO2-eq yr\eqn{^{-1}}).}
-  \item{..._per_ha}{\code{numeric}. Each emission column expressed per hectare
-    (kg CO2-eq ha\eqn{^{-1}}).}
-  \item{..._per_t}{\code{numeric}. Each emission column expressed per tonne of
-    product (kg CO2-eq t\eqn{^{-1}}).}
+\item{...}{Traceability identifier columns as defined in
+\code{`object@traceability$id_cols`} (e.g., farm ID, year, NUTS2 region).}
+\item{FADN_code_letter}{\code{character}. FADN crop category code.}
+\item{area_ha}{\code{numeric}. Harvested crop area (ha).}
+\item{prod_t}{\code{numeric}. Crop production (t).}
+\item{N2O_d_kgCO2e}{\code{numeric}. Direct N2O emissions from managed soils
+(kg CO2-eq yr\eqn{^{-1}}).}
+\item{N2O_ATD_kgCO2e}{\code{numeric}. Indirect N2O emissions from atmospheric
+deposition (kg CO2-eq yr\eqn{^{-1}}).}
+\item{N2O_L_kgCO2e}{\code{numeric}. Indirect N2O emissions from leaching and
+run-off (kg CO2-eq yr\eqn{^{-1}}).}
+\item{ghg_ferti_prod_kgCO2e}{\code{numeric}. Upstream emissions from
+fertilizer production (kg CO2-eq yr\eqn{^{-1}}).}
+\item{ghg_diesel_crop_kgCO2e}{\code{numeric}. Off-road diesel emissions
+allocated to the crop (kg CO2-eq yr\eqn{^{-1}}).}
+\item{ghg_elec_crop_kgCO2e}{\code{numeric}. Electricity emissions allocated
+to the crop (kg CO2-eq yr\eqn{^{-1}}).}
+\item{total_ghg_crop_kgCO2e}{\code{numeric}. Total GHG emissions from crop
+production (kg CO2-eq yr\eqn{^{-1}}).}
+\item{..._per_ha}{\code{numeric}. Each emission column expressed per hectare
+(kg CO2-eq ha\eqn{^{-1}}).}
+\item{..._per_t}{\code{numeric}. Each emission column expressed per tonne of
+product (kg CO2-eq t\eqn{^{-1}}).}
 }
 }
 \description{
@@ -52,66 +52,72 @@ the provided \code{FADN2Footprint} object.
 
 The following emission sources are aggregated:
 \itemize{
-  \item **Managed soils**: direct and indirect N2O emissions from synthetic
-    and organic fertilizer application, crop residues, and grazing livestock
-    dung and urine deposition (IPCC Equations 11.1, 2006/2019).
-  \item **Fertilizer production**: upstream GHG emissions associated with the
-    manufacturing of synthetic fertilizers.
-  \item **Off-road diesel combustion**: farm machinery fuel use, allocated to
-    each crop via economic allocation.
-  \item **Electricity consumption**: on-farm electricity use, allocated to each
-    crop via economic allocation.
+\item \strong{Managed soils}: direct and indirect N2O emissions from synthetic
+and organic fertilizer application, crop residues, and grazing livestock
+dung and urine deposition (IPCC Equations 11.1, 2006/2019).
+\item \strong{Fertilizer production}: upstream GHG emissions associated with the
+manufacturing of synthetic fertilizers.
+\item \strong{Off-road diesel combustion}: farm machinery fuel use, allocated to
+each crop via economic allocation.
+\item \strong{Electricity consumption}: on-farm electricity use, allocated to each
+crop via economic allocation.
 }
 }
 \details{
-## Economic Allocation
+\subsection{Economic Allocation}{
+
 Fuel and electricity emissions are shared across crops proportionally to each
 crop's contribution to the total farm crop output value (turnover, \code{TO}):
 \deqn{econ\_alloc_c = \frac{TO_c}{\sum_c TO_c}}
 where \eqn{TO_c} is the economic output of crop \eqn{c}.
+}
 
-## Emission Components
+\subsection{Emission Components}{
+
 All emission components (kg CO2-eq) are summed to obtain the total crop-level
 GHG footprint:
 \deqn{total\_ghg\_crop = N2O_d + N2O_{ATD} + N2O_L +
   ghg_{ferti\_prod} + ghg_{diesel} + ghg_{elec}}
 where:
 \itemize{
-  \item \eqn{N2O_d} = direct N2O emissions from managed soils
-    (kg CO2-eq, from \code{\link{GHGE_n2o_msoils}})
-  \item \eqn{N2O_{ATD}} = indirect N2O emissions from atmospheric deposition
-    (kg CO2-eq, from \code{\link{GHGE_n2o_msoils}})
-  \item \eqn{N2O_L} = indirect N2O emissions from leaching and run-off
-    (kg CO2-eq, from \code{\link{GHGE_n2o_msoils}})
-  \item \eqn{ghg_{ferti\_prod}} = upstream emissions from fertilizer production
-    (kg CO2-eq, from \code{\link{GHGE_ferti_prod}})
-  \item \eqn{ghg_{diesel}} = off-road diesel combustion emissions allocated to
-    the crop (kg CO2-eq, from \code{\link{GHGE_fuels}})
-  \item \eqn{ghg_{elec}} = electricity consumption emissions allocated to the
-    crop (kg CO2-eq, from \code{\link{GHGE_elec}})
+\item \eqn{N2O_d} = direct N2O emissions from managed soils
+(kg CO2-eq, from \code{\link{f_GHGE_n2o_msoils}})
+\item \eqn{N2O_{ATD}} = indirect N2O emissions from atmospheric deposition
+(kg CO2-eq, from \code{\link{f_GHGE_n2o_msoils}})
+\item \eqn{N2O_L} = indirect N2O emissions from leaching and run-off
+(kg CO2-eq, from \code{\link{f_GHGE_n2o_msoils}})
+\item \eqn{ghg_{ferti\_prod}} = upstream emissions from fertilizer production
+(kg CO2-eq, from \code{\link{f_GHGE_ferti_prod}})
+\item \eqn{ghg_{diesel}} = off-road diesel combustion emissions allocated to
+the crop (kg CO2-eq, from \code{\link{f_GHGE_fuels}})
+\item \eqn{ghg_{elec}} = electricity consumption emissions allocated to the
+crop (kg CO2-eq, from \code{\link{f_GHGE_elec}})
+}
 }
 
-## Intensity Indicators
+\subsection{Intensity Indicators}{
+
 For each emission component and for the total, emissions are additionally
 expressed as:
 \itemize{
-  \item per hectare (kg CO2-eq ha\eqn{^{-1}}): dividing by \code{area_ha}
-  \item per tonne of product (kg CO2-eq t\eqn{^{-1}}): dividing by \code{prod_t}
+\item per hectare (kg CO2-eq ha\eqn{^{-1}}): dividing by \code{area_ha}
+\item per tonne of product (kg CO2-eq t\eqn{^{-1}}): dividing by \code{prod_t}
 }
 Column names follow the pattern \code{{emission_col}_per_ha} and
 \code{{emission_col}_per_t}.
 }
+}
 \note{
 \itemize{
-  \item If \code{object@footprints$GHGE$GHGE_crops} is already populated,
-    the cached result is returned immediately without recomputation.
-  \item N2O emissions from soil organic matter mineralisation following land
-    use change are not yet included (TODO).
-  \item Land use change emissions related to other farm practices (hedge
-    density, ground cover, grassland management, etc.) are not yet included
-    (TODO).
-  \item \code{NA} values in individual emission components are treated as zero
-    when computing \code{total_ghg_crop_kgCO2e} (via \code{na.rm = TRUE}).
+\item If \code{object@footprints$GHGE$GHGE_crops} is already populated,
+the cached result is returned immediately without recomputation.
+\item N2O emissions from soil organic matter mineralisation following land
+use change are not yet included (TODO).
+\item Land use change emissions related to other farm practices (hedge
+density, ground cover, grassland management, etc.) are not yet included
+(TODO).
+\item \code{NA} values in individual emission components are treated as zero
+when computing \code{total_ghg_crop_kgCO2e} (via \code{na.rm = TRUE}).
 }
 }
 \references{
@@ -128,8 +134,8 @@ Ngarize, S., Osako, A., Pyrozhenko, Y., Shermanau, P. and Federici, S. (eds).
 IPCC, Switzerland.
 }
 \seealso{
-\code{\link{GHGE_n2o_msoils}}, \code{\link{GHGE_ferti_prod}},
-\code{\link{GHGE_fuels}}, \code{\link{GHGE_elec}},
+\code{\link{f_GHGE_n2o_msoils}}, \code{\link{f_GHGE_ferti_prod}},
+\code{\link{f_GHGE_fuels}}, \code{\link{f_GHGE_elec}},
 \code{\link{f_GHGE_livestock}}, \code{\link{FADN2Footprint-class}}
 }
 \concept{footprint-ghge}

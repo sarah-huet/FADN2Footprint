@@ -9,15 +9,17 @@ f_GHGE_herd(object, overwrite = FALSE, account_pseudoherd = FALSE, ...)
 \arguments{
 \item{object}{An S4 object of class "FADN2Footprint" prepared by the
 package workflow. The object must provide:
-- `object@traceability$id_cols`: character vector of farm identifier
-  column names,
-- `object@herd`: herd composition table with FADN_code_letter, species
-  and Qobs columns,
-- all slots required by GHGE_ch4_enteric, GHGE_ch4_manure,
-  GHGE_n2o_manure and f_GHGE_feed.}
+\itemize{
+\item \code{object@traceability$id_cols}: character vector of farm identifier
+column names,
+\item \code{object@herd}: herd composition table with FADN_code_letter, species
+and Qobs columns,
+\item all slots required by GHGE_ch4_enteric, GHGE_ch4_manure,
+GHGE_n2o_manure and f_GHGE_feed.
+}}
 
 \item{overwrite}{Logical, default FALSE. If FALSE and
-`object@footprints$GHGE$GHGE_herd` is not NULL, the cached table is
+\code{object@footprints$GHGE$GHGE_herd} is not NULL, the cached table is
 returned with a message. Set to TRUE to force recomputation.}
 
 \item{account_pseudoherd}{Logical, default FALSE. When TRUE, pseudo-herd
@@ -29,24 +31,24 @@ implementation.}
 }
 \value{
 A tibble with one row per farm × livestock category combination
-  (identified by `object@traceability$id_cols` and `FADN_code_letter`) and
-  columns including:
+(identified by \code{object@traceability$id_cols} and \code{FADN_code_letter}) and
+columns including:
 \describe{
-  \item{species}{Livestock species label.}
-  \item{Qobs}{Observed animal count.}
-  \item{feed_farm_*}{On-farm feed dry matter, area, and emission
-    components (kg CO2e per livestock category).}
-  \item{feed_pseudofarm_*}{Pseudo-farm (on-farm + purchased) feed dry
-    matter, area, and emission components.}
-  \item{CH4_enteric_kgCO2e_livcat}{Enteric fermentation CH4 emissions.}
-  \item{CH4_MM_kgCO2e_livcat}{Manure management CH4 emissions.}
-  \item{N2O_D_MM_kgCO2e_livcat}{Direct manure management N2O.}
-  \item{N2O_G_mm_kgCO2e_livcat}{Indirect N2O from grazing.}
-  \item{N2O_L_mm_kgCO2e_livcat}{Indirect N2O from leaching/runoff.}
-  \item{farm_ghge_herd_kgCO2e_livcat}{Total scope 1 & 2 herd GHGE.}
-  \item{pseudofarm_ghge_herd_kgCO2e_livcat}{Total scope 1, 2 & 3 GHGE.}
-  \item{farm_ghge_herd_kgCO2e_per_anim}{Scope 1 & 2 GHGE per animal.}
-  \item{pseudofarm_ghge_herd_kgCO2e_per_anim}{Scope 3 GHGE per animal.}
+\item{species}{Livestock species label.}
+\item{Qobs}{Observed animal count.}
+\item{feed_farm_\emph{}{On-farm feed dry matter, area, and emission
+components (kg CO2e per livestock category).}
+\item{feed_pseudofarm_}}{Pseudo-farm (on-farm + purchased) feed dry
+matter, area, and emission components.}
+\item{CH4_enteric_kgCO2e_livcat}{Enteric fermentation CH4 emissions.}
+\item{CH4_MM_kgCO2e_livcat}{Manure management CH4 emissions.}
+\item{N2O_D_MM_kgCO2e_livcat}{Direct manure management N2O.}
+\item{N2O_G_mm_kgCO2e_livcat}{Indirect N2O from grazing.}
+\item{N2O_L_mm_kgCO2e_livcat}{Indirect N2O from leaching/runoff.}
+\item{farm_ghge_herd_kgCO2e_livcat}{Total scope 1 & 2 herd GHGE.}
+\item{pseudofarm_ghge_herd_kgCO2e_livcat}{Total scope 1, 2 & 3 GHGE.}
+\item{farm_ghge_herd_kgCO2e_per_anim}{Scope 1 & 2 GHGE per animal.}
+\item{pseudofarm_ghge_herd_kgCO2e_per_anim}{Scope 3 GHGE per animal.}
 }
 }
 \description{
@@ -60,49 +62,55 @@ CO2-equivalent per livestock category and per animal, under both a farm
 \details{
 The function proceeds in three steps:
 
-**Step 1 – Animal emissions:**
+\strong{Step 1 – Animal emissions:}
 Direct emissions are computed per livestock category (FADN_code_letter)
 by calling:
-- GHGE_ch4_enteric(object): enteric fermentation CH4 (kg CO2e per
-  livestock category, CH4_enteric_kgCO2e_livcat),
-- GHGE_ch4_manure(object): manure management CH4
-  (CH4_MM_kgCO2e_livcat),
-- GHGE_n2o_manure(object): manure management N2O, disaggregated into
-  direct (N2O_D_MM_kgCO2e_livcat), grazing indirect
-  (N2O_G_mm_kgCO2e_livcat) and leaching/runoff indirect
-  (N2O_L_mm_kgCO2e_livcat).
+\itemize{
+\item GHGE_ch4_enteric(object): enteric fermentation CH4 (kg CO2e per
+livestock category, CH4_enteric_kgCO2e_livcat),
+\item GHGE_ch4_manure(object): manure management CH4
+(CH4_MM_kgCO2e_livcat),
+\item GHGE_n2o_manure(object): manure management N2O, disaggregated into
+direct (N2O_D_MM_kgCO2e_livcat), grazing indirect
+(N2O_G_mm_kgCO2e_livcat) and leaching/runoff indirect
+(N2O_L_mm_kgCO2e_livcat).
 The three tables are joined by traceability id columns and
 FADN_code_letter. Heating fuels and electricity for livestock buildings
 are not included here; they are accounted for per activity in
 f_GHGE_herd_output.
+}
 
-**Step 2 – Feed emissions (f_GHGE_feed):**
+\strong{Step 2 – Feed emissions (f_GHGE_feed):}
 Feed-related GHGE (kg CO2e per t DM) are retrieved and summed across all
 feed items per livestock category and feed origin ("feed_produced" vs
 "feed_purchased"), weighted by dry matter quantity (DM_t_livcat).
 The results are pivoted wide by feed origin and a pseudo-farm total is
 constructed as the sum of on-farm and purchased feed emissions:
-- **feed_farm_***: emissions from on-farm produced feed only (scope 1 & 2
-  boundary; note that crop footprint already accounts for these).
-- **feed_pseudofarm_***: total feed emissions including purchased feed
-  (scope 3 boundary).
+\itemize{
+\item \strong{feed_farm_}*: emissions from on-farm produced feed only (scope 1 & 2
+boundary; note that crop footprint already accounts for these).
+\item \strong{feed_pseudofarm_}*: total feed emissions including purchased feed
+(scope 3 boundary).
 Column names ending in _per_t are renamed to _livcat after weighting.
+}
 
-**Step 3 – Combined herd impact:**
+\strong{Step 3 – Combined herd impact:}
 Animal and feed emission tables are joined to the herd table
-(`object@herd`) by traceability id columns and FADN_code_letter.
+(\code{object@herd}) by traceability id columns and FADN_code_letter.
 Aggregate indicators are computed:
-- **farm_ghge_herd_kgCO2e_livcat**: total scope 1 & 2 herd GHGE per
-  livestock category (on-farm feed + CH4 enteric + CH4 MM + N2O MM).
-- **pseudofarm_ghge_herd_kgCO2e_livcat**: total scope 1, 2 & 3 herd
-  GHGE per livestock category (pseudo-farm feed + CH4 + N2O).
-- **farm_ghge_herd_kgCO2e_per_anim**: farm total divided by observed
-  animal count (Qobs).
-- **pseudofarm_ghge_herd_kgCO2e_per_anim**: pseudo-farm total divided
-  by Qobs.
+\itemize{
+\item \strong{farm_ghge_herd_kgCO2e_livcat}: total scope 1 & 2 herd GHGE per
+livestock category (on-farm feed + CH4 enteric + CH4 MM + N2O MM).
+\item \strong{pseudofarm_ghge_herd_kgCO2e_livcat}: total scope 1, 2 & 3 herd
+GHGE per livestock category (pseudo-farm feed + CH4 + N2O).
+\item \strong{farm_ghge_herd_kgCO2e_per_anim}: farm total divided by observed
+animal count (Qobs).
+\item \strong{pseudofarm_ghge_herd_kgCO2e_per_anim}: pseudo-farm total divided
+by Qobs.
+}
 
 The function returns cached results stored in
-object@footprints$GHGE$GHGE_herd when present and `overwrite = FALSE`.
+object@footprints$GHGE$GHGE_herd when present and \code{overwrite = FALSE}.
 }
 \examples{
 \dontrun{
@@ -128,6 +136,6 @@ National Greenhouse Gas Inventories}, Volume 4. IPCC.
 }
 \seealso{
 GHGE_ch4_enteric, GHGE_ch4_manure, GHGE_n2o_manure,
-  f_GHGE_feed, f_GHGE_herd_output, f_GHGE_farm
+f_GHGE_feed, f_GHGE_herd_output, f_GHGE_farm
 }
 \concept{footprint-ghge}

@@ -3,7 +3,7 @@
 \name{f_ground_cover}
 \alias{f_ground_cover}
 \title{Function to estimate ground cover based on FADN, LPIS and SENTINEL-2 data
-`ground_cover` Create a tibble with the following variables:  'farm_id', 'land_use_type', 'ground_cover'}
+\code{ground_cover} Create a tibble with the following variables:  'farm_id', 'land_use_type', 'ground_cover'}
 \usage{
 f_ground_cover(object, overwrite = FALSE)
 }
@@ -17,11 +17,13 @@ cached GHGE results are ignored and computations are re-run.}
 }
 \value{
 A tibble with:
-- ground_cover: average of hedge linear meter per hectare
+\itemize{
+\item ground_cover: average of hedge linear meter per hectare
+}
 }
 \description{
 Function to estimate ground cover based on FADN, LPIS and SENTINEL-2 data
-`ground_cover` Create a tibble with the following variables:  'farm_id', 'land_use_type', 'ground_cover'
+\code{ground_cover} Create a tibble with the following variables:  'farm_id', 'land_use_type', 'ground_cover'
 }
 \examples{
 data(fadn_fict)

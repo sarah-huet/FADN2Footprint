@@ -18,14 +18,18 @@ f_map_columns_to_common(
 \item{id_cols}{A vector with the column name of the data set identifiers. Default are ID and YEAR.}
 
 \item{var_dict}{A tibble with columns:
-- `var_common`: standardized variable names (targets).
-- `var_user`: original variable names (sources).}
+\itemize{
+\item \code{var_common}: standardized variable names (targets).
+\item \code{var_user}: original variable names (sources).
+}}
 
 \item{version}{One of "var_pre2014", "var_post2014", "var_user", or "var_common".}
 
 \item{trace}{Logical; if TRUE, stores mapping info in attributes:
-- `attr(df_out, "dropped_common")`: dropped common variables when source variables have matched with more than one common variable, and were stored under the first common variable name in dictionary order.
-- `attr(df_out, "trace_map")`: mapping info.}
+\itemize{
+\item \code{attr(df_out, "dropped_common")}: dropped common variables when source variables have matched with more than one common variable, and were stored under the first common variable name in dictionary order.
+\item \code{attr(df_out, "trace_map")}: mapping info.
+}}
 }
 \value{
 A tibble with harmonized variables aggregated as needed.

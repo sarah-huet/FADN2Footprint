@@ -11,55 +11,59 @@ An object of class \code{list} of length 2.
 mock_data
 }
 \description{
-This script builds a shareable *mock* (anonymised / perturbed) dataset from
+This script builds a shareable \emph{mock} (anonymised / perturbed) dataset from
 confidential raw FADN microdata so that users can test the
 \pkg{FADN2Footprint} workflow without accessing real farm records.
 
 The script:
 \enumerate{
-  \item Loads the confidential dataset and a variable dictionary.
-  \item Drops direct identifiers and keeps only variables required by the package.
-  \item Pre-processes categorical variables by collapsing rare levels into \code{"Other"}.
-  \item Pre-processes continuous variables via 1\% / 99\% winsorisation (clipping extremes).
-  \item Draws a stratified weighted sample (20\%) by \code{NUTS0}, \code{YEAR} and \code{TF_GEN1},
-        excluding strata with too few farms.
-  \item Adds random noise to continuous variables (Gaussian noise with SD = 10\% of IQR),
-        optionally enforcing non-negativity for variables whose minimum is 0 in the raw data.
-  \item Produces a basic validation report comparing summary statistics and selected categorical
-        distributions between the real and mock datasets.
-  \item Saves \code{mock_data} as an internal package dataset using \code{usethis::use_data()}.
+\item Loads the confidential dataset and a variable dictionary.
+\item Drops direct identifiers and keeps only variables required by the package.
+\item Pre-processes categorical variables by collapsing rare levels into \code{"Other"}.
+\item Pre-processes continuous variables via 1\\% / 99\\% winsorisation (clipping extremes).
+\item Draws a stratified weighted sample (20\\%) by \code{NUTS0}, \code{YEAR} and \code{TF_GEN1},
+excluding strata with too few farms.
+\item Adds random noise to continuous variables (Gaussian noise with SD = 10\\% of IQR),
+optionally enforcing non-negativity for variables whose minimum is 0 in the raw data.
+\item Produces a basic validation report comparing summary statistics and selected categorical
+distributions between the real and mock datasets.
+\item Saves \code{mock_data} as an internal package dataset using \code{usethis::use_data()}.
 }
 }
 \details{
-## Inputs (local / confidential)
+\subsection{Inputs (local / confidential)}{
+
 \itemize{
-  \item \code{FADN_raw_data.RData}: Must contain raw FADN microdata.
-  \item \code{inst/scripts/dictionary_FADN.R}: Must create \code{dict_FADN} with (at least)
-        the columns \code{var_common}, \code{type} (values \code{"categorical"} or \code{"continuous"}),
-        and \code{needed_in_FADN2Footprint} (e.g., \code{"T"} for required variables).
+\item \code{FADN_raw_data.RData}: Must contain raw FADN microdata.
+\item \code{inst/scripts/dictionary_FADN.R}: Must create \code{dict_FADN} with (at least)
+the columns \code{var_common}, \code{type} (values \code{"categorical"} or \code{"continuous"}),
+and \code{needed_in_FADN2Footprint} (e.g., \code{"T"} for required variables).
+}
 }
 
-## Outputs
+\subsection{Outputs}{
+
 \itemize{
-  \item \code{mock_data}: A data.frame/tibble saved into the package data using
-        \code{usethis::use_data(mock_data, overwrite = TRUE)}.
-  \item \code{validation_report}: A list (created in-memory) with:
-        \itemize{
-          \item \code{summary_comparison}: mean and SD comparison for up to 10 continuous variables.
-          \item \code{categorical_comparison}: proportional tables for up to 5 categorical variables.
-        }
+\item \code{mock_data}: A data.frame/tibble saved into the package data using
+\code{usethis::use_data(mock_data, overwrite = TRUE)}.
+\item \code{validation_report}: A list (created in-memory) with:
+\itemize{
+\item \code{summary_comparison}: mean and SD comparison for up to 10 continuous variables.
+\item \code{categorical_comparison}: proportional tables for up to 5 categorical variables.
+}
+}
 }
 }
 \section{Confidentiality / disclosure control}{
 
-This script is a *utility* to reduce disclosure risk, but it does **not** guarantee anonymisation.
+This script is a \emph{utility} to reduce disclosure risk, but it does \strong{not} guarantee anonymisation.
 In particular, users should review:
 \itemize{
-  \item the identifier drop list (\code{ID}, \code{PACAGE}, \code{SIRET}, \code{NUTS3});
-  \item rare-category threshold (\eqn{\le 3} occurrences are collapsed to \code{"Other"});
-  \item winsorisation limits (1st and 99th percentiles);
-  \item noise magnitude (10\% of IQR);
-  \item sampling layers and minimum stratum size (\code{n_farms/5 >= 3}).
+\item the identifier drop list (\code{ID}, \code{PACAGE}, \code{SIRET}, \code{NUTS3});
+\item rare-category threshold (\eqn{\le 3} occurrences are collapsed to \code{"Other"});
+\item winsorisation limits (1st and 99th percentiles);
+\item noise magnitude (10\\% of IQR);
+\item sampling layers and minimum stratum size (\code{n_farms/5 >= 3}).
 }
 }
 
@@ -71,9 +75,9 @@ Requires \pkg{dplyr}, \pkg{tidyr}, and \pkg{usethis}.
 \section{Side effects}{
 
 \itemize{
-  \item Loads a local \code{.RData} file.
-  \item Sources \code{dictionary_FADN.R}.
-  \item Writes/updates a package dataset via \code{usethis::use_data()}.
+\item Loads a local \code{.RData} file.
+\item Sources \code{dictionary_FADN.R}.
+\item Writes/updates a package dataset via \code{usethis::use_data()}.
 }
 }
 

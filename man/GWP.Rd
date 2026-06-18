@@ -14,8 +14,8 @@ Built from Table 8.A.1 in https://www.ipcc.ch/site/assets/uploads/2018/02/WG1AR5
 GWP
 }
 \description{
-`GWP` is an **internal** auxiliary vector distributed with the
-**FADN2Footprint** package.
+\code{GWP} is an \strong{internal} auxiliary vector distributed with the
+\strong{FADN2Footprint} package.
 }
 \details{
 This dataset is intended for internal package use.
@@ -27,8 +27,8 @@ GWP
 
 }
 \references{
-Myhre, G., et al. (2013). *Anthropogenic and natural radiative forcing*, in:
-*Climate Change 2013: The Physical Science Basis. Contribution of Working Group I to the Fifth Assessment Report of the Intergovernmental Panel on Climate Change*. Cambridge University Press, Cambridge, United Kingdom and New York, NY, USA.
+Myhre, G., et al. (2013). \emph{Anthropogenic and natural radiative forcing}, in:
+\emph{Climate Change 2013: The Physical Science Basis. Contribution of Working Group I to the Fifth Assessment Report of the Intergovernmental Panel on Climate Change}. Cambridge University Press, Cambridge, United Kingdom and New York, NY, USA.
 }
 \keyword{datasets}
 \keyword{internal}

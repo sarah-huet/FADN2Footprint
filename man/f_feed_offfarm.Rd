@@ -20,13 +20,15 @@ cached GHGE results are ignored and computations are re-run.}
 \value{
 A tibble/data.frame with one or more rows per traceable farm and
 feed line containing:
-- traceability id columns (as in object@traceability$id_cols),
-- FADN_code_letter (crop FADN code),
-- feed_type and Sailley_feed (feed naming used for feed tables),
-- DM_t_crop: purchased feed dry matter (tonnes),
-- GE_MJ_crop, GE_kcal_crop: gross energy totals for the purchased feed,
-- CP_t_crop: crude protein (tonnes) contained in the purchased feed,
-- Ash_t_crop: ash (tonnes) contained in the purchased feed.
+\itemize{
+\item traceability id columns (as in object@traceability$id_cols),
+\item FADN_code_letter (crop FADN code),
+\item feed_type and Sailley_feed (feed naming used for feed tables),
+\item DM_t_crop: purchased feed dry matter (tonnes),
+\item GE_MJ_crop, GE_kcal_crop: gross energy totals for the purchased feed,
+\item CP_t_crop: crude protein (tonnes) contained in the purchased feed,
+\item Ash_t_crop: ash (tonnes) contained in the purchased feed.
+}
 
 Rows with zero purchased DM are filtered out.
 }
@@ -42,39 +44,43 @@ ash) for the purchased feed.
 }
 \details{
 The function executes the following sequence:
-- validate that `object` inherits from the S4 class "FADN2Footprint";
-- return cached results from object@practices$herding$feed$feed_purchased if
-  present and `overwrite = FALSE`;
-- compute theoretical ration/value shares using f_feed_theo_ration(object);
-- extract farm purchase variables (columns matching "feed_purch_*") from
-  object@input and pivot to long format to obtain per‑farm feed purchase
-  values in EUR. The function recognises concentrate vs rough feed and maps
-  to species groups (grazing, swine, poultry) based on the purchase variable
-  name;
-- join theoretical per‑crop/per‑feed value shares to the purchase values and
-  allocate purchased value among crops and livestock categories using the
-  th_feed$th_feed_value table (th_crop_value_p100_feed_type);
-- convert allocated values to physical tonnes using an euros_t conversion
-  factor (expected to be supplied in th_feed tables);
-- attach average feed quality values (GE, CP, Ash) from feed tables
-  (data_extra$feed_table_all_as_DM aggregated by Sailley feed) and compute
-  per‑farm totals: DM_t_crop, GE (MJ and kcal), CP_t_crop, Ash_t_crop;
-- return a tibble with one (or more) rows per farm / feed line with produced
-  purchased feed quantities and nutritional summaries. Rows with zero DM are
-  filtered out.
+\itemize{
+\item validate that \code{object} inherits from the S4 class "FADN2Footprint";
+\item return cached results from object@practices$herding$feed$feed_purchased if
+present and \code{overwrite = FALSE};
+\item compute theoretical ration/value shares using f_feed_theo_ration(object);
+\item extract farm purchase variables (columns matching "feed_purch_*") from
+object@input and pivot to long format to obtain per‑farm feed purchase
+values in EUR. The function recognises concentrate vs rough feed and maps
+to species groups (grazing, swine, poultry) based on the purchase variable
+name;
+\item join theoretical per‑crop/per‑feed value shares to the purchase values and
+allocate purchased value among crops and livestock categories using the
+th_feed$th_feed_value table (th_crop_value_p100_feed_type);
+\item convert allocated values to physical tonnes using an euros_t conversion
+factor (expected to be supplied in th_feed tables);
+\item attach average feed quality values (GE, CP, Ash) from feed tables
+(data_extra$feed_table_all_as_DM aggregated by Sailley feed) and compute
+per‑farm totals: DM_t_crop, GE (MJ and kcal), CP_t_crop, Ash_t_crop;
+\item return a tibble with one (or more) rows per farm / feed line with produced
+purchased feed quantities and nutritional summaries. Rows with zero DM are
+filtered out.
+}
 
 Important assumptions and notes:
-- The conversion from euros to tonnes (euros_t) is provided by the theoretical
-  ration/value outputs (th_feed) and reflects price information or default
-  conversion data; the function does not itself estimate prices.
-- Theoretical ration/value shares come from f_feed_theo_ration(object) and
-  must include fields used for joining and allocation (feed_type, species,
-  th_crop_value_p100_feed_type, euros_t, FADN_code_letter, Sailley_feed, ...).
-- The function depends on package data tables (data_extra$Sailley_2021_feed_flows,
-  data_extra$feed_table_all_as_DM) and on the helper f_feed_theo_ration;
-  these must be present and consistent with the FADN2Footprint object.
-- Yields for purchased crops are not estimated here (TODO in code); national
-  average yields could be added in future versions to improve traceability.
+\itemize{
+\item The conversion from euros to tonnes (euros_t) is provided by the theoretical
+ration/value outputs (th_feed) and reflects price information or default
+conversion data; the function does not itself estimate prices.
+\item Theoretical ration/value shares come from f_feed_theo_ration(object) and
+must include fields used for joining and allocation (feed_type, species,
+th_crop_value_p100_feed_type, euros_t, FADN_code_letter, Sailley_feed, ...).
+\item The function depends on package data tables (data_extra$Sailley_2021_feed_flows,
+data_extra$feed_table_all_as_DM) and on the helper f_feed_theo_ration;
+these must be present and consistent with the FADN2Footprint object.
+\item Yields for purchased crops are not estimated here (TODO in code); national
+average yields could be added in future versions to improve traceability.
+}
 }
 \examples{
 \dontrun{

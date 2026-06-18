@@ -19,23 +19,23 @@ year identifiers (e.g., \code{c("FADN_ID", "YEAR")}).}
 A \code{\link[tibble]{tibble}} with one row per farm × year,
 containing:
 \describe{
-  \item{...}{Traceability identifier columns (\code{id_cols}).}
-  \item{COUNTRY}{\code{character}. Country identifier as provided in the
-    input data.}
-  \item{NUTS, NUTS2, NUTS3}{\code{character}. NUTS region codes (where
-    available).}
-  \item{SYS02}{\code{numeric}. Farm representativeness weight.}
-  \item{TF_SUBP4, TF14, TF8}{\code{integer}. Type of farming codes at
-    different aggregation levels.}
-  \item{SIZC}{\code{integer}. Economic size class.}
-  \item{SE131}{\code{numeric}. Total farm output (EUR yr\eqn{^{-1}}).}
-  \item{ORGANIC}{\code{logical}. \code{TRUE} if the farm is certified
-    organic or in conversion to organic farming.}
-  \item{PACAGE, SIRET, DEPCOM}{\code{character}. French administrative
-    identifiers (where available).}
-  \item{...}{Additional country reference columns from
-    \code{data_extra$country_names} (e.g., \code{Country_ISO_3166_1_A3},
-    \code{country_eu}).}
+\item{...}{Traceability identifier columns (\code{id_cols}).}
+\item{COUNTRY}{\code{character}. Country identifier as provided in the
+input data.}
+\item{NUTS, NUTS2, NUTS3}{\code{character}. NUTS region codes (where
+available).}
+\item{SYS02}{\code{numeric}. Farm representativeness weight.}
+\item{TF_SUBP4, TF14, TF8}{\code{integer}. Type of farming codes at
+different aggregation levels.}
+\item{SIZC}{\code{integer}. Economic size class.}
+\item{SE131}{\code{numeric}. Total farm output (EUR yr\eqn{^{-1}}).}
+\item{ORGANIC}{\code{logical}. \code{TRUE} if the farm is certified
+organic or in conversion to organic farming.}
+\item{PACAGE, SIRET, DEPCOM}{\code{character}. French administrative
+identifiers (where available).}
+\item{...}{Additional country reference columns from
+\code{data_extra$country_names} (e.g., \code{Country_ISO_3166_1_A3},
+\code{country_eu}).}
 }
 }
 \description{
@@ -45,44 +45,47 @@ matching the \code{COUNTRY} column against a reference table. The result
 is a tidy farm-level dataset enriched with standardised country identifiers.
 }
 \details{
-## Step 1 — Variable Selection and Cleaning
+\subsection{Step 1 — Variable Selection and Cleaning}{
+
 The following variable groups are selected from \code{df_harmonized}:
 \itemize{
-  \item **Identifiers** (\code{id_cols}): farm × year traceability columns.
-  \item **French administrative identifiers**: \code{PACAGE}, \code{SIRET},
-    \code{DEPCOM} (where available).
-  \item **Localisation**: \code{COUNTRY}, \code{NUTS} region codes.
-  \item **Farm representativeness weight**: \code{SYS02}.
-  \item **Type of farming**: \code{TF_SUBP4}, \code{TF14}, \code{TF8}
-    (FADN typology at different aggregation levels).
-  \item **Economic size class**: \code{SIZC}.
-  \item **Total output**: \code{SE131} (EUR, FADN Standard Results).
-  \item **Organic farming certification**: \code{ORGANIC}, recoded as a
-    logical: \code{TRUE} if certified organic (code \code{2}) or in
-    conversion (code \code{4}), \code{FALSE} otherwise.
+\item \strong{Identifiers} (\code{id_cols}): farm × year traceability columns.
+\item \strong{French administrative identifiers}: \code{PACAGE}, \code{SIRET},
+\code{DEPCOM} (where available).
+\item \strong{Localisation}: \code{COUNTRY}, \code{NUTS} region codes.
+\item \strong{Farm representativeness weight}: \code{SYS02}.
+\item \strong{Type of farming}: \code{TF_SUBP4}, \code{TF14}, \code{TF8}
+(FADN typology at different aggregation levels).
+\item \strong{Economic size class}: \code{SIZC}.
+\item \strong{Total output}: \code{SE131} (EUR, FADN Standard Results).
+\item \strong{Organic farming certification}: \code{ORGANIC}, recoded as a
+logical: \code{TRUE} if certified organic (code \code{2}) or in
+conversion (code \code{4}), \code{FALSE} otherwise.
+}
 }
 }
 \note{
 \itemize{
-  \item The PDO (Protected Designation of Origin) certification variable
-    is intentionally excluded due to poor registration quality in several
-    national datasets (e.g., absent from the French FADN for 2016–2018).
-  \item Country name harmonisation uses a best-match strategy: the naming
-    convention (\code{country_eu}, \code{Country_ISO_3166_1_A3}, or
-    \code{country_FADN}) with the highest number of matching values in the
-    \code{COUNTRY} column is selected automatically. A warning is issued
-    if no match is found.
-  \item A message listing all recognised FADN variable descriptions present
-    in the output is printed via \code{\link[base]{message}}.
+\item The PDO (Protected Designation of Origin) certification variable
+is intentionally excluded due to poor registration quality in several
+national datasets (e.g., absent from the French FADN for 2016–2018).
+\item Country name harmonisation uses a best-match strategy: the naming
+convention (\code{country_eu}, \code{Country_ISO_3166_1_A3}, or
+\code{country_FADN}) with the highest number of matching values in the
+\code{COUNTRY} column is selected automatically. A warning is issued
+if no match is found.
+\item A message listing all recognised FADN variable descriptions present
+in the output is printed via \code{\link[base]{message}}.
 }
+\subsection{Step 2 — Country Name Harmonisation}{
 
-## Step 2 — Country Name Harmonisation
 The \code{COUNTRY} column may follow different naming conventions depending
 on the FADN data source (national vs. EU FADN). The function identifies the
 best-matching convention by counting overlaps with
 \code{data_extra$country_names} and joins the full reference table to enrich
 the output with standardised country identifiers (ISO 3166-1 A3, EU FADN
 code, etc.).
+}
 }
 \seealso{
 \code{\link{.parse_crop_data}}, \code{\link{.parse_livestock_data}},

@@ -9,11 +9,13 @@ f_tillage(object, overwrite = FALSE)
 \arguments{
 \item{object}{An S4 object of class "FADN2Footprint" prepared by the
 package workflow. The object must provide:
-- object@traceability$id_cols: character vector of farm identifier
-  column names,
-- object@crop: crop activity table with columns FADN_code_letter,
-  land_use_type and area_ha,
-- object@input: farm input table with column diesel_l.}
+\itemize{
+\item object@traceability$id_cols: character vector of farm identifier
+column names,
+\item object@crop: crop activity table with columns FADN_code_letter,
+land_use_type and area_ha,
+\item object@input: farm input table with column diesel_l.
+}}
 
 \item{overwrite}{Logical, default FALSE. If FALSE and
 object@practices$crops$tillage is not NULL, the cached table is
@@ -21,15 +23,15 @@ returned with a message. Set to TRUE to force recomputation.}
 }
 \value{
 A tibble with one row per farm × arable crop activity combination,
-  containing the following columns:
+containing the following columns:
 \describe{
-  \item{(id_cols)}{Farm identifier columns defined in
-    object@traceability$id_cols.}
-  \item{FADN_code_letter}{FADN crop activity code.}
-  \item{land_use_type}{Land use type (always "arable" in the output).}
-  \item{tillage}{Tillage intensity indicator in litres of diesel per
-    hectare above the no-till baseline. 0 indicates no-till or direct
-    seeding; NA indicates unreliable diesel data.}
+\item{(id_cols)}{Farm identifier columns defined in
+object@traceability$id_cols.}
+\item{FADN_code_letter}{FADN crop activity code.}
+\item{land_use_type}{Land use type (always "arable" in the output).}
+\item{tillage}{Tillage intensity indicator in litres of diesel per
+hectare above the no-till baseline. 0 indicates no-till or direct
+seeding; NA indicates unreliable diesel data.}
 }
 }
 \description{
@@ -54,27 +56,31 @@ Only arable land use types are considered; permanent grassland, orchards
 and other non-arable land uses are excluded from the output.
 
 The estimation procedure per crop activity is:
-1. The farm's total diesel consumption (diesel_l) is allocated to each
-   crop in proportion to its share of the farm's total arable area
-   (area_ha / sum_area_ha within the same land_use_type group).
-2. The no-till baseline (avrg_diesel_no_tillage × area_ha) is subtracted
-   from the allocated diesel.
-3. The result is divided by crop area (area_ha) to express the indicator
-   in L/ha.
+\enumerate{
+\item The farm's total diesel consumption (diesel_l) is allocated to each
+crop in proportion to its share of the farm's total arable area
+(area_ha / sum_area_ha within the same land_use_type group).
+\item The no-till baseline (avrg_diesel_no_tillage × area_ha) is subtracted
+from the allocated diesel.
+\item The result is divided by crop area (area_ha) to express the indicator
+in L/ha.
+}
 
 Three cases are handled explicitly:
-- **NA or zero diesel**: farms with missing or non-positive diesel_l are
-  assigned NA (it is considered implausible that a farm has no diesel
-  consumption, so these records are flagged as unreliable and will be
-  invalidated by infer_practices).
-- **Below no-till baseline**: when the allocated diesel is lower than the
-  no-till reference, tillage is set to 0 (interpreted as direct seeding /
-  no-till practice).
-- **Default**: excess diesel per hectare is returned as the tillage
-  intensity indicator.
+\itemize{
+\item \strong{NA or zero diesel}: farms with missing or non-positive diesel_l are
+assigned NA (it is considered implausible that a farm has no diesel
+consumption, so these records are flagged as unreliable and will be
+invalidated by infer_practices).
+\item \strong{Below no-till baseline}: when the allocated diesel is lower than the
+no-till reference, tillage is set to 0 (interpreted as direct seeding /
+no-till practice).
+\item \strong{Default}: excess diesel per hectare is returned as the tillage
+intensity indicator.
+}
 
 The function returns cached results stored in
-object@practices$crops$tillage when present and `overwrite = FALSE`.
+object@practices$crops$tillage when present and \code{overwrite = FALSE}.
 }
 \examples{
 \dontrun{

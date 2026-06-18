@@ -3,7 +3,7 @@
 \name{f_livestock_density}
 \alias{f_livestock_density}
 \title{Function to estimate the farm livestock density based on FADN data
-`livestock_density` Create a tibble with the following variables:  'farm_id', 'crop', 'TFI_ha'}
+\code{livestock_density} Create a tibble with the following variables:  'farm_id', 'crop', 'TFI_ha'}
 \usage{
 f_livestock_density(object, overwrite = FALSE)
 }
@@ -20,7 +20,7 @@ a tibble
 }
 \description{
 Function to estimate the farm livestock density based on FADN data
-`livestock_density` Create a tibble with the following variables:  'farm_id', 'crop', 'TFI_ha'
+\code{livestock_density} Create a tibble with the following variables:  'farm_id', 'crop', 'TFI_ha'
 }
 \examples{
 data(fadn_fict)

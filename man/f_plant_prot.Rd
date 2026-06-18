@@ -3,7 +3,7 @@
 \name{f_plant_prot}
 \alias{f_plant_prot}
 \title{Function to estimate Plant Protection Agents based on FADN data
-`plant_prot` Create a tibble with the following variables:  'farm_id', 'crop', 'TFI_ha'}
+\code{plant_prot} Create a tibble with the following variables:  'farm_id', 'crop', 'TFI_ha'}
 \usage{
 f_plant_prot(object, overwrite = FALSE)
 }
@@ -20,7 +20,7 @@ a tibble
 }
 \description{
 Function to estimate Plant Protection Agents based on FADN data
-`plant_prot` Create a tibble with the following variables:  'farm_id', 'crop', 'TFI_ha'
+\code{plant_prot} Create a tibble with the following variables:  'farm_id', 'crop', 'TFI_ha'
 }
 \examples{
 data(fadn_fict)

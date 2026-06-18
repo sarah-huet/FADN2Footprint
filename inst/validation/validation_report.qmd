@@ -1,7 +1,7 @@
 ---
 title: "FADN2Footprint — Validation Report"
 subtitle: "Comparison of package estimates with literature values"
-author: "Your name"
+author: "Sarah HUET"
 date: today
 format:
   html:
@@ -60,33 +60,6 @@ cat("Years covered:", paste(sort(unique(my_object_GHGE@farm$YEAR)), collapse = "
 
 ```
 
-```{r check_LU}
-
-object = my_object_GHGE
-
-id_cols = object@traceability$id_cols
-
-
-tmp_farm_LU = object@farm |>
-      dplyr::select(dplyr::all_of(id_cols),SE080)
-
-tmp_herd_LU = object@herd |>
-  dplyr::summarise(
-    tot_LU = sum(ALU, na.rm = T),
-    .by =  dplyr::all_of(id_cols)
-  )
-
-tmp_LU = dplyr::left_join(
-  tmp_farm_LU,
-  tmp_herd_LU,
-  by = id_cols
-)
-
-plot(tmp_LU$SE080, tmp_LU$tot_LU)
-
-```
-
-
 
 # Literature references
 
@@ -95,7 +68,7 @@ plot(tmp_LU$SE080, tmp_LU$tot_LU)
 # TOTAL GHGE ----
 
 lit_GHGE_total <- readxl::read_excel(
-  "validation_references.xlsx",
+  "../../inst/validation/validation_references.xlsx",
   sheet = "summary_total_GHGE"
 ) |>
   # filter for references with both per ha and per t
@@ -115,7 +88,7 @@ lit_GHGE_total <- readxl::read_excel(
 # COMPONENTS OF GHGE ----
 
 lit_GHGE_components <- readxl::read_excel(
-  "validation_references.xlsx",
+  "../../inst/validation/validation_references.xlsx",
   sheet = "summary_share_components"
 ) |>
   # filter for wheat, meat and milk 
@@ -143,7 +116,7 @@ cat("Literature (total GHGE) loaded:", nrow(lit_GHGE_total), "rows\n")
 cat("Literature (components of GHGE) loaded:", nrow(lit_GHGE_components), "rows\n")
 
 lit_agri_pract <- readxl::read_excel(
-  "validation_references.xlsx",
+  "../../inst/validation/validation_references.xlsx",
   sheet = "summary_agri_practices"
 )
 
@@ -437,8 +410,8 @@ source ?
 ```{r yields}
 
 mean(tmp_object_milk@output$other_herd_products |>
-  dplyr::filter(output == "milk" & species == "cattle") |>
-  dplyr::pull(yield))
+       dplyr::filter(output == "milk" & species == "cattle") |>
+       dplyr::pull(yield))
 
 
 
@@ -557,12 +530,23 @@ tmp_ghge_milk_compo <- tmp_ghge_milk_compo_long |>
 
 ### GHGE beef
 
+For beef, as wee compare our values to CAP2ER reports that consider only the farm area, we use farm values, not pseudofarm ones.
+
 ```{r GHGE_output_beef}
 
 # select meat farms in France
 tmp_object_beef = m_prune_farms(my_object_GHGE, TF14 == "49", COUNTRY == "FRA")
 
-(tmp_object_beef@footprints$GHGE$GHGE_meat)
+# keep farms with 100% grassland
+quantile(tmp_object_beef@practices$herding$general$ha_perm_grassland_pha)
+tmp_object_beef = m_keep_farms(
+  tmp_object_beef,
+  tmp_object_beef@practices$herding$general |>
+    dplyr::filter(ha_perm_grassland_pha == 1) |>
+    dplyr::select(ID,YEAR,COUNTRY)
+)
+
+#(tmp_object_beef@footprints$GHGE$GHGE_meat)
 
 # Retrieve GHGE estimates for meat, filtering to cow meat output only
 tmp_ghge_beef <- tmp_object_beef@footprints$GHGE$GHGE_meat |>
@@ -575,9 +559,13 @@ tmp_ghge_beef_compo_long <- tmp_ghge_beef |>
     output, species,
     dplyr::matches("per_ha_farm$|per_t$"),   # keep farm and per-tonne estimates
     -dplyr::matches("total_ghg|ghge_herd|^feed_pseudofarm") # drop aggregated/herd-level columns
+    #dplyr::matches("per_ha_pseudofarm|per_t$"),   # keep pseudofarm and per-tonne estimates
+    #-dplyr::matches("total_ghg|ghge_herd|feed_farm") # drop aggregated/herd-level columns
+    
   ) |>
   tidyr::pivot_longer(
     cols = dplyr::matches("per_ha_farm|per_t$"),
+    #cols = dplyr::matches("per_ha_pseudofarm|per_t$"),
     names_to = "component"
   ) |>
   dplyr::mutate(
@@ -596,11 +584,13 @@ tmp_ghge_beef_compo_long <- tmp_ghge_beef |>
     # Build a composite indicator label encoding both unit type and GHGE category
     indicator = dplyr::case_when(
       grepl("per_ha_farm$", component) ~ paste("GHGE_kgCO2e_ha", Harmonized_Category, sep = "__"),
+      #grepl("per_ha_pseudofarm$", component) ~ paste("GHGE_kgCO2e_ha", Harmonized_Category, sep = "__"),
       grepl("per_t$",            component) ~ paste("GHGE_kgCO2e_t",  Harmonized_Category, sep = "__")
     ),
     # Assign unit label based on whether the estimate is per ha or per tonne of product
     unit = dplyr::case_when(
       grepl("per_ha_farm$", component) ~ "kgCO2e_per_ha",
+      #grepl("per_ha_pseudofarm$", component) ~ "kgCO2e_per_ha",
       grepl("per_t$",            component) ~ "kgCO2e_per_t"
     )
   )
@@ -612,6 +602,7 @@ tmp_ghge_beef_compo <- tmp_ghge_beef_compo_long |>
     .by = c(tmp_object_beef@traceability$id_cols, "product", "Harmonized_Category", "indicator", "unit")
   )
 
+tmp_ghge_beef_compo
 
 ```
 
@@ -667,13 +658,17 @@ tmp_ghge_dairy_farm <- tmp_object_milk@footprints$GHGE$GHGE_farm |>
   ) |>
   # add total LU
   dplyr::left_join(
-    tmp_object_milk@farm |>
-      dplyr::select(dplyr::all_of(tmp_object_milk@traceability$id_cols),SE080),
+    tmp_object_milk@herd |>
+      dplyr::filter(species == "cattle") |>
+      dplyr::summarise(
+        tot_LU = sum(ALU, na.rm = T),
+        .by =  dplyr::all_of(tmp_object_milk@traceability$id_cols)
+      ),
     by = tmp_object_milk@traceability$id_cols
   ) |>
   # divide by total LU
   dplyr::mutate(
-    value_per_LU = value / dplyr::na_if(SE080,0)
+    value_per_LU = value / dplyr::na_if(tot_LU,0)
   ) |>
   # estimate averages
   dplyr::summarise(
@@ -701,13 +696,18 @@ tmp_ghge_beef_farm <- tmp_object_beef@footprints$GHGE$GHGE_farm |>
   ) |>
   # add total LU
   dplyr::left_join(
-    tmp_object_beef@farm |>
-      dplyr::select(dplyr::all_of(tmp_object_beef@traceability$id_cols),SE080),
+    tmp_object_beef@herd |>
+      dplyr::filter(species == "cattle") |>
+      dplyr::summarise(
+        tot_LU = sum(ALU, na.rm = T),
+        .by =  dplyr::all_of(tmp_object_beef@traceability$id_cols)
+      ),
     by = tmp_object_beef@traceability$id_cols
   ) |>
+  
   # divide by total LU
   dplyr::mutate(
-    value_per_LU = value / dplyr::na_if(SE080,0)
+    value_per_LU = value / dplyr::na_if(tot_LU,0)
   ) |>
   # estimate averages
   dplyr::summarise(
@@ -888,4 +888,60 @@ comparison |>
 
 ```
 
+# Checks
 
+```{r check_LU}
+
+object = my_object_GHGE
+
+id_cols = object@traceability$id_cols
+
+
+tmp_farm_LU = object@farm |>
+  dplyr::select(dplyr::all_of(id_cols),
+                SE080)
+
+tmp_herd_LU = object@herd |>
+  dplyr::summarise(
+    tot_LU = sum(ALU, na.rm = T),
+    .by =  dplyr::all_of(id_cols)
+  )
+
+tmp_LU = dplyr::left_join(
+  tmp_farm_LU,
+  tmp_herd_LU,
+  by = id_cols
+)
+
+plot(tmp_LU$SE080, tmp_LU$tot_LU)
+
+```
+
+I want to compare our estimation for meat production to EUROSTAT price : https://ec.europa.eu/eurostat/databrowser/view/apri_ap_anouta__custom_21870211/default/table
+Les prix pour la France sont bizarre : on est ~360€ pour 100kg et par tête pour les génisses alors qu'en Espagne par exemple, on est à 285€ pour 100 kg (donc 2850€/t) et 1200€ par tête
+le rendement dans agribalyse est de 1/22e-4=450 kg/ha vs 7.2/15*10^3 = 480 kg/ha dans CAP2ER
+```{r meat_price}
+
+# Heiffers
+
+tmp_heif = tmp_object_beef@output$meat |>
+  dplyr::filter(FADN_code_letter == "LHEIFFAT")
+
+cat("Average weight for heiffers: ",
+    mean(tmp_heif$prod_t / tmp_heif$sales_nb, na.rm = TRUE)," t/head")
+cat("\n")
+cat("Mean price for heiffer: ",
+    mean(tmp_heif$sales_e / tmp_heif$sales_nb, na.rm = TRUE)," €/head and ",
+    mean(tmp_heif$sales_e / tmp_heif$prod_t, na.rm = TRUE)," €/t")
+cat("\n")
+cat("\n")
+
+cat("\nOn average, beef farms sell ",
+    (mean(tmp_object_beef@herd |>
+           #dplyr::filter(grepl("LHEIF",FADN_code_letter)) |>
+           dplyr::pull(share_SSN),
+         na.rm = T))*100,"% of their animals for slaughter")
+
+
+```
+C'est pourquoi nos estimations par ha sont pas trop mal mais explosent par tonne : on alloue les émissions de toutes les animaux de l'activité viande à la production en viande des 50% vendues pour abattage.

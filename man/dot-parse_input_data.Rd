@@ -20,31 +20,31 @@ year identifiers (e.g., \code{c("FADN_ID", "YEAR")}).}
 A \code{\link[tibble]{tibble}} with one row per farm × year,
 containing:
 \describe{
-  \item{...}{Traceability identifier columns (\code{id_cols}).}
-  \item{feed_purch_concent_graz}{\code{numeric}. Purchased concentrate
-    feed expenditure for grazing livestock (EUR yr\eqn{^{-1}}).}
-  \item{feed_purch_rough_graz}{\code{numeric}. Purchased roughage
-    expenditure for grazing livestock (EUR yr\eqn{^{-1}}).}
-  \item{feed_purch_concent_pigs}{\code{numeric}. Purchased concentrate
-    feed expenditure for pigs (EUR yr\eqn{^{-1}}).}
-  \item{feed_purch_concent_poultry}{\code{numeric}. Purchased concentrate
-    feed expenditure for poultry (EUR yr\eqn{^{-1}}).}
-  \item{N_min_ferti_Q}{\code{numeric}. Mineral nitrogen fertiliser
-    quantity (kg N yr\eqn{^{-1}}).}
-  \item{pesticides_v}{\code{numeric}. Pesticide expenditure
-    (EUR yr\eqn{^{-1}}).}
-  \item{diesel_v, heating_fuels_v, elec_V}{\code{numeric}. Energy
-    expenditure for motor fuel, heating fuel, and electricity
-    (EUR yr\eqn{^{-1}}).}
-  \item{diesel_l}{\code{numeric}. Motor fuel consumption (L yr\eqn{^{-1}}),
-    observed or imputed from expenditure and fuel price.}
-  \item{heating_fuels_l}{\code{numeric}. Heating fuel consumption
-    (L yr\eqn{^{-1}}), observed or imputed.}
-  \item{diesel_MJ}{\code{numeric}. Motor fuel consumption in energy terms
-    (MJ yr\eqn{^{-1}}), computed as \code{diesel_l × 37.9}.}
-  \item{heating_fuels_MJ}{\code{numeric}. Heating fuel consumption in
-    energy terms (MJ yr\eqn{^{-1}}), computed as
-    \code{heating_fuels_l × 37.9}.}
+\item{...}{Traceability identifier columns (\code{id_cols}).}
+\item{feed_purch_concent_graz}{\code{numeric}. Purchased concentrate
+feed expenditure for grazing livestock (EUR yr\eqn{^{-1}}).}
+\item{feed_purch_rough_graz}{\code{numeric}. Purchased roughage
+expenditure for grazing livestock (EUR yr\eqn{^{-1}}).}
+\item{feed_purch_concent_pigs}{\code{numeric}. Purchased concentrate
+feed expenditure for pigs (EUR yr\eqn{^{-1}}).}
+\item{feed_purch_concent_poultry}{\code{numeric}. Purchased concentrate
+feed expenditure for poultry (EUR yr\eqn{^{-1}}).}
+\item{N_min_ferti_Q}{\code{numeric}. Mineral nitrogen fertiliser
+quantity (kg N yr\eqn{^{-1}}).}
+\item{pesticides_v}{\code{numeric}. Pesticide expenditure
+(EUR yr\eqn{^{-1}}).}
+\item{diesel_v, heating_fuels_v, elec_V}{\code{numeric}. Energy
+expenditure for motor fuel, heating fuel, and electricity
+(EUR yr\eqn{^{-1}}).}
+\item{diesel_l}{\code{numeric}. Motor fuel consumption (L yr\eqn{^{-1}}),
+observed or imputed from expenditure and fuel price.}
+\item{heating_fuels_l}{\code{numeric}. Heating fuel consumption
+(L yr\eqn{^{-1}}), observed or imputed.}
+\item{diesel_MJ}{\code{numeric}. Motor fuel consumption in energy terms
+(MJ yr\eqn{^{-1}}), computed as \code{diesel_l × 37.9}.}
+\item{heating_fuels_MJ}{\code{numeric}. Heating fuel consumption in
+energy terms (MJ yr\eqn{^{-1}}), computed as
+\code{heating_fuels_l × 37.9}.}
 }
 }
 \description{
@@ -55,51 +55,59 @@ expenditure values and country- or EU-level fuel prices where direct
 quantity records are unavailable.
 }
 \details{
-## Step 1 — Variable Selection and Renaming
+\subsection{Step 1 — Variable Selection and Renaming}{
+
 Core FADN input variables are selected and renamed to human-readable names:
 \itemize{
-  \item **Purchased feeds** (EUR): concentrates and roughages for grazing
-    livestock (\code{IGRFEDCNCTRPUR_V}, \code{IGRFEDCRSPUR_V}),
-    concentrates for pigs (\code{IPIGFEDPUR_V}) and poultry
-    (\code{IPLTRFEDPUR_V}).
-  \item **Mineral fertiliser quantity**: nitrogen inputs
-    (\code{INUSE_Q}, kg N).
-  \item **Pesticides expenditure** (\code{IPROT_V}, EUR).
-  \item **Energy expenditure**: motor fuel (\code{IFULS_V}), heating fuel
-    (\code{IHFULS_V}), and electricity (\code{IELE_V}) in EUR.
-  \item **Fuel quantities** (litres, optional): \code{IFULS_Q} and
-    \code{IHFULS_Q} are included where available, otherwise set to
-    \code{NA}.
+\item \strong{Purchased feeds} (EUR): concentrates and roughages for grazing
+livestock (\code{IGRFEDCNCTRPUR_V}, \code{IGRFEDCRSPUR_V}),
+concentrates for pigs (\code{IPIGFEDPUR_V}) and poultry
+(\code{IPLTRFEDPUR_V}).
+\item \strong{Mineral fertiliser quantity}: nitrogen inputs
+(\code{INUSE_Q}, kg N).
+\item \strong{Pesticides expenditure} (\code{IPROT_V}, EUR).
+\item \strong{Energy expenditure}: motor fuel (\code{IFULS_V}), heating fuel
+(\code{IHFULS_V}), and electricity (\code{IELE_V}) in EUR.
+\item \strong{Fuel quantities} (litres, optional): \code{IFULS_Q} and
+\code{IHFULS_Q} are included where available, otherwise set to
+\code{NA}.
+}
 }
 
-## Step 2 — Zero-Row Filtering
+\subsection{Step 2 — Zero-Row Filtering}{
+
 Rows where all numeric non-identifier variables are zero or \code{NA} are
 removed before the fuel price join to reduce memory usage.
+}
 
-## Step 3 — Fuel Price Preparation
+\subsection{Step 3 — Fuel Price Preparation}{
+
 Country- and year-specific fuel prices are sourced from \code{ref_fuel_wob}:
 \itemize{
-  \item \code{PFUEL_ROAD}: price of road/motor fuel (EUR L\eqn{^{-1}}).
-  \item \code{PFUEL_HEAT}: price of heating fuel (EUR L\eqn{^{-1}}).
+\item \code{PFUEL_ROAD}: price of road/motor fuel (EUR L\eqn{^{-1}}).
+\item \code{PFUEL_HEAT}: price of heating fuel (EUR L\eqn{^{-1}}).
 }
 EU-27 average prices (mean across all countries by year) are computed as a
 fallback for country × year combinations with missing price data.
+}
 
-## Step 4 — Quantity Imputation and Energy Conversion
+\subsection{Step 4 — Quantity Imputation and Energy Conversion}{
+
 \itemize{
-  \item **Fuel prices**: country-specific price is used where available;
-    EU-27 average price is used as fallback via
-    \code{\link[dplyr]{coalesce}}.
-  \item **Fuel quantities** (litres): observed \code{IFULS_Q} /
-    \code{IHFULS_Q} are used where available; otherwise estimated as
-    expenditure divided by the resolved fuel price
-    (\code{diesel_v / final_price_road}).
-  \item **Energy content conversion**: fuel quantities are converted to
-    megajoules using a fixed factor of 37.9 MJ L\eqn{^{-1}} (appropriate
-    for diesel and light heating fuel).
+\item \strong{Fuel prices}: country-specific price is used where available;
+EU-27 average price is used as fallback via
+\code{\link[dplyr]{coalesce}}.
+\item \strong{Fuel quantities} (litres): observed \code{IFULS_Q} /
+\code{IHFULS_Q} are used where available; otherwise estimated as
+expenditure divided by the resolved fuel price
+(\code{diesel_v / final_price_road}).
+\item \strong{Energy content conversion}: fuel quantities are converted to
+megajoules using a fixed factor of 37.9 MJ L\eqn{^{-1}} (appropriate
+for diesel and light heating fuel).
 }
 Intermediate price columns (\code{PFUEL_*}, \code{final_price_*}) are
 dropped from the output.
+}
 }
 \references{
 World Oil & Biofuels (WOB) database. Fuel price series used for quantity

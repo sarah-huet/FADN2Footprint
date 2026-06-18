@@ -26,25 +26,25 @@ Defaults to \code{FALSE}.}
 \value{
 A named \code{list} with three elements:
 \describe{
-  \item{\code{GHGE_milk}}{A \code{\link[tibble]{tibble}} with one row
-    per farm × year × dairy livestock category × milk output, containing:
-    \itemize{
-      \item \code{id_cols}: farm × year identifiers.
-      \item \code{FADN_code_letter}: livestock category code.
-      \item \code{FADN_code_letter_output}: output product code (milk).
-      \item \code{output}: \code{"milk"}.
-      \item \code{prod_t}: milk production (t yr\eqn{^{-1}}).
-      \item \code{sum_feed_area_ha}: total feed area (ha).
-      \item \code{econ_alloc_ratio_herd}: economic allocation ratio for milk.
-      \item GHG components in kg CO\eqn{_2}e (total, per ha, per t):
-        feed-related, CH\eqn{_4} enteric, CH\eqn{_4} MM,
-        N\eqn{_2}O direct/grazing/leaching MM, and total.
-    }
-  }
-  \item{\code{GHGE_meat}}{\code{NULL} — reserved for future
-    implementation.}
-  \item{\code{GHGE_eggs}}{\code{NULL} — reserved for future
-    implementation.}
+\item{\code{GHGE_milk}}{A \code{\link[tibble]{tibble}} with one row
+per farm × year × dairy livestock category × milk output, containing:
+\itemize{
+\item \code{id_cols}: farm × year identifiers.
+\item \code{FADN_code_letter}: livestock category code.
+\item \code{FADN_code_letter_output}: output product code (milk).
+\item \code{output}: \code{"milk"}.
+\item \code{prod_t}: milk production (t yr\eqn{^{-1}}).
+\item \code{sum_feed_area_ha}: total feed area (ha).
+\item \code{econ_alloc_ratio_herd}: economic allocation ratio for milk.
+\item GHG components in kg CO\eqn{_2}e (total, per ha, per t):
+feed-related, CH\eqn{_4} enteric, CH\eqn{_4} MM,
+N\eqn{_2}O direct/grazing/leaching MM, and total.
+}
+}
+\item{\code{GHGE_meat}}{\code{NULL} — reserved for future
+implementation.}
+\item{\code{GHGE_eggs}}{\code{NULL} — reserved for future
+implementation.}
 }
 
 The result is also cached in \code{object@footprints$BVIAS$BVI_milk}
@@ -57,11 +57,12 @@ category combination. The function combines emissions from enteric
 fermentation, manure management, and feed production, then allocates
 the total impact to individual outputs using economic allocation ratios.
 
-Currently implemented for **cow milk**; meat and egg outputs are
+Currently implemented for \strong{cow milk}; meat and egg outputs are
 reserved for future implementation.
 }
 \details{
-## Step 1 — Herd Output Economic Allocation Ratios
+\subsection{Step 1 — Herd Output Economic Allocation Ratios}{
+
 Economic allocation ratios are estimated via
 \code{\link{f_herd_output_econ_alloc}}. If \code{account_pseudoherd =
 TRUE}, a pseudo-herd (representing off-farm animals associated with
@@ -69,33 +70,38 @@ purchased feed) is also considered via
 \code{\link{f_pseudoherd_output_econ_alloc}}, and on-farm and off-farm
 outputs are combined with an \code{animals} flag
 (\code{"on_farm"} vs. pseudo-herd rows).
-
-## Step 2 — Herd and Feed Impact Estimation
-
-### 2.1 Direct Herd Emissions
-Three emission sources are computed:
-\itemize{
-  \item **Enteric fermentation** (CH\eqn{_4}): via
-    \code{\link{GHGE_ch4_enteric}}.
-  \item **Manure management CH\eqn{_4}**: via
-    \code{\link{GHGE_ch4_manure}}.
-  \item **Manure management N\eqn{_2}O** (direct, grazing, leaching):
-    via \code{\link{GHGE_n2o_manure}}.
 }
 
-### 2.2 Feed-Related Emissions
+\subsection{Step 2 — Herd and Feed Impact Estimation}{
+\subsection{2.1 Direct Herd Emissions}{
+
+Three emission sources are computed:
+\itemize{
+\item \strong{Enteric fermentation} (CH\eqn{_4}): via
+\code{\link{GHGE_ch4_enteric}}.
+\item \strong{Manure management CH\eqn{_4}}: via
+\code{\link{GHGE_ch4_manure}}.
+\item \strong{Manure management N\eqn{_2}O} (direct, grazing, leaching):
+via \code{\link{GHGE_n2o_manure}}.
+}
+}
+
+\subsection{2.2 Feed-Related Emissions}{
+
 Feed-related GHG impacts (kg CO\eqn{_2}e ha\eqn{^{-1}}) are retrieved
 from \code{\link{f_GHGE_feed}}, then summarised per farm × year ×
 livestock category as:
 \itemize{
-  \item \code{sum_feed_area_ha}: total feed area (ha).
-  \item Weighted means of GHG intensity (kg CO\eqn{_2}e ha\eqn{^{-1}})
-    across feed crops, weighted by area.
-  \item Sums of total GHG from feed (kg CO\eqn{_2}e), obtained by
-    multiplying intensity by area and summing.
+\item \code{sum_feed_area_ha}: total feed area (ha).
+\item Weighted means of GHG intensity (kg CO\eqn{_2}e ha\eqn{^{-1}})
+across feed crops, weighted by area.
+\item Sums of total GHG from feed (kg CO\eqn{_2}e), obtained by
+multiplying intensity by area and summing.
+}
 }
 
-### 2.3 Aggregation
+\subsection{2.3 Aggregation}{
+
 All emission components are joined to the herd table and summed into
 \code{total_ghg_livestock_cat_kgCO2e}:
 \deqn{
@@ -103,10 +109,13 @@ All emission components are joined to the herd table and summed into
   \text{CH}_4^\text{MM} + \text{N}_2\text{O}^\text{D,MM} +
   \text{N}_2\text{O}^\text{G,MM} + \text{N}_2\text{O}^\text{L,MM}
 }
+}
 
-## Step 3 — Allocation to Outputs
+}
 
-### Cow Milk
+\subsection{Step 3 — Allocation to Outputs}{
+\subsection{Cow Milk}{
+
 Farms with a dairy cattle activity (\code{Qobs_milk > 0}) and
 positive milk production are identified. Total herd impact is allocated
 to milk using the economic allocation ratio (\code{econ_alloc_ratio_herd})
@@ -116,6 +125,9 @@ each emission component:
   \text{GHG per ha} = \frac{\text{GHG} \times r_\text{alloc}}{A_\text{feed}}
   \qquad
   \text{GHG per t} = \frac{\text{GHG} \times r_\text{alloc}}{Q_\text{milk}}
+}
+}
+
 }
 }
 \references{

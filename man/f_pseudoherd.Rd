@@ -3,7 +3,7 @@
 \name{f_pseudoherd}
 \alias{f_pseudoherd}
 \title{Function to estimate off-farm animals of the cattle herd based on FADN data
-`f_pseudoherd` Estimate off-farm animals of the cattle herd}
+\code{f_pseudoherd} Estimate off-farm animals of the cattle herd}
 \usage{
 f_pseudoherd(object)
 }
@@ -12,12 +12,14 @@ f_pseudoherd(object)
 }
 \value{
 A list with, for each livestock category:
-- Q_obs: the number of animals observed in the farm (in number of heads)
-- Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+\itemize{
+\item Q_obs: the number of animals observed in the farm (in number of heads)
+\item Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+}
 }
 \description{
 Function to estimate off-farm animals of the cattle herd based on FADN data
-`f_pseudoherd` Estimate off-farm animals of the cattle herd
+\code{f_pseudoherd} Estimate off-farm animals of the cattle herd
 }
 \examples{
 data(fadn_fict)

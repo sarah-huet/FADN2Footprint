@@ -13,11 +13,11 @@ f_GHGE_ferti_prod(object, overwrite = FALSE)
 A \code{\link[tibble]{tibble}} with one row per farm observation ×
 crop category, containing:
 \describe{
-  \item{...}{Traceability identifier columns
-    (\code{object@traceability$id_cols}).}
-  \item{FADN_code_letter}{\code{character}. FADN crop category code.}
-  \item{ghg_ferti_prod_kgCO2e}{\code{numeric}. GHG emissions from mineral
-    fertiliser production (kg CO2-eq yr\eqn{^{-1}}).}
+\item{...}{Traceability identifier columns
+(\code{object@traceability$id_cols}).}
+\item{FADN_code_letter}{\code{character}. FADN crop category code.}
+\item{ghg_ferti_prod_kgCO2e}{\code{numeric}. GHG emissions from mineral
+fertiliser production (kg CO2-eq yr\eqn{^{-1}}).}
 }
 }
 \description{
@@ -27,32 +27,36 @@ following a life cycle assessment (LCA) approach (scope 3). Emission factors
 are sourced from the JRC (Edwards et al., 2019).
 }
 \details{
-## Emission Factor
+\subsection{Emission Factor}{
+
 A single average emission factor for nitrogen fertiliser supply is applied:
 \deqn{EF_{ferti,prod} = 4{,}571.9 \; \text{g CO}_2\text{-eq kg}^{-1}
   \text{N} = 4.572 \; \text{kg CO}_2\text{-eq kg}^{-1} \text{N}}
 sourced from JRC Table 47 (Edwards et al., 2019), which covers the full
 supply chain of N fertiliser production including energy use and process
 emissions.
+}
 
-## Calculation
+\subsection{Calculation}{
+
 \deqn{ghg_{ferti,prod} = N_{ferti,min} \times EF_{ferti,prod}}
 where \eqn{N_{ferti,min}} (kg N yr\eqn{^{-1}}) is the mineral nitrogen
 applied per crop and farm, estimated by \code{\link{f_n_ferti}}.
 }
+}
 \note{
 \itemize{
-  \item The emission factor is an average across all mineral N fertiliser
-    types. It may overestimate emissions for urea-based fertilisers and
-    underestimate them for ammonium nitrate (AN), but is consistent with
-    the review of Walling & Vaneeckhaute (2020), accounting for recent
-    innovations in Europe reducing the carbon content of AN fertilisers.
-  \item Only mineral N fertilisers (\eqn{F_{SN}}) are considered here.
-    Emissions from organic fertiliser production are attributed to the
-    livestock system of origin and are not double-counted.
-  \item This function covers fertiliser production emissions only. Field-
-    level N2O emissions from fertiliser application are estimated
-    separately in \code{\link{GHGE_n2o_msoils}}.
+\item The emission factor is an average across all mineral N fertiliser
+types. It may overestimate emissions for urea-based fertilisers and
+underestimate them for ammonium nitrate (AN), but is consistent with
+the review of Walling & Vaneeckhaute (2020), accounting for recent
+innovations in Europe reducing the carbon content of AN fertilisers.
+\item Only mineral N fertilisers (\eqn{F_{SN}}) are considered here.
+Emissions from organic fertiliser production are attributed to the
+livestock system of origin and are not double-counted.
+\item This function covers fertiliser production emissions only. Field-
+level N2O emissions from fertiliser application are estimated
+separately in \code{\link{GHGE_n2o_msoils}}.
 }
 }
 \references{

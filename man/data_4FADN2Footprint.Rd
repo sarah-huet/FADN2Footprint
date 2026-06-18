@@ -51,15 +51,15 @@ mapping decisions).
 The returned object is an S4 instance of class \linkS4class{FADN2Footprint}
 with the following main slots:
 \itemize{
-  \item \code{farm}: parsed farm characteristics table.
-  \item \code{crop}: parsed crop/activity table.
-  \item \code{herd}: parsed livestock/herd table.
-  \item \code{input}: parsed input-use table (restricted to supported inputs).
-  \item \code{output}: a list of parsed output components.
-  \item \code{landscape_metrics}: user-provided landscape metrics (or \code{NULL}).
-  \item \code{practices}: initialized list of practice indicators (mostly \code{NULL}).
-  \item \code{footprints}: initialized list of footprint results (mostly \code{NULL}).
-  \item \code{traceability}: list capturing version detection and mapping/removal logs.
+\item \code{farm}: parsed farm characteristics table.
+\item \code{crop}: parsed crop/activity table.
+\item \code{herd}: parsed livestock/herd table.
+\item \code{input}: parsed input-use table (restricted to supported inputs).
+\item \code{output}: a list of parsed output components.
+\item \code{landscape_metrics}: user-provided landscape metrics (or \code{NULL}).
+\item \code{practices}: initialized list of practice indicators (mostly \code{NULL}).
+\item \code{footprints}: initialized list of footprint results (mostly \code{NULL}).
+\item \code{traceability}: list capturing version detection and mapping/removal logs.
 }
 }
 \examples{

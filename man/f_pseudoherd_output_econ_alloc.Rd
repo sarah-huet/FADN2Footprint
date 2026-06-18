@@ -3,7 +3,7 @@
 \name{f_pseudoherd_output_econ_alloc}
 \alias{f_pseudoherd_output_econ_alloc}
 \title{Function to estimate economic allocation ratios between herd outputs
-`f_herd_output_econ_alloc` Estimate herd outputs}
+\code{f_herd_output_econ_alloc} Estimate herd outputs}
 \usage{
 f_pseudoherd_output_econ_alloc(object)
 }
@@ -12,12 +12,14 @@ f_pseudoherd_output_econ_alloc(object)
 }
 \value{
 A list with, for each livestock category:
-- Q_obs: the number of animals observed in the farm (in number of heads)
-- Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+\itemize{
+\item Q_obs: the number of animals observed in the farm (in number of heads)
+\item Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+}
 }
 \description{
 Function to estimate economic allocation ratios between herd outputs
-`f_herd_output_econ_alloc` Estimate herd outputs
+\code{f_herd_output_econ_alloc} Estimate herd outputs
 }
 \examples{
 data(fadn_fict)

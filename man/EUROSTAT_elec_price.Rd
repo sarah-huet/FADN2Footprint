@@ -7,9 +7,9 @@
 \format{
 A tibble/data frame with one row per country-year combination and 3 columns:
 \describe{
-  \item{\code{Country_ISO_3166_1_A3}}{Country code (ISO 3166-1 alpha-3).}
-  \item{\code{YEAR}}{Year (character).}
-  \item{\code{euro_kWh}}{Annual mean electricity price in \(€ / kWh\) (numeric), computed as the mean of S1 and S2 when available.}
+\item{\code{Country_ISO_3166_1_A3}}{Country code (ISO 3166-1 alpha-3).}
+\item{\code{YEAR}}{Year (character).}
+\item{\code{euro_kWh}}{Annual mean electricity price in \(€ / kWh\) (numeric), computed as the mean of S1 and S2 when available.}
 }
 }
 \source{
@@ -23,24 +23,24 @@ data(EUROSTAT_elec_price)
 \description{
 Country-level electricity price time series derived from an EUROSTAT export of
 dataset \code{NRG_PC_205}. Values are extracted from a custom Excel spreadsheet
-bundled with the package and processed for use in **FADN2Footprint** (e.g.,
+bundled with the package and processed for use in \strong{FADN2Footprint} (e.g.,
 energy cost proxies and footprint accounting steps requiring electricity price
 assumptions).
 
 The source table provides prices per semester (S1, S2). This dataset aggregates
 semester values into an annual mean electricity price per country and year.
 
-Units are **euros per kilowatt-hour** (\(€ / kWh\)).
+Units are \strong{euros per kilowatt-hour} (\(€ / kWh\)).
 }
 \details{
 Processing steps (as implemented in the data-creation script):
 \enumerate{
-  \item Read range \code{A12:AK56} from \code{Sheet 7} of the custom EUROSTAT export.
-  \item Drop non-data header rows (e.g. \code{"GEO (Labels)"}).
-  \item Convert price columns to numeric (suppressing coercion warnings).
-  \item Map country labels to ISO3 codes using \code{data_extra$country_names}.
-  \item Pivot semester columns (e.g. \code{YYYY-S1}, \code{YYYY-S2}) to long format.
-  \item Compute annual means by country and year.
+\item Read range \code{A12:AK56} from \code{Sheet 7} of the custom EUROSTAT export.
+\item Drop non-data header rows (e.g. \code{"GEO (Labels)"}).
+\item Convert price columns to numeric (suppressing coercion warnings).
+\item Map country labels to ISO3 codes using \code{data_extra$country_names}.
+\item Pivot semester columns (e.g. \code{YYYY-S1}, \code{YYYY-S2}) to long format.
+\item Compute annual means by country and year.
 }
 }
 \examples{

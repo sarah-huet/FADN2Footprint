@@ -3,7 +3,7 @@
 \name{f_BVIAS_feed_pseudoherd}
 \alias{f_BVIAS_feed_pseudoherd}
 \title{Function to estimate economic allocation ratios between herd outputs
-`f_pseudoherd_feed_impact` Estimate herd outputs}
+\code{f_pseudoherd_feed_impact} Estimate herd outputs}
 \usage{
 f_BVIAS_feed_pseudoherd(object)
 }
@@ -12,12 +12,14 @@ f_BVIAS_feed_pseudoherd(object)
 }
 \value{
 A list with, for each livestock category:
-- Q_obs: the number of animals observed in the farm (in number of heads)
-- Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+\itemize{
+\item Q_obs: the number of animals observed in the farm (in number of heads)
+\item Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+}
 }
 \description{
 Function to estimate economic allocation ratios between herd outputs
-`f_pseudoherd_feed_impact` Estimate herd outputs
+\code{f_pseudoherd_feed_impact} Estimate herd outputs
 }
 \examples{
 data(fadn_fict)

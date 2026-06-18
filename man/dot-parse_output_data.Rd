@@ -29,74 +29,79 @@ year identifiers (e.g., \code{c("FADN_ID", "YEAR")}).}
 \value{
 A named \code{list} of four \code{\link[tibble]{tibble}}s:
 \describe{
-  \item{\code{crop}}{One row per farm × year × crop. Columns:
-    \code{id_cols}, \code{FADN_code_letter}, \code{output},
-    \code{species}, \code{prod_t} (t), \code{sales_t} (t),
-    \code{sales_e} (EUR), \code{output_e} (EUR), \code{yield}
-    (t ha\eqn{^{-1}}).}
-  \item{\code{other_herd_products}}{One row per farm × year × output
-    product × producing livestock category. Columns: \code{id_cols},
-    \code{FADN_code_letter_output}, \code{output}, \code{species},
-    \code{prod_t} (t), \code{sales_t} (t), \code{sales_e} (EUR),
-    \code{output_e} (EUR), \code{FADN_code_letter} (producing livestock
-    category), \code{Qobs} (head), \code{yield} (t head\eqn{^{-1}}).}
-  \item{\code{meat}}{One row per farm × year × livestock category.
-    Columns: \code{id_cols}, \code{FADN_code_letter}, \code{output},
-    \code{species}, \code{sales_nb} (head), \code{prod_t} (t),
-    \code{sales_t} (t), \code{sales_e} (EUR), \code{output_e} (EUR),
-    \code{yield_t_sales_nb} (t head\eqn{^{-1}}),
-    \code{prop_sales_Qobs}, \code{yield_t_Qobs}
-    (t head\eqn{^{-1}}), \code{yield_e_Qobs} (EUR head\eqn{^{-1}}).}
-  \item{\code{living_animals}}{One row per farm × year × livestock
-    category. Columns: \code{id_cols}, \code{FADN_code_letter},
-    \code{output}, \code{species}, \code{prod_nb} (head),
-    \code{sales_nb} (head), \code{sales_e} (EUR),
-    \code{output_e} (EUR).}
+\item{\code{crop}}{One row per farm × year × crop. Columns:
+\code{id_cols}, \code{FADN_code_letter}, \code{output},
+\code{species}, \code{prod_t} (t), \code{sales_t} (t),
+\code{sales_e} (EUR), \code{output_e} (EUR), \code{yield}
+(t ha\eqn{^{-1}}).}
+\item{\code{other_herd_products}}{One row per farm × year × output
+product × producing livestock category. Columns: \code{id_cols},
+\code{FADN_code_letter_output}, \code{output}, \code{species},
+\code{prod_t} (t), \code{sales_t} (t), \code{sales_e} (EUR),
+\code{output_e} (EUR), \code{FADN_code_letter} (producing livestock
+category), \code{Qobs} (head), \code{yield} (t head\eqn{^{-1}}).}
+\item{\code{meat}}{One row per farm × year × livestock category.
+Columns: \code{id_cols}, \code{FADN_code_letter}, \code{output},
+\code{species}, \code{sales_nb} (head), \code{prod_t} (t),
+\code{sales_t} (t), \code{sales_e} (EUR), \code{output_e} (EUR),
+\code{yield_t_sales_nb} (t head\eqn{^{-1}}),
+\code{prop_sales_Qobs}, \code{yield_t_Qobs}
+(t head\eqn{^{-1}}), \code{yield_e_Qobs} (EUR head\eqn{^{-1}}).}
+\item{\code{living_animals}}{One row per farm × year × livestock
+category. Columns: \code{id_cols}, \code{FADN_code_letter},
+\code{output}, \code{species}, \code{prod_nb} (head),
+\code{sales_nb} (head), \code{sales_e} (EUR),
+\code{output_e} (EUR).}
 }
 }
 \description{
 An internal function that extracts, structures, and enriches farm output
 variables across four output categories from harmonised FADN data:
 \enumerate{
-  \item **Crop outputs**: production quantities, sales, and yields per
-    crop × farm × year.
-  \item **Animal products** (milk, eggs, wool): quantities and yields
-    linked to their producing herd categories.
-  \item **Meat outputs**: live-weight production and sales estimates for
-    animals sold for slaughter.
-  \item **Living animal outputs**: rearing sales (animals sold for
-    reproduction or further fattening).
+\item \strong{Crop outputs}: production quantities, sales, and yields per
+crop × farm × year.
+\item \strong{Animal products} (milk, eggs, wool): quantities and yields
+linked to their producing herd categories.
+\item \strong{Meat outputs}: live-weight production and sales estimates for
+animals sold for slaughter.
+\item \strong{Living animal outputs}: rearing sales (animals sold for
+reproduction or further fattening).
 }
 }
 \details{
-## Step 1 — Metadata Setup
+\subsection{Step 1 — Metadata Setup}{
+
 Valid animal product output codes are extracted from
 \code{data_extra$output}, filtering out entries with missing
 \code{output} labels. A regex pattern is built from these codes (sorted
 by decreasing length) for column matching.
+}
 
-## Step 2 — Crop Outputs
+\subsection{Step 2 — Crop Outputs}{
+
 Sourced directly from the pre-parsed \code{crop_data} object. Standard
 FADN crop variables are mapped as:
 \itemize{
-  \item \code{SV} → \code{sales_e}: crop sales value (EUR).
-  \item \code{TO} → \code{output_e}: total crop output value (EUR).
-  \item \code{prod_t}, \code{sales_t}, \code{yield}: carried over from
-    \code{crop_data}.
+\item \code{SV} → \code{sales_e}: crop sales value (EUR).
+\item \code{TO} → \code{output_e}: total crop output value (EUR).
+\item \code{prod_t}, \code{sales_t}, \code{yield}: carried over from
+\code{crop_data}.
 }
 Rows with zero production and zero sales value are excluded.
+}
 
-## Step 3 — Other Animal Products (Milk, Eggs, Wool)
+\subsection{Step 3 — Other Animal Products (Milk, Eggs, Wool)}{
+
 Animal product variables are extracted from \code{df_harmonized} by
 matching recognised output codes, pivoted to long format, split into
 \code{FADN_code_letter} and \code{variable} suffix via
 \code{\link[tidyr]{extract}}, and pivoted back to wide format. Standard
 FADN suffixes are renamed:
 \itemize{
-  \item \code{PRQ} → \code{prod_t}: production quantity (t).
-  \item \code{SQ}  → \code{sales_t}: sales quantity (t).
-  \item \code{SV}  → \code{sales_e}: sales value (EUR).
-  \item \code{TO}  → \code{output_e}: total output value (EUR).
+\item \code{PRQ} → \code{prod_t}: production quantity (t).
+\item \code{SQ}  → \code{sales_t}: sales quantity (t).
+\item \code{SV}  → \code{sales_e}: sales value (EUR).
+\item \code{TO}  → \code{output_e}: total output value (EUR).
 }
 Output metadata (\code{output}, \code{species}) are joined from
 \code{data_extra$output}. Producer animals are linked via a
@@ -104,8 +109,10 @@ one-to-many mapping table (\code{from_livestock_category} in
 \code{data_extra$output}, semicolon-delimited), joined against
 \code{herd_data} to retrieve observed animal numbers (\code{Qobs}).
 Yield is computed as \code{prod_t / Qobs}.
+}
 
-## Step 4 — Meat Outputs
+\subsection{Step 4 — Meat Outputs}{
+
 Sourced from \code{herd_data}. Animals sold for slaughter
 (\code{SSN}) are assigned a live-weight production quantity using
 default live weights from \code{data_extra$livestock}:
@@ -115,19 +122,22 @@ Output values (\code{output_e}) are pro-rated from total output
 total sales value (\code{SV}). Meat output type is categorised by
 species and livestock code:
 \itemize{
-  \item \code{LBOV1} → \code{meat_veal}
-  \item \code{LCOWDAIR} → \code{meat_cull_cow}
-  \item cattle → \code{meat_beef}; swine → \code{meat_pork};
-    poultry → \code{meat_chicken}; others → \code{meat}.
+\item \code{LBOV1} → \code{meat_veal}
+\item \code{LCOWDAIR} → \code{meat_cull_cow}
+\item cattle → \code{meat_beef}; swine → \code{meat_pork};
+poultry → \code{meat_chicken}; others → \code{meat}.
 }
 Multiple yield metrics are computed (per animal sold, per observed
 animal).
+}
 
-## Step 5 — Living Animal Outputs (Rearing Sales)
+\subsection{Step 5 — Living Animal Outputs (Rearing Sales)}{
+
 Animals sold for reproduction or further fattening (\code{SRN},
 \code{SRV}) are extracted from \code{herd_data}. Output values are
 pro-rated from \code{TO} proportionally to rearing sales value over
 total sales value.
+}
 }
 \seealso{
 \code{\link{.parse_crop_data}}, \code{\link{.parse_herd_data}},

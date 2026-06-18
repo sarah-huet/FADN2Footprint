@@ -74,7 +74,7 @@
 #' }
 #'
 #' @references
-#' Jayet, P.-A. et al. (2023). AROPAJ model. [reference details to be added]
+#' Jayet, P.-A. et al. (2023). AROPAJ model.
 #'
 #' Sailley, S.F. et al. (2021). National feed consumption volumes by species.
 #' See `FADN2Footprint::data_extra$Sailley_2021_feed_flows`.
@@ -95,7 +95,7 @@
 #' }
 #'
 #' @seealso f_feed_onfarm, f_feed_offfarm, f_herd_activities,
-#'   f_feed_theo_ration, [data_extra$Sailley_2021_feed_flows]
+#'   f_feed_theo_ration, `[data_extra$Sailley_2021_feed_flows]`
 #'
 #' @concept practice-herding
 #' @export

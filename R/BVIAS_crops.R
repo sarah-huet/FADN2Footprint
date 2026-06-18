@@ -6,7 +6,7 @@
 #'
 #' This function assesses biodiversity performance by:
 #' 1. Calculating raw metric scores based on non-linear response functions.
-#' 2. Rescaling scores to a [0, 1] range.
+#' 2. Rescaling scores to a `[0, 1]` range.
 #' 3. Aggregating scores using weighted mean.
 #' 4. Normalizing based on land use type (Arable vs Grassland) following Gallego-Zamorano et al. (2022) and Lindner et al. (2019).
 #' 5. Converting the result into a per-tonne impact using yield data.
@@ -30,7 +30,7 @@
 #' The raw score \eqn{y} for each metric is calculated using the following response function:
 #' \deqn{y = \gamma + \epsilon \cdot \exp\left(-\frac{|(x_{norm}^\delta - \beta)^\alpha|}{2\sigma^\alpha}\right)}{y = gamma + epsilon * exp(-|(x_norm^delta - beta)^alpha| / (2 * sigma^alpha))}
 #'
-#' These raw scores are then rescaled to [0, 1] based on the minimum and maximum values observed
+#' These raw scores are then rescaled to `[0, 1]` based on the minimum and maximum values observed
 #' per metric and land use type.
 #'
 #' The final \code{BV_norm} is calculated by interpolating the weighted mean of \eqn{y} (\code{BV_LU})

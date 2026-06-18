@@ -32,15 +32,17 @@ or the package default data_extra$BVIAS_var_weight.}
 }
 \value{
 The input FADN2Footprint S4 object updated with biodiversity footprint
-  outputs stored under object@footprints$BVIAS:
-  - object@footprints$BVIAS$model_parameters$constants: the constants used,
-  - object@footprints$BVIAS$model_parameters$weights: the weights used,
-  - object@footprints$BVIAS$BVI_crops: per‑farm / per‑activity crop BVI table
-    (as returned by f_BVIAS_crops),
-  - object@footprints$BVIAS$BVI_feed: per‑feed‑line BVI table (as returned by
-    f_BVIAS_feed),
-  - object@footprints$BVIAS$BVI_milk: herd output BVI allocations (as returned
-    by f_BVIAS_herd_output).
+outputs stored under object@footprints$BVIAS:
+\itemize{
+\item object@footprints$BVIAS$model_parameters$constants: the constants used,
+\item object@footprints$BVIAS$model_parameters$weights: the weights used,
+\item object@footprints$BVIAS$BVI_crops: per‑farm / per‑activity crop BVI table
+(as returned by f_BVIAS_crops),
+\item object@footprints$BVIAS$BVI_feed: per‑feed‑line BVI table (as returned by
+f_BVIAS_feed),
+\item object@footprints$BVIAS$BVI_milk: herd output BVI allocations (as returned
+by f_BVIAS_herd_output).
+}
 }
 \description{
 compute_footprint_biodiv is a high-level wrapper that computes and caches
@@ -53,44 +55,50 @@ footprints slot and returns the updated FADN2Footprint object.
 }
 \details{
 Workflow:
-- Validate that the supplied object inherits from the S4 class
-  "FADN2Footprint".
-- If a cached result is present at object@footprints$BVIAS$BVI_crops and
-  `overwrite = FALSE`, the function prints a message and returns the cached
-  value immediately.
-- Validate `BVIAS_constants` and `BVIAS_weights` (must be data.frames or NULL).
-- If constants or weights are not supplied, attempt to load them from
-  object@footprints$BVIAS$model_parameters; if still missing, fall back on
-  package defaults (data_extra$BVIAS_var_constant and
-  data_extra$BVIAS_var_weight). The chosen source is indicated with a
-  message.
-- Store the chosen constants and weights in
-  object@footprints$BVIAS$model_parameters.
-- Call:
-    * f_BVIAS_crops(object, ...) to compute per‑farm crop biodiversity impacts
-      and store result in object@footprints$BVIAS$BVI_crops;
-    * f_BVIAS_feed(object, ...) to compute feed-level impacts and store in
-      object@footprints$BVIAS$BVI_feed;
-    * f_BVIAS_herd_output(object, ...) to compute BVI allocated to herd
-      outputs and store in object@footprints$BVIAS$BVI_milk.
-- Return the updated FADN2Footprint S4 object with BVIAS outputs attached.
+\itemize{
+\item Validate that the supplied object inherits from the S4 class
+"FADN2Footprint".
+\item If a cached result is present at object@footprints$BVIAS$BVI_crops and
+\code{overwrite = FALSE}, the function prints a message and returns the cached
+value immediately.
+\item Validate \code{BVIAS_constants} and \code{BVIAS_weights} (must be data.frames or NULL).
+\item If constants or weights are not supplied, attempt to load them from
+object@footprints$BVIAS$model_parameters; if still missing, fall back on
+package defaults (data_extra$BVIAS_var_constant and
+data_extra$BVIAS_var_weight). The chosen source is indicated with a
+message.
+\item Store the chosen constants and weights in
+object@footprints$BVIAS$model_parameters.
+\item Call:
+\itemize{
+\item f_BVIAS_crops(object, ...) to compute per‑farm crop biodiversity impacts
+and store result in object@footprints$BVIAS$BVI_crops;
+\item f_BVIAS_feed(object, ...) to compute feed-level impacts and store in
+object@footprints$BVIAS$BVI_feed;
+\item f_BVIAS_herd_output(object, ...) to compute BVI allocated to herd
+outputs and store in object@footprints$BVIAS$BVI_milk.
+}
+\item Return the updated FADN2Footprint S4 object with BVIAS outputs attached.
+}
 
 Notes and assumptions:
-- The function delegates domain-specific computations to helper functions
-  (f_BVIAS_crops, f_BVIAS_feed, f_BVIAS_herd_output) which must be present
-  and compatible with the structure of the provided object.
-- The function expects the object to contain required slots and intermediate
-  data (for example: object@farm, object@traceability$id_cols,
-  object@practices, object@herd, object@output, etc.). Helper functions may
-  call infer_practices or other preparatory steps as needed.
-- If model parameter tables are not provided and not present in the object,
-  package defaults (data_extra$BVIAS_var_constant and
-  data_extra$BVIAS_var_weight) are used. A message is printed to indicate the
-  parameter source.
+\itemize{
+\item The function delegates domain-specific computations to helper functions
+(f_BVIAS_crops, f_BVIAS_feed, f_BVIAS_herd_output) which must be present
+and compatible with the structure of the provided object.
+\item The function expects the object to contain required slots and intermediate
+data (for example: object@farm, object@traceability$id_cols,
+object@practices, object@herd, object@output, etc.). Helper functions may
+call infer_practices or other preparatory steps as needed.
+\item If model parameter tables are not provided and not present in the object,
+package defaults (data_extra$BVIAS_var_constant and
+data_extra$BVIAS_var_weight) are used. A message is printed to indicate the
+parameter source.
+}
 }
 \section{Caching and messages}{
 
-If a cached BVI crops table exists and `overwrite = FALSE`, the function will
+If a cached BVI crops table exists and \code{overwrite = FALSE}, the function will
 print a message and return the cached object immediately. Messages are also
 printed when default constants/weights are used or when constants/weights are
 loaded from the object.

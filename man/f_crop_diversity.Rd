@@ -3,7 +3,7 @@
 \name{f_crop_diversity}
 \alias{f_crop_diversity}
 \title{Function to estimate crop diversity based on FADN data
-`crop_diversity` Create a tibble with the following variables:  'farm_id', 'land_use_type', 'Shannon', 'crop_nb_LU'}
+\code{crop_diversity} Create a tibble with the following variables:  'farm_id', 'land_use_type', 'Shannon', 'crop_nb_LU'}
 \usage{
 f_crop_diversity(object, overwrite = FALSE)
 }
@@ -17,13 +17,15 @@ cached GHGE results are ignored and computations are re-run.}
 }
 \value{
 A tibble with:
-- crop_nb_pLU: number of crop per land use type (i.e., arable or grassland)
-- Shannon: the Shannon index per land use type
-- R_Simpson: the reciprocal Simpson index per land use type
+\itemize{
+\item crop_nb_pLU: number of crop per land use type (i.e., arable or grassland)
+\item Shannon: the Shannon index per land use type
+\item R_Simpson: the reciprocal Simpson index per land use type
+}
 }
 \description{
 Function to estimate crop diversity based on FADN data
-`crop_diversity` Create a tibble with the following variables:  'farm_id', 'land_use_type', 'Shannon', 'crop_nb_LU'
+\code{crop_diversity} Create a tibble with the following variables:  'farm_id', 'land_use_type', 'Shannon', 'crop_nb_LU'
 }
 \examples{
 data(fadn_fict)

@@ -3,7 +3,7 @@
 \name{f_herd_rearing_param_swine}
 \alias{f_herd_rearing_param_swine}
 \title{Function to estimate off-farm animals of the swine herd based on FADN data
-`f_herd_rearing_param_swine` Estimate off-farm animals of the swine herd}
+\code{f_herd_rearing_param_swine} Estimate off-farm animals of the swine herd}
 \usage{
 f_herd_rearing_param_swine(object)
 }
@@ -12,12 +12,14 @@ f_herd_rearing_param_swine(object)
 }
 \value{
 A tibble with, for each livestock category:
-- Q_obs: the number of animals observed in the farm (in number of heads)
-- Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+\itemize{
+\item Q_obs: the number of animals observed in the farm (in number of heads)
+\item Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+}
 }
 \description{
 Function to estimate off-farm animals of the swine herd based on FADN data
-`f_herd_rearing_param_swine` Estimate off-farm animals of the swine herd
+\code{f_herd_rearing_param_swine} Estimate off-farm animals of the swine herd
 }
 \examples{
 data(fadn_fict)

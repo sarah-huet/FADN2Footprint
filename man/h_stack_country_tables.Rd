@@ -18,8 +18,8 @@ Defaults to \code{"COUNTRY"}.}
 }
 \value{
 A named list of data frames (one per table type), each containing
-  all countries (and years if previously stacked) with an added
-  \code{country_col} column.
+all countries (and years if previously stacked) with an added
+\code{country_col} column.
 }
 \description{
 After stacking years with \code{stack_yearly_tables()}, this function

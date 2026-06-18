@@ -3,7 +3,7 @@
 \name{f_feed_value}
 \alias{f_feed_value}
 \title{Function to estimate feed value
-`f_feed_value` Estimate the feed value based on EUROSTAT feed stuff prices}
+\code{f_feed_value} Estimate the feed value based on EUROSTAT feed stuff prices}
 \usage{
 f_feed_value(object)
 }
@@ -15,7 +15,7 @@ a list of two tables
 }
 \description{
 Function to estimate feed value
-`f_feed_value` Estimate the feed value based on EUROSTAT feed stuff prices
+\code{f_feed_value} Estimate the feed value based on EUROSTAT feed stuff prices
 }
 \examples{
 data(fadn_fict)

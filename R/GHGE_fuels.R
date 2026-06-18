@@ -147,7 +147,7 @@ f_GHGE_fuels <- function(object,
       by = id_cols
     ) |>
     dplyr::mutate(
-      diesel_tillage_tot_MJ = dplyr::coalesce(diesel_tillage_tot_l * (diesel_MJ / diesel_l), 0),
+      diesel_tillage_tot_MJ = dplyr::coalesce(diesel_MJ * ( diesel_tillage_tot_l/ diesel_l), 0),
       diesel_remain_MJ = diesel_MJ - diesel_tillage_tot_MJ
     ) |>
     # add EF

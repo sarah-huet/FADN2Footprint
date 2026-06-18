@@ -95,55 +95,55 @@ fadn_data = FADN_16_18
 # --- Share of rearing vs slaughter sales by livestock category ----
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# --- Identify SSN and SRN variables ---
-ssn_vars <- grep("SSN$", names(fadn_data), value = TRUE)
-srn_vars <- grep("SRN$", names(fadn_data), value = TRUE)
-
-# Corresponding total sales variables (SN suffix)
-# e.g., SE206SSN -> SE206SN, SE206SRN -> SE206SN
-all_livestock_vars <- unique(c(ssn_vars, srn_vars))
-
-# Extract base codes to find corresponding SN variables
-# Assumes naming convention: [PREFIX]SSN or [PREFIX]SRN -> [PREFIX]SN
-base_codes_ssn <- sub("_SSN$", "", ssn_vars)
-base_codes_srn <- sub("_SRN$", "", srn_vars)
-base_codes_all <- unique(c(base_codes_ssn, base_codes_srn))
-
-sn_vars <- paste0(base_codes_all, "_SN")
-sn_vars_present <- intersect(sn_vars, names(fadn_data))
 
 # --- Compute share variables at farm level ---
 # Share = SSN / SN and SRN / SN for each livestock category
 
-share_vars <- c()
+sales_raw <- fadn_data |>
+  dplyr::select(ID, YEAR, COUNTRY, NUTS2, SYS02,
+                dplyr::matches("_SN$|_SSN$|_SRN$"))
 
-for (base in base_codes_all) {
-  sn_col  <- paste0(base, "_SN")
-  ssn_col <- paste0(base, "_SSN")
-  srn_col <- paste0(base, "_SRN")
+sales_raw_long <- sales_raw |>
+  tidyr::pivot_longer(
+    cols = dplyr::matches("_SN$|_SSN$|_SRN$")
+  ) |>
+  dplyr::filter(value >0) |>
+  dplyr::mutate(
+    FADN_code_letter = gsub("_SN$|_SSN$|_SRN$","",name),
+    var = stringr::str_extract(name,"SN$|SSN$|SRN$")
+  ) |>
+  tidyr::pivot_wider(
+    id_cols = c('ID', 'YEAR', 'COUNTRY', 'NUTS2', 'SYS02', 'FADN_code_letter'),
+    names_from = 'var',
+    values_from = 'value',
+    values_fill = 0
+  ) |>
+  # check if SN = SRN + SSN
+  dplyr::mutate(
+    complete_sales = SN == SRN + SSN
+  )
 
-  # SSN share
-  if (ssn_col %in% names(fadn_data) & sn_col %in% names(fadn_data)) {
-    share_col_ssn <- paste0(base, "_share_SSN")
-    fadn_data[[share_col_ssn]] <- ifelse(
-      fadn_data[[sn_col]] > 0,
-      fadn_data[[ssn_col]] / fadn_data[[sn_col]],
-      NA_real_
-    )
-    share_vars <- c(share_vars, share_col_ssn)
-  }
+table(sales_raw_long$complete_sales)
 
-  # SRN share
-  if (srn_col %in% names(fadn_data) & sn_col %in% names(fadn_data)) {
-    share_col_srn <- paste0(base, "_share_SRN")
-    fadn_data[[share_col_srn]] <- ifelse(
-      fadn_data[[sn_col]] > 0,
-      fadn_data[[srn_col]] / fadn_data[[sn_col]],
-      NA_real_
-    )
-    share_vars <- c(share_vars, share_col_srn)
-  }
-}
+sales_shares_raw <- sales_raw_long |>
+  # keep only farms with complete sales values
+  dplyr::filter(complete_sales) |>
+  # estimate shares
+  dplyr::mutate(
+    share_SRN = SRN / SN,
+    share_SSN = SSN / SN
+  )
+
+# Missing NUTS2 x livestock category
+missing_cat <- dplyr::anti_join(
+  sales_raw_long |>
+    dplyr::select(NUTS2, FADN_code_letter) |>
+    dplyr::distinct(),
+  sales_shares_raw |>
+    dplyr::select(NUTS2, FADN_code_letter) |>
+    dplyr::distinct(),
+  by = c('NUTS2', 'FADN_code_letter')
+)
 
 # --- Summarise shares at NUTS2 level using h_average_practices ---
 # primary_grp  : NUTS2 (the level we want results at)
@@ -151,35 +151,13 @@ for (base in base_codes_all) {
 # weight_var   : farm weight (e.g., "WF" in FADN)
 
 sales_shares <- h_average_practices(
-  data          = fadn_data,
-  target_vars   = share_vars,
-  primary_grp   = "NUTS2",
-  secondary_grp = "COUNTRY",
+  data          = sales_shares_raw |>
+    dplyr::bind_rows(missing_cat),
+  target_vars   = c("share_SRN", "share_SSN"),
+  primary_grp   = c('FADN_code_letter', "NUTS2"),
+  secondary_grp = c('FADN_code_letter'),
   weight_var    = "SYS02"            # adjust to actual weight column name
 )
-
-# --- Final fallback: replace remaining NAs with the overall variable mean ---
-# This handles cases where both NUTS2 and country-level data are unavailable
-
-sales_shares <- sales_shares |>
-  dplyr::mutate(
-    dplyr::across(
-      dplyr::all_of(share_vars),
-      ~ dplyr::coalesce(., mean(., na.rm = TRUE))
-    )
-  )
-
-# Report variables that still contain NAs after all imputation steps
-remaining_nas <- colSums(is.na(sales_shares[share_vars]))
-if (any(remaining_nas > 0)) {
-  warning(
-    "The following variables still contain NAs after all imputation steps ",
-    "(all values were NA, no mean could be computed):\n",
-    paste(names(remaining_nas[remaining_nas > 0]), collapse = ", ")
-  )
-} else {
-  message("No remaining NAs in share variables after imputation.")
-}
 
 View(sales_shares)
 

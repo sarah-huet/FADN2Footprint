@@ -3,7 +3,7 @@
 \name{f_share_Nmin_ferti}
 \alias{f_share_Nmin_ferti}
 \title{Function to estimate the share of fertilizer based on either FADN or RICA data
-`share_Nmin_ferti` Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'}
+\code{share_Nmin_ferti} Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'}
 \usage{
 f_share_Nmin_ferti(object, overwrite = FALSE)
 }
@@ -20,7 +20,7 @@ a tibble
 }
 \description{
 Function to estimate the share of fertilizer based on either FADN or RICA data
-`share_Nmin_ferti` Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'
+\code{share_Nmin_ferti} Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'
 }
 \examples{
 data(fadn_fict)

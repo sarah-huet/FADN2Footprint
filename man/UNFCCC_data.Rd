@@ -7,26 +7,26 @@
 \format{
 A named list containing 7 data frames (tibbles):
 \describe{
-  \item{table3As2}{**Table 3.A (Sheet 2 of 2): Enteric Fermentation.**
-  Contains Implied Emission Factors (IEF) for methane emissions from enteric fermentation per livestock category.}
+\item{table3As2}{\strong{Table 3.A (Sheet 2 of 2): Enteric Fermentation.}
+Contains Implied Emission Factors (IEF) for methane emissions from enteric fermentation per livestock category.}
 
-  \item{table3Bas1}{**Table 3.B(a) (Sheet 1 of 2): CH4 Emissions from Manure Management.**
-  Contains data on manure management system allocation (MMS) and nitrogen excretion rates.}
+\item{table3Bas1}{\strong{Table 3.B(a) (Sheet 1 of 2): CH4 Emissions from Manure Management.}
+Contains data on manure management system allocation (MMS) and nitrogen excretion rates.}
 
-  \item{table3Bas2}{**Table 3.B(a) (Sheet 2 of 2): CH4 Emissions from Manure Management.**
-  Contains Implied Emission Factors (IEF) for methane from manure management.}
+\item{table3Bas2}{\strong{Table 3.B(a) (Sheet 2 of 2): CH4 Emissions from Manure Management.}
+Contains Implied Emission Factors (IEF) for methane from manure management.}
 
-  \item{table3Bb}{**Table 3.B(b): N2O Emissions from Manure Management.**
-  Contains Nitrogen excretion data and N2O Implied Emission Factors per manure management system.}
+\item{table3Bb}{\strong{Table 3.B(b): N2O Emissions from Manure Management.}
+Contains Nitrogen excretion data and N2O Implied Emission Factors per manure management system.}
 
-  \item{table3D}{**Table 3.D: Agricultural Soils.**
-  Contains fractions and activity data for direct and indirect N2O emissions from managed soils (fertilizers, crop residues, etc.).}
+\item{table3D}{\strong{Table 3.D: Agricultural Soils.}
+Contains fractions and activity data for direct and indirect N2O emissions from managed soils (fertilizers, crop residues, etc.).}
 
-  \item{EF_managed_soils}{**Derived Emission Factors for Soils.**
-  A subset or processed version of Table 3.D focusing specifically on emission factors for direct/indirect soil emissions.}
+\item{EF_managed_soils}{\strong{Derived Emission Factors for Soils.}
+A subset or processed version of Table 3.D focusing specifically on emission factors for direct/indirect soil emissions.}
 
-  \item{EF_fuel}{**Table 1.A(a) (Sheet 4 of 4): Fuel combustion activities.**
-  Contains Implied Emission Factors of Liquid fuels for CO2, CH4, and N2O from fuel combustion in the agriculture/forestry/fisheries sector (in t CO2 TJ-1, kg CH4 TJ-1, and kg N2O TJ-1).}
+\item{EF_fuel}{\strong{Table 1.A(a) (Sheet 4 of 4): Fuel combustion activities.}
+Contains Implied Emission Factors of Liquid fuels for CO2, CH4, and N2O from fuel combustion in the agriculture/forestry/fisheries sector (in t CO2 TJ-1, kg CH4 TJ-1, and kg N2O TJ-1).}
 }
 }
 \source{

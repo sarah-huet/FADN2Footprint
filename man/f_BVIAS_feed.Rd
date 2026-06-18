@@ -34,15 +34,17 @@ object@footprints$BVIAS$model_parameters$weights or package defaults
 }
 \value{
 A tibble/data.frame containing one row per feed detail line (per
-  traceability id). Returned columns include:
-  - traceability id columns (as in object@traceability$id_cols),
-  - feed descriptors (FADN_code_feed, feed_type, feed_origin, Sailley_feed, ...),
-  - quantity columns (DM_t_livcat, Qobs variants where present),
-  - area_ha (recomputed area = DM_t_livcat / yield),
-  - practice variables joined from on‑farm or averaged off‑farm estimates
-    (e.g. tillage, N_ferti, pesticides, crop_diversity, mean_field_size, ground_cover, ...),
-  - biodiversity metrics BVI_ha and BVI_t and the yield used to compute BVI_t,
-  - other intermediate variables used in the BVIAS computations.
+traceability id). Returned columns include:
+\itemize{
+\item traceability id columns (as in object@traceability$id_cols),
+\item feed descriptors (FADN_code_feed, feed_type, feed_origin, Sailley_feed, ...),
+\item quantity columns (DM_t_livcat, Qobs variants where present),
+\item area_ha (recomputed area = DM_t_livcat / yield),
+\item practice variables joined from on‑farm or averaged off‑farm estimates
+(e.g. tillage, N_ferti, pesticides, crop_diversity, mean_field_size, ground_cover, ...),
+\item biodiversity metrics BVI_ha and BVI_t and the yield used to compute BVI_t,
+\item other intermediate variables used in the BVIAS computations.
+}
 
 A tibble/data.frame with per‑feed-line biodiversity impact estimates (BVI_ha, BVI_t) and supporting variables.
 }
@@ -54,29 +56,33 @@ feeding, area and practice variables used for the assessment.
 }
 \details{
 The function:
-- validates that the input is an S4 object of class "FADN2Footprint";
-- optionally uses cached results stored at object@footprints$BVIAS$BVI_feed;
-- loads or checks BVIAS model parameter tables (constants and weights) either
-  from the provided arguments, from object@footprints$BVIAS$model_parameters,
-  or from package defaults (data_extra$BVIAS_var_constant and
-  data_extra$BVIAS_var_weight);
-- ensures farm practices are inferred (calls infer_practices internally)
-  so that herd feed intake detail and farm practices exist on the object;
-- computes on‑farm crop impacts via f_BVIAS_crops and joins these to produced
-  feed lines, computes off‑farm (purchased) feed impacts by joining average
-  practice/impact estimates to purchased feed categories, and treats special
-  cases (e.g. soybean meal sourcing and adjusted soybean practices/impacts);
-- returns a row per feed line (joined with traceability id columns) containing
-  feed quantities (DM_t_livcat), area estimates, yield, estimated practice
-  variables, and biodiversity impact metrics (BVI_ha, BVI_t).
+\itemize{
+\item validates that the input is an S4 object of class "FADN2Footprint";
+\item optionally uses cached results stored at object@footprints$BVIAS$BVI_feed;
+\item loads or checks BVIAS model parameter tables (constants and weights) either
+from the provided arguments, from object@footprints$BVIAS$model_parameters,
+or from package defaults (data_extra$BVIAS_var_constant and
+data_extra$BVIAS_var_weight);
+\item ensures farm practices are inferred (calls infer_practices internally)
+so that herd feed intake detail and farm practices exist on the object;
+\item computes on‑farm crop impacts via f_BVIAS_crops and joins these to produced
+feed lines, computes off‑farm (purchased) feed impacts by joining average
+practice/impact estimates to purchased feed categories, and treats special
+cases (e.g. soybean meal sourcing and adjusted soybean practices/impacts);
+\item returns a row per feed line (joined with traceability id columns) containing
+feed quantities (DM_t_livcat), area estimates, yield, estimated practice
+variables, and biodiversity impact metrics (BVI_ha, BVI_t).
+}
 
 The implementation follows three main steps:
-1) estimate on‑farm vs off‑farm feed quantities and attach farm metadata;
-2) estimate on‑farm crop practices & impacts using f_BVIAS_crops;
-3) estimate off‑farm (purchased) crop practice averages and impacts and
-   combine results. Soybean meal (imported soybean) is treated using a
-   dedicated routine that maps Lindner/Overmars-derived parameters to FADN
-   practice space.
+\enumerate{
+\item estimate on‑farm vs off‑farm feed quantities and attach farm metadata;
+\item estimate on‑farm crop practices & impacts using f_BVIAS_crops;
+\item estimate off‑farm (purchased) crop practice averages and impacts and
+combine results. Soybean meal (imported soybean) is treated using a
+dedicated routine that maps Lindner/Overmars-derived parameters to FADN
+practice space.
+}
 }
 \section{Caching and messages}{
 

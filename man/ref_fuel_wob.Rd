@@ -7,16 +7,16 @@
 \format{
 A data frame with one row per country-year and the following columns:
 \describe{
-  \item{\code{COUNTRY}}{Country code as used in FADN inputs (\code{country_FADN}).}
-  \item{\code{country_eu}}{EU/WOB country code (e.g. \code{FR}, \code{DE}, \code{EL}).}
-  \item{\code{YEAR}}{Year (character).}
-  \item{\code{PFUEL_ROAD}}{Automotive gas oil price without tax, in \(€ / L\) (annual mean).}
-  \item{\code{PFUEL_HEAT}}{Heating gas oil price without tax, in \(€ / L\) (annual mean).}
+\item{\code{COUNTRY}}{Country code as used in FADN inputs (\code{country_FADN}).}
+\item{\code{country_eu}}{EU/WOB country code (e.g. \code{FR}, \code{DE}, \code{EL}).}
+\item{\code{YEAR}}{Year (character).}
+\item{\code{PFUEL_ROAD}}{Automotive gas oil price without tax, in \(€ / L\) (annual mean).}
+\item{\code{PFUEL_HEAT}}{Heating gas oil price without tax, in \(€ / L\) (annual mean).}
 }
 }
 \source{
 European Commission, DG Energy, Weekly Oil Bulletin (WOB), historical price files
-(without taxes), as downloaded on **2022-11-04** and stored locally in the
+(without taxes), as downloaded on \strong{2022-11-04} and stored locally in the
 project raw-data folders (see script paths \code{data_raw/ref_fuel/...}).
 }
 \usage{
@@ -24,22 +24,22 @@ data(ref_fuel_wob)
 }
 \description{
 Reference fuel price time series derived from the European Commission
-**Weekly Oil Bulletin (WOB)** historical files, processed for use in
-**FADN2Footprint** (e.g., cost proxies for energy use and related footprint
+\strong{Weekly Oil Bulletin (WOB)} historical files, processed for use in
+\strong{FADN2Footprint} (e.g., cost proxies for energy use and related footprint
 accounting).
 
-The dataset provides annual average prices **without taxes** (WOT) for:
+The dataset provides annual average prices \strong{without taxes} (WOT) for:
 \itemize{
-  \item automotive gas oil (road diesel),
-  \item heating gas oil.
+\item automotive gas oil (road diesel),
+\item heating gas oil.
 }
 
-Coverage is **2004–2022** (as constructed by the data-creation script):
+Coverage is \strong{2004–2022} (as constructed by the data-creation script):
 \itemize{
-  \item 2005–2022: extracted from \code{Oil_Bulletin_Prices_History.xlsx}
-  (sheets \code{wotax_ctr_road} and \code{wotax_ctr_heat}).
-  \item 2004: reconstructed from one Excel file per country (weekly observations),
-  aggregated to annual means and converted to \(€ / L\).
+\item 2005–2022: extracted from \code{Oil_Bulletin_Prices_History.xlsx}
+(sheets \code{wotax_ctr_road} and \code{wotax_ctr_heat}).
+\item 2004: reconstructed from one Excel file per country (weekly observations),
+aggregated to annual means and converted to \(€ / L\).
 }
 
 Country identifiers from WOB (\code{country_eu}, e.g. \code{"EL"} for Greece) are
@@ -50,14 +50,14 @@ mapped to the package's FADN country codes (\code{COUNTRY}) using
 \details{
 Data-processing notes (as implemented in the script):
 \enumerate{
-  \item Zeros in the 2005+ history tables are treated as missing values (\code{NA}).
-  \item The 2005–2022 tables are reshaped from wide (years as columns) to long
-  (one row per country-year).
-  \item For 2004, weekly observations are filtered to year 2004, averaged by
-  country, and converted from \(€ / 1000\ L\) to \(€ / L\)
-  via division by 1000.
-  \item The final dataset is the row-bind of the 2004 and 2005–2022 blocks,
-  sorted by \code{COUNTRY} and \code{YEAR}.
+\item Zeros in the 2005+ history tables are treated as missing values (\code{NA}).
+\item The 2005–2022 tables are reshaped from wide (years as columns) to long
+(one row per country-year).
+\item For 2004, weekly observations are filtered to year 2004, averaged by
+country, and converted from \(€ / 1000\ L\) to \(€ / L\)
+via division by 1000.
+\item The final dataset is the row-bind of the 2004 and 2005–2022 blocks,
+sorted by \code{COUNTRY} and \code{YEAR}.
 }
 }
 \examples{

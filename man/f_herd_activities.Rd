@@ -9,11 +9,13 @@ f_herd_activities(object, overwrite = FALSE)
 \arguments{
 \item{object}{An S4 object of class "FADN2Footprint" prepared by the package
 workflow. The function expects the object to provide:
-- object@traceability$id_cols (vector of id column names used for joins),
-- object@herd (for sheep, goats, horses),
-- helper functions f_herd_rearing_param_cattle, f_herd_rearing_param_swine,
-  f_herd_rearing_param_poultry to supply rearing parameter tables,
-- package data table data_extra$livestock for species lookup.}
+\itemize{
+\item object@traceability$id_cols (vector of id column names used for joins),
+\item object@herd (for sheep, goats, horses),
+\item helper functions f_herd_rearing_param_cattle, f_herd_rearing_param_swine,
+f_herd_rearing_param_poultry to supply rearing parameter tables,
+\item package data table data_extra$livestock for species lookup.
+}}
 
 \item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
 the function returns
@@ -22,13 +24,15 @@ cached GHGE results are ignored and computations are re-run.}
 }
 \value{
 A tibble/data.frame with one or more rows per traceable farm and
-  FADN animal category (FADN_code_letter). Typical columns include:
-  - traceability id columns (as in object@traceability$id_cols),
-  - FADN_code_letter (animal category code),
-  - Qobs: observed number of animals (baseline from rearing params / herd),
-  - Qobs_milk, Qobs_meat, Qobs_eggs (when applicable): observed numbers of
-    animals participating in each activity (zeros when not applicable),
-  - species: species label joined from data_extra$livestock.
+FADN animal category (FADN_code_letter). Typical columns include:
+\itemize{
+\item traceability id columns (as in object@traceability$id_cols),
+\item FADN_code_letter (animal category code),
+\item Qobs: observed number of animals (baseline from rearing params / herd),
+\item Qobs_milk, Qobs_meat, Qobs_eggs (when applicable): observed numbers of
+animals participating in each activity (zeros when not applicable),
+\item species: species label joined from data_extra$livestock.
+}
 
 Rows with Qobs <= 0 are filtered out.
 }
@@ -42,36 +46,40 @@ quantities participating in each activity.
 }
 \details{
 The function:
-- validates that `object` inherits from the S4 class "FADN2Footprint";
-- returns cached results stored in object@practices$herding$activities when
-  present and `overwrite = FALSE`;
-- for cattle, uses f_herd_rearing_param_cattle(object) and a set of
-  rearing/transfer rate variables (rt_*) to estimate the observed number of
-  animals involved in the milk production chain (Qobs_milk) and the remainder
-  allocated to meat production (Qobs_meat). The code performs intermediate
-  calculations to allocate breeders, juveniles and other rearing classes to
-  the milk or meat activity. Several internal formulas include safety checks
-  (e.g. pmin/pmax or conditional zeroing) to avoid negative or impossible
-  allocations.
-- for swine and poultry, calls f_herd_rearing_param_swine and
-  f_herd_rearing_param_poultry, reshapes the rearing-parameter outputs into
-  long format and assigns activity roles (meat, eggs) where relevant;
-- for sheep, goats and horses, extracts existing Qobs columns from
-  object@herd and keeps them for activity allocation (no extra rearing
-  parameter computation is performed here);
-- finally, the results for all species are row-bound, filtered to keep only
-  positive observed animal counts, and annotated with species information
-  using data_extra$livestock to allow downstream joins and aggregation.
+\itemize{
+\item validates that \code{object} inherits from the S4 class "FADN2Footprint";
+\item returns cached results stored in object@practices$herding$activities when
+present and \code{overwrite = FALSE};
+\item for cattle, uses f_herd_rearing_param_cattle(object) and a set of
+rearing/transfer rate variables (rt_*) to estimate the observed number of
+animals involved in the milk production chain (Qobs_milk) and the remainder
+allocated to meat production (Qobs_meat). The code performs intermediate
+calculations to allocate breeders, juveniles and other rearing classes to
+the milk or meat activity. Several internal formulas include safety checks
+(e.g. pmin/pmax or conditional zeroing) to avoid negative or impossible
+allocations.
+\item for swine and poultry, calls f_herd_rearing_param_swine and
+f_herd_rearing_param_poultry, reshapes the rearing-parameter outputs into
+long format and assigns activity roles (meat, eggs) where relevant;
+\item for sheep, goats and horses, extracts existing Qobs columns from
+object@herd and keeps them for activity allocation (no extra rearing
+parameter computation is performed here);
+\item finally, the results for all species are row-bound, filtered to keep only
+positive observed animal counts, and annotated with species information
+using data_extra$livestock to allow downstream joins and aggregation.
+}
 
 Important notes and assumptions:
-- The cattle allocation logic is relatively complex and depends on rearing
-  parameters provided by f_herd_rearing_param_cattle (rt_* variables,
-  breeder and juvenile Qobs columns). Users should check those inputs and
-  accompanying TODOs in the implementation for edge cases (e.g. farms with
-  missing intermediate classes).
-- The function does not modify the input object; it returns a tibble that
-  can be stored back into the object's cache slot (object@practices$herding$activities)
-  by the caller if desired.
+\itemize{
+\item The cattle allocation logic is relatively complex and depends on rearing
+parameters provided by f_herd_rearing_param_cattle (rt_* variables,
+breeder and juvenile Qobs columns). Users should check those inputs and
+accompanying TODOs in the implementation for edge cases (e.g. farms with
+missing intermediate classes).
+\item The function does not modify the input object; it returns a tibble that
+can be stored back into the object's cache slot (object@practices$herding$activities)
+by the caller if desired.
+}
 }
 \examples{
 \dontrun{
@@ -87,6 +95,6 @@ herd_act2 <- f_herd_activities(f, overwrite = TRUE)
 }
 \seealso{
 f_herd_rearing_param_cattle, f_herd_rearing_param_swine,
-  f_herd_rearing_param_poultry, data_extra$livestock
+f_herd_rearing_param_poultry, data_extra$livestock
 }
 \concept{practice-herding}

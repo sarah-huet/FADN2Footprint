@@ -1,1 +1,3 @@
-/.quarto/
+*.html
+*.R
+inst/doc

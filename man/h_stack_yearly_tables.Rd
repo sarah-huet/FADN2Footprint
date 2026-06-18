@@ -16,7 +16,7 @@ Defaults to \code{"YEAR"}.}
 }
 \value{
 A named list of data frames (one per table type), each containing
-  all years stacked with an added \code{year_col} column.
+all years stacked with an added \code{year_col} column.
 }
 \description{
 National FADN data typically come as separate files per year. This helper

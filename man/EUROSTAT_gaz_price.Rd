@@ -7,9 +7,9 @@
 \format{
 A tibble/data frame with one row per country-year combination and 3 columns:
 \describe{
-  \item{\code{Country_ISO_3166_1_A3}}{Country code (ISO 3166-1 alpha-3).}
-  \item{\code{YEAR}}{Year (character).}
-  \item{\code{euro_GJ}}{Annual mean gas price in \(€ / GJ\) (numeric), computed as the mean of S1 and S2 when available.}
+\item{\code{Country_ISO_3166_1_A3}}{Country code (ISO 3166-1 alpha-3).}
+\item{\code{YEAR}}{Year (character).}
+\item{\code{euro_GJ}}{Annual mean gas price in \(€ / GJ\) (numeric), computed as the mean of S1 and S2 when available.}
 }
 }
 \source{
@@ -22,24 +22,24 @@ data(EUROSTAT_gaz_price)
 \description{
 Country-level natural gas price time series derived from EUROSTAT dataset
 \code{NRG_PC_203}. Values are extracted from a custom EUROSTAT Excel export
-and processed for use in **FADN2Footprint** (e.g., energy cost proxies and
+and processed for use in \strong{FADN2Footprint} (e.g., energy cost proxies and
 footprint accounting steps requiring gas price assumptions).
 
 The source table provides prices per semester (S1, S2). This dataset aggregates
 semester values into an annual mean price per country and year.
 
-Units are **euros per gigajoule** (\(€ / GJ\)), reported in **gross
-calorific value (GCV)** terms, as indicated in the extraction script.
+Units are \strong{euros per gigajoule} (\(€ / GJ\)), reported in \strong{gross
+calorific value (GCV)} terms, as indicated in the extraction script.
 }
 \details{
 Processing steps (as implemented in the data-creation script):
 \enumerate{
-  \item Read range \code{A12:AK50} from \code{Sheet 16} of the custom EUROSTAT export.
-  \item Drop non-data header rows (e.g. \code{"GEO (Labels)"}).
-  \item Convert price columns to numeric (suppressing coercion warnings).
-  \item Map country labels to ISO3 codes using \code{data_extra$country_names}.
-  \item Pivot semester columns (e.g. \code{YYYY-S1}, \code{YYYY-S2}) to long format.
-  \item Compute annual means by country and year.
+\item Read range \code{A12:AK50} from \code{Sheet 16} of the custom EUROSTAT export.
+\item Drop non-data header rows (e.g. \code{"GEO (Labels)"}).
+\item Convert price columns to numeric (suppressing coercion warnings).
+\item Map country labels to ISO3 codes using \code{data_extra$country_names}.
+\item Pivot semester columns (e.g. \code{YYYY-S1}, \code{YYYY-S2}) to long format.
+\item Compute annual means by country and year.
 }
 }
 \examples{

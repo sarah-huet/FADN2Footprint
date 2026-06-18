@@ -53,6 +53,7 @@ Suggests:
     devtools,
     knitr,
     rmarkdown,
+    bookdown,
     testthat (>= 3.0.0)
 Collate: 
     'BVIAS_crops.R'
@@ -111,5 +112,7 @@ Collate:
     'validate_estimates.R'
     'zzz.R'
 Config/roxygen2/version: 8.0.0
+Roxygen: list(markdown = TRUE)
+VignetteBuilder: knitr
 Depends: 
     R (>= 3.5)

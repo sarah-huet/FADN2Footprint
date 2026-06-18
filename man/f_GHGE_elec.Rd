@@ -13,19 +13,19 @@ f_GHGE_elec(object, account_pseudoherd = FALSE, ...)
 A \code{\link[tibble]{tibble}} containing one row per farm
 observation, with the following columns:
 \describe{
-  \item{...}{Traceability identifier columns as defined in
-    \code{object@traceability$id_cols} (e.g., farm ID, year, NUTS2 region).}
-  \item{elec_V}{\code{numeric}. Electricity expenditure from FADN (€).}
-  \item{Country_ISO_3166_1_A3}{\code{character}. Country ISO 3166-1 alpha-3
-    code.}
-  \item{euro_kWh}{\code{numeric}. National average electricity price
-    (€ kWh\eqn{^{-1}}), from EUROSTAT \code{NRG_PC_205}.}
-  \item{elec_kWh}{\code{numeric}. Estimated electricity consumption (kWh
-    yr\eqn{^{-1}}).}
-  \item{EF_elec}{\code{numeric}. Country- and year-specific electricity
-    emission factor (kg CO2-eq kWh\eqn{^{-1}}).}
-  \item{ghg_elec_kgCO2e}{\code{numeric}. Total GHG emissions from electricity
-    consumption (kg CO2-eq yr\eqn{^{-1}}).}
+\item{...}{Traceability identifier columns as defined in
+\code{object@traceability$id_cols} (e.g., farm ID, year, NUTS2 region).}
+\item{elec_V}{\code{numeric}. Electricity expenditure from FADN (€).}
+\item{Country_ISO_3166_1_A3}{\code{character}. Country ISO 3166-1 alpha-3
+code.}
+\item{euro_kWh}{\code{numeric}. National average electricity price
+(€ kWh\eqn{^{-1}}), from EUROSTAT \code{NRG_PC_205}.}
+\item{elec_kWh}{\code{numeric}. Estimated electricity consumption (kWh
+yr\eqn{^{-1}}).}
+\item{EF_elec}{\code{numeric}. Country- and year-specific electricity
+emission factor (kg CO2-eq kWh\eqn{^{-1}}).}
+\item{ghg_elec_kgCO2e}{\code{numeric}. Total GHG emissions from electricity
+consumption (kg CO2-eq yr\eqn{^{-1}}).}
 }
 }
 \description{
@@ -41,22 +41,25 @@ in kWh is back-calculated using EUROSTAT national average electricity prices
 \href{https://doi.org/10.2908/NRG_PC_205}{NRG_PC_205}).
 }
 \details{
-## Electricity Quantity Estimation
+\subsection{Electricity Quantity Estimation}{
+
 Electricity consumption is estimated as:
 \deqn{elec\_kWh = \frac{elec\_V}{euro\_kWh}}
 where:
 \itemize{
-  \item \eqn{elec\_V} = electricity expenditure from FADN (\code{IELE_V},
-    in euros)
-  \item \eqn{euro\_kWh} = national average electricity price (€ kWh\eqn{^{-1}}),
-    from EUROSTAT table \code{NRG_PC_205}, matched by country ISO code
-    (\code{Country_ISO_3166_1_A3}) and survey year (\code{YEAR})
+\item \eqn{elec\_V} = electricity expenditure from FADN (\code{IELE_V},
+in euros)
+\item \eqn{euro\_kWh} = national average electricity price (€ kWh\eqn{^{-1}}),
+from EUROSTAT table \code{NRG_PC_205}, matched by country ISO code
+(\code{Country_ISO_3166_1_A3}) and survey year (\code{YEAR})
 }
 When country- and year-specific electricity prices are missing, the
 cross-country mean price is used as a fallback (TODO: replace with
 EU-27 average price).
+}
 
-## GHG Emission Estimation
+\subsection{GHG Emission Estimation}{
+
 Total GHG emissions from electricity use are estimated as:
 \deqn{ghg\_elec\_kgCO2e = elec\_kWh \times EF_{elec}}
 where \eqn{EF_{elec}} is the country- and year-specific electricity emission
@@ -66,17 +69,18 @@ factor (kg CO2-eq kWh\eqn{^{-1}} = t CO2 MWh\eqn{^{-1}}), sourced from
 When country- and year-specific emission factors are missing, the
 cross-country mean emission factor is substituted.
 }
+}
 \note{
 \itemize{
-  \item Allocation of electricity emissions to specific farm activities
-    (crops or livestock) is not performed within this function; it is
-    handled downstream in \code{\link{f_GHGE_crops}} and
-    \code{\link{f_GHGE_livestock}} using economic allocation keys.
-  \item The FADN variable \code{IELE_V} represents total farm electricity
-    expenditure and does not distinguish between end-uses.
-  \item When EUROSTAT prices are unavailable for a given country-year
-    combination, missing values are currently replaced by the cross-country
-    mean; replacement with the EU-27 average price is planned (TODO).
+\item Allocation of electricity emissions to specific farm activities
+(crops or livestock) is not performed within this function; it is
+handled downstream in \code{\link{f_GHGE_crops}} and
+\code{\link{f_GHGE_livestock}} using economic allocation keys.
+\item The FADN variable \code{IELE_V} represents total farm electricity
+expenditure and does not distinguish between end-uses.
+\item When EUROSTAT prices are unavailable for a given country-year
+combination, missing values are currently replaced by the cross-country
+mean; replacement with the EU-27 average price is planned (TODO).
 }
 }
 \references{

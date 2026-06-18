@@ -228,3 +228,133 @@ setMethod("m_remove_farms", "FADN2Footprint", function(object, farms_to_remove) 
   return(object)
 })
 
+# Keep farms ----
+#' Keep (retain) only specific farms in a FADN2Footprint object
+#'
+#' This function filters a FADN2Footprint object so that ONLY the specified farms
+#' are retained across all data slots (farm, crop, herd, inputs, practices,
+#' footprints, etc.). It automatically handles nested lists and updates the
+#' traceability slot to log discarded farms (those NOT kept).
+#'
+#' @param object A \code{FADN2Footprint} object.
+#' @param farms_to_keep A \code{data.frame} or \code{tibble} containing at least
+#'   the ID columns defined in \code{object@traceability$id_cols}. It may optionally
+#'   contain a \code{reason} column describing why the farm is being kept.
+#'
+#' @return The filtered \code{FADN2Footprint} object.
+#'
+#' @concept utils
+#' @export
+#' @importFrom dplyr select reframe semi_join anti_join bind_rows distinct all_of mutate
+#' @importFrom tidyselect all_of
+#' @import methods
+#'
+#' @examples
+#' \dontrun{
+#' # Define farms to keep (e.g., a study subset)
+#' subset <- data.frame(ID = c(101, 105), YEAR = c(2020, 2020), reason = "Study cohort")
+#'
+#' # Keep only them
+#' obj_subset <- m_keep_farms(my_obj, subset)
+#' }
+setGeneric("m_keep_farms", function(object, farms_to_keep) {
+  standardGeneric("m_keep_farms")
+})
+
+setMethod("m_keep_farms", "FADN2Footprint", function(object, farms_to_keep) {
+
+  # --- 1. Validation ---
+
+  if (!inherits(farms_to_keep, "data.frame")) {
+    stop("'farms_to_keep' must be a tibble or a data.frame.")
+  }
+
+  id_cols <- object@traceability$id_cols
+  if (is.null(id_cols) || length(id_cols) == 0) {
+    stop("'object@traceability$id_cols' is not defined in the object.")
+  }
+
+  missing_ids <- setdiff(id_cols, colnames(farms_to_keep))
+  if (length(missing_ids) > 0) {
+    stop("The following ID columns are missing in 'farms_to_keep': ",
+         paste(missing_ids, collapse = ", "))
+  }
+
+  # --- 2. Prepare Keep Data ---
+
+  # Keep only the unique ID combinations to retain (clean version for joins)
+  farms_to_keep_clean <- farms_to_keep |>
+    dplyr::select(tidyselect::all_of(id_cols)) |>
+    dplyr::distinct()
+
+  # --- 3. Recursive Filter Helper ---
+
+  # This function navigates any depth of list/dataframe nesting,
+  # keeping only the rows that match farms_to_keep_clean (semi_join)
+  apply_keep <- function(x) {
+    if (is.data.frame(x)) {
+      # Check if this dataframe contains the ID columns needed for joining
+      if (all(id_cols %in% colnames(x))) {
+        return(x |> dplyr::semi_join(farms_to_keep_clean, by = id_cols))
+      } else {
+        return(x) # Return untouched if IDs are missing
+      }
+    } else if (is.list(x)) {
+      # Recursive step: Apply to all elements of the list
+      return(lapply(x, apply_keep))
+    } else {
+      return(x) # Return other types (NULL, vectors) untouched
+    }
+  }
+
+  # --- 4. Identify Discarded Farms (for traceability) ---
+
+  # Before filtering, figure out which farms are being dropped.
+  # We use the master 'farm' slot (assumed to hold all farms) as reference.
+  discarded_farms <- NULL
+  if (is.data.frame(object@farm) && all(id_cols %in% colnames(object@farm))) {
+    discarded_farms <- object@farm |>
+      dplyr::select(tidyselect::all_of(id_cols)) |>
+      dplyr::distinct() |>
+      dplyr::anti_join(farms_to_keep_clean, by = id_cols)
+
+    if (nrow(discarded_farms) > 0) {
+      discarded_farms <- discarded_farms |>
+        dplyr::mutate(problem = "Removed (not in keep list)")
+    } else {
+      discarded_farms <- NULL
+    }
+  }
+
+  # --- 5. Apply to Slots ---
+
+  # Apply to standard dataframes
+  object@farm              <- apply_keep(object@farm)
+  object@crop              <- apply_keep(object@crop)
+  object@herd              <- apply_keep(object@herd)
+  object@input             <- apply_keep(object@input)
+  object@landscape_metrics <- apply_keep(object@landscape_metrics)
+
+  # Apply to nested lists (Footprints, Practices, Output, etc.)
+  object@practices  <- apply_keep(object@practices)
+  object@footprints <- apply_keep(object@footprints)
+  object@output     <- apply_keep(object@output)
+
+  # --- 6. Update Traceability ---
+
+  if (!is.null(discarded_farms)) {
+    if (is.null(object@traceability$discarded_farms)) {
+      # Initialize if empty
+      object@traceability$discarded_farms <- discarded_farms
+    } else {
+      # Append, ensure columns match, and remove duplicates
+      object@traceability$discarded_farms <- dplyr::bind_rows(
+        object@traceability$discarded_farms,
+        discarded_farms
+      ) |>
+        dplyr::distinct(dplyr::across(tidyselect::all_of(id_cols)), .keep_all = TRUE)
+    }
+  }
+
+  return(object)
+})

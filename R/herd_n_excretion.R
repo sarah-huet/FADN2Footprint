@@ -325,6 +325,7 @@ f_n_excr <- function(object,
         #str_detect(IPCC_mix_cat, "\\bcalves_preweaning\\b") & code_livestock == 932 ~ 73 # calves on forage (broutards only ???)
       ),
       # !!! we could estimate DE = qté aliment - prod lait
+      # TODO: use DE from UNFCCC
 
 
       ## Ratio of net energy for maintenance REM

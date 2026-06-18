@@ -12,10 +12,10 @@ h_read_dictionary(dictionary_path)
 \value{
 A list with elements:
 \describe{
-  \item{variable_pattern}{Tibble of suffix mappings by group}
-  \item{category_pattern}{Tibble of product code mappings}
-  \item{manual_matches}{Tibble of farm-level variable mappings}
-  \item{unit_conversion}{Tibble of code-specific unit conversions}
+\item{variable_pattern}{Tibble of suffix mappings by group}
+\item{category_pattern}{Tibble of product code mappings}
+\item{manual_matches}{Tibble of farm-level variable mappings}
+\item{unit_conversion}{Tibble of code-specific unit conversions}
 }
 }
 \description{

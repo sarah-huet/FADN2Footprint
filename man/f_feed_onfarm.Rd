@@ -20,14 +20,16 @@ cached GHGE results are ignored and computations are re-run.}
 \value{
 A tibble/data.frame with one or more rows per traceable farm and
 feed line containing:
-- traceability id columns (as in object@traceability$id_cols),
-- FADN_code_letter (crop FADN code) and FADN_code_feed (mapped feed code),
-- feed_type and Sailley_feed (feed naming used for feed tables),
-- yield (crop yield, when available),
-- DM_t_livcat: produced feed dry matter (tonnes),
-- GE_MJ_livcat, GE_kcal_livcat: gross energy totals for the produced feed,
-- CP_t_livcat: crude protein (tonnes) contained in the produced feed,
-- Ash_t_livcat: ash (tonnes) contained in the produced feed.
+\itemize{
+\item traceability id columns (as in object@traceability$id_cols),
+\item FADN_code_letter (crop FADN code) and FADN_code_feed (mapped feed code),
+\item feed_type and Sailley_feed (feed naming used for feed tables),
+\item yield (crop yield, when available),
+\item DM_t_livcat: produced feed dry matter (tonnes),
+\item GE_MJ_livcat, GE_kcal_livcat: gross energy totals for the produced feed,
+\item CP_t_livcat: crude protein (tonnes) contained in the produced feed,
+\item Ash_t_livcat: ash (tonnes) contained in the produced feed.
+}
 
 Rows with zero produced DM are filtered out.
 }
@@ -42,34 +44,38 @@ feed across livestock categories, and (3) compute nutritional summaries
 }
 \details{
 The function implements the following main steps:
-- validate that `object` is an S4 object of class "FADN2Footprint";
-- use cached results from object@practices$herding$feed$feed_produced when
-  available and `overwrite = FALSE`;
-- compute theoretical livestock rations with f_feed_theo_ration(object);
-- identify crops that are used as feed (using package data_extra$crops
-  feed_type) and compute on‑farm feed quantity as production minus sales;
-- join theoretical ration lines to FADN crop codes using a Sailley
-  crosswalk (data_extra$Sailley_2021_feed_flows) restricted to flows marked
-  as produced on farm, then allocate on‑farm crop feed to livestock
-  categories in proportion to the theoretical crop demand (th_DMI_t_livcat_y);
-- attach average feed quality values (GE, CP, Ash) from feed tables
-  (data_extra$feed_table_all_as_DM) aggregated by Sailley feed name and
-  compute per‑farm totals: DM_t_livcat, GE (MJ and kcal), CP_t_livcat, Ash_t_livcat;
-- return a tibble with one (or more) rows per farm/crop/feed line containing
-  the produced feed quantity and nutritional summaries.
+\itemize{
+\item validate that \code{object} is an S4 object of class "FADN2Footprint";
+\item use cached results from object@practices$herding$feed$feed_produced when
+available and \code{overwrite = FALSE};
+\item compute theoretical livestock rations with f_feed_theo_ration(object);
+\item identify crops that are used as feed (using package data_extra$crops
+feed_type) and compute on‑farm feed quantity as production minus sales;
+\item join theoretical ration lines to FADN crop codes using a Sailley
+crosswalk (data_extra$Sailley_2021_feed_flows) restricted to flows marked
+as produced on farm, then allocate on‑farm crop feed to livestock
+categories in proportion to the theoretical crop demand (th_DMI_t_livcat_y);
+\item attach average feed quality values (GE, CP, Ash) from feed tables
+(data_extra$feed_table_all_as_DM) aggregated by Sailley feed name and
+compute per‑farm totals: DM_t_livcat, GE (MJ and kcal), CP_t_livcat, Ash_t_livcat;
+\item return a tibble with one (or more) rows per farm/crop/feed line containing
+the produced feed quantity and nutritional summaries.
+}
 
 Important assumptions and notes:
-- Crop production values are considered to be reported in dry matter (DM).
-  The function prints a message to this effect.
-- The function assumes co‑products (e.g. oilseed meals, bran) are treated as
-  purchased rather than produced on farm (see TODO in code). Only crops
-  flagged as feed in data_extra$crops are considered.
-- The theoretical ration is used only to allocate produced feed across
-  livestock categories, not to change total on‑farm production quantities.
-- The function depends on package data tables (data_extra$crops,
-  data_extra$Sailley_2021_feed_flows, data_extra$feed_table_all_as_DM) and on
-  the helper f_feed_theo_ration; these must be available in the package
-  environment and compatible with the FADN2Footprint object structure.
+\itemize{
+\item Crop production values are considered to be reported in dry matter (DM).
+The function prints a message to this effect.
+\item The function assumes co‑products (e.g. oilseed meals, bran) are treated as
+purchased rather than produced on farm (see TODO in code). Only crops
+flagged as feed in data_extra$crops are considered.
+\item The theoretical ration is used only to allocate produced feed across
+livestock categories, not to change total on‑farm production quantities.
+\item The function depends on package data tables (data_extra$crops,
+data_extra$Sailley_2021_feed_flows, data_extra$feed_table_all_as_DM) and on
+the helper f_feed_theo_ration; these must be available in the package
+environment and compatible with the FADN2Footprint object structure.
+}
 }
 \examples{
 \dontrun{

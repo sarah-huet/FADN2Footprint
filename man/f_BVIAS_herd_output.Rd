@@ -18,7 +18,7 @@ the cached object and no recomputation is performed. If TRUE, existing
 cached GHGE results are ignored and computations are re-run.}
 
 \item{account_pseudoherd}{Logical (default FALSE). When FALSE the function
-uses economic allocation estimated for the actual herd (f_herd_output_econ_alloc).
+uses economic allocation estimated for the actual herd (f_output_econ_alloc).
 When TRUE the function computes and combines both on‑farm and pseudoherd
 outputs/allocations (via f_pseudoherd_output_econ_alloc) and merges them so
 both sources of animal outputs are accounted for.}
@@ -27,12 +27,14 @@ both sources of animal outputs are accounted for.}
 }
 \value{
 A named list with elements for major herd outputs:
-  - milk: a tibble/data.frame with one row per traceable farm (as defined in
-    object@traceability$id_cols) containing production (prod_t), aggregated
-    feed impact metrics (sum_BVI_ha_feed, BVI_ha), the economic allocation
-    ratio used, and the allocated biodiversity impact per tonne (BVI_t).
-  - meat: currently NULL (placeholder).
-  - eggs: currently NULL (placeholder).
+\itemize{
+\item milk: a tibble/data.frame with one row per traceable farm (as defined in
+object@traceability$id_cols) containing production (prod_t), aggregated
+feed impact metrics (sum_BVI_ha_feed, BVI_ha), the economic allocation
+ratio used, and the allocated biodiversity impact per tonne (BVI_t).
+\item meat: currently NULL (placeholder).
+\item eggs: currently NULL (placeholder).
+}
 }
 \description{
 f_BVIAS_herd_output computes biodiversity impact allocations for herd outputs
@@ -43,39 +45,43 @@ milk) expressed per tonne (BVI_t) and returns results for major herd outputs.
 }
 \details{
 Workflow implemented by this function:
-- validate that `object` is an S4 object of class "FADN2Footprint";
-- use cached results stored in object@footprints$BVIAS$BVI_milk unless
-  `overwrite = TRUE` (in that case the computation is re-run);
-- compute herd outputs and economic allocation ratios via
-  f_herd_output_econ_alloc (or combine on‑farm and pseudoherd outputs when
-  `account_pseudoherd = TRUE` by calling f_pseudoherd_output_econ_alloc);
-- compute feed impacts by calling f_BVIAS_feed and aggregate feed impacts at
-  the farm / activity level (weighted by area required to produce the feed);
-- join aggregated feed impact to farm output data (for example, milk
-  production) and allocate the aggregated feed impact to outputs using the
-  previously computed economic allocation ratios;
-- return allocated BVI expressed per unit output (BVI_t) together with the
-  underlying per-farm variables used in the calculation.
+\itemize{
+\item validate that \code{object} is an S4 object of class "FADN2Footprint";
+\item use cached results stored in object@footprints$BVIAS$BVI_milk unless
+\code{overwrite = TRUE} (in that case the computation is re-run);
+\item compute herd outputs and economic allocation ratios via
+f_output_econ_alloc (or combine on‑farm and pseudoherd outputs when
+\code{account_pseudoherd = TRUE} by calling f_pseudoherd_output_econ_alloc);
+\item compute feed impacts by calling f_BVIAS_feed and aggregate feed impacts at
+the farm / activity level (weighted by area required to produce the feed);
+\item join aggregated feed impact to farm output data (for example, milk
+production) and allocate the aggregated feed impact to outputs using the
+previously computed economic allocation ratios;
+\item return allocated BVI expressed per unit output (BVI_t) together with the
+underlying per-farm variables used in the calculation.
+}
 
 Notes and assumptions:
-- The function expects the S4 object to contain or be able to produce the
-  necessary slots and intermediate data (e.g. object@herd,
-  object@output$other_herd_products, object@traceability$id_cols). It calls
-  internal helper functions (f_herd_output_econ_alloc, f_pseudoherd_output_econ_alloc,
-  f_BVIAS_feed) and therefore those must be available in the package or the
-  user environment.
-- When `account_pseudoherd = TRUE`, the function will combine outputs and
-  economic allocation ratios from on‑farm and pseudoherd estimations, tagging
-  the on‑farm rows with animals = "on_farm".
-- The function currently computes and returns results for milk (cow milk),
-  leaving placeholders (NULL) for meat and eggs; these can be extended in
-  future versions.
+\itemize{
+\item The function expects the S4 object to contain or be able to produce the
+necessary slots and intermediate data (e.g. object@herd,
+object@output$other_herd_products, object@traceability$id_cols). It calls
+internal helper functions (f_output_econ_alloc, f_pseudoherd_output_econ_alloc,
+f_BVIAS_feed) and therefore those must be available in the package or the
+user environment.
+\item When \code{account_pseudoherd = TRUE}, the function will combine outputs and
+economic allocation ratios from on‑farm and pseudoherd estimations, tagging
+the on‑farm rows with animals = "on_farm".
+\item The function currently computes and returns results for milk (cow milk),
+leaving placeholders (NULL) for meat and eggs; these can be extended in
+future versions.
+}
 }
 \section{Caching}{
 
 If a cached BVI result is present in object@footprints$BVIAS$BVI_milk and
-`overwrite = FALSE`, the function prints a message and returns the cached
-object. Use `overwrite = TRUE` to force recomputation.
+\code{overwrite = FALSE}, the function prints a message and returns the cached
+object. Use \code{overwrite = TRUE} to force recomputation.
 }
 
 \examples{
@@ -91,6 +97,6 @@ res2 <- f_BVIAS_herd_output(f, overwrite = TRUE, account_pseudoherd = TRUE)
 
 }
 \seealso{
-f_BVIAS_feed, f_herd_output_econ_alloc, f_pseudoherd_output_econ_alloc
+f_BVIAS_feed, f_output_econ_alloc, f_pseudoherd_output_econ_alloc
 }
 \concept{footprint-biodiv}

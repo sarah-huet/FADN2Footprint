@@ -9,10 +9,12 @@ f_GHGE_farm(object, overwrite = FALSE, account_pseudoherd = F, ...)
 \arguments{
 \item{object}{An S4 object of class "FADN2Footprint". Required slots used
 by the function include at least:
-- `object@traceability$id_cols` (character vector of id columns used for joins),
-- `object@farm` (farm metadata table),
-- underlying helpers `f_GHGE_crops()` and `f_GHGE_herd()` must be available
-  and compatible with the package naming conventions for emission columns.}
+\itemize{
+\item \code{object@traceability$id_cols} (character vector of id columns used for joins),
+\item \code{object@farm} (farm metadata table),
+\item underlying helpers \code{f_GHGE_crops()} and \code{f_GHGE_herd()} must be available
+and compatible with the package naming conventions for emission columns.
+}}
 
 \item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
 the function returns
@@ -28,19 +30,19 @@ Defaults to \code{FALSE}.}
 }
 \value{
 A tibble with one row per farm (identified by
-  `object@traceability$id_cols`) and columns for each emission component and
-  aggregate indicator (all in kg CO2-equivalent), including:
+\code{object@traceability$id_cols}) and columns for each emission component and
+aggregate indicator (all in kg CO2-equivalent), including:
 \describe{
-  \item{crop}{Per-farm summed crop emission components (prefix crop_).}
-  \item{herd_}{Per-farm summed herd emission components (prefix herd_).}
-  \item{herd_purchased_feed_ghge_kgCO2e}{Scope 3 purchased feed emissions.}
-  \item{farm_total_ghge_kgCO2e}{Total scope 1 & 2 farm GHGE.}
-  \item{pseudofarm_total_ghge_kgCO2e}{Total scope 1, 2 & 3 GHGE.}
-  \item{farm_total_CO2_kgCO2e}{Total CO2 scope 1 & 2.}
-  \item{pseudofarm_total_CO2_kgCO2e}{Total CO2 scope 1, 2 & 3.}
-  \item{farm_total_N2O_kgCO2e}{Total N2O from soils and manure.}
-  \item{farm_total_CH4_kgCO2e}{Total CH4 from enteric fermentation and
-    manure management.}
+\item{crop}{Per-farm summed crop emission components (prefix crop_).}
+\item{herd_}{Per-farm summed herd emission components (prefix herd_).}
+\item{herd_purchased_feed_ghge_kgCO2e}{Scope 3 purchased feed emissions.}
+\item{farm_total_ghge_kgCO2e}{Total scope 1 & 2 farm GHGE.}
+\item{pseudofarm_total_ghge_kgCO2e}{Total scope 1, 2 & 3 GHGE.}
+\item{farm_total_CO2_kgCO2e}{Total CO2 scope 1 & 2.}
+\item{pseudofarm_total_CO2_kgCO2e}{Total CO2 scope 1, 2 & 3.}
+\item{farm_total_N2O_kgCO2e}{Total N2O from soils and manure.}
+\item{farm_total_CH4_kgCO2e}{Total CH4 from enteric fermentation and
+manure management.}
 }
 }
 \description{
@@ -56,46 +58,52 @@ The function proceeds in three steps:
 Step 1 – Crop GHGE (f_GHGE_crops):
 Per-crop emission components are summed across all crops on the farm,
 including:
-- direct and indirect soil N2O (crop_N2O_d, crop_N2O_ATD, crop_N2O_L),
-- diesel combustion (crop_ghg_diesel_crop),
-- electricity consumption (crop_ghg_elec_crop),
-- upstream N fertiliser production (crop_ghg_ferti_prod; scope 3).
+\itemize{
+\item direct and indirect soil N2O (crop_N2O_d, crop_N2O_ATD, crop_N2O_L),
+\item diesel combustion (crop_ghg_diesel_crop),
+\item electricity consumption (crop_ghg_elec_crop),
+\item upstream N fertiliser production (crop_ghg_ferti_prod; scope 3).
 Intensity metrics (per_ha, per_t columns) are excluded from the
 farm-level summation.
+}
 
 Step 2 – Herd and purchased feed GHGE (f_GHGE_herd):
 Per-animal-category emission components are summed across the herd,
 including:
-- enteric CH4 fermentation (herd_CH4_enteric),
-- manure management CH4 (herd_CH4_MM),
-- manure management direct N2O (herd_N2O_D_MM),
-- manure management indirect N2O via grazing (herd_N2O_G_mm) and
-  leaching/runoff (herd_N2O_L_mm).
+\itemize{
+\item enteric CH4 fermentation (herd_CH4_enteric),
+\item manure management CH4 (herd_CH4_MM),
+\item manure management direct N2O (herd_N2O_D_MM),
+\item manure management indirect N2O via grazing (herd_N2O_G_mm) and
+leaching/runoff (herd_N2O_L_mm).
 Intensity metrics (per_ha, per_t, per_anim columns) are excluded.
 Purchased feed GHGE is derived as the difference between pseudo-farm
 (all feed including purchased) and on-farm-only feed emissions
 (herd_purchased_feed_ghge_kgCO2e; scope 3).
+}
 
 Step 3 – Farm-scale aggregation:
 Crop and herd summaries are joined to the farm table and the following
 aggregate indicators are computed:
-- farm_total_ghge_kgCO2e: total scope 1 & 2 emissions (on-farm crops +
-  livestock; note that on-farm feed is already counted in the crop
-  footprint and is not double-counted).
-- pseudofarm_total_ghge_kgCO2e: total scope 1, 2 & 3 emissions, adding
-  upstream fertiliser production and purchased feed emissions.
-- farm_total_CO2_kgCO2e: scope 1 & 2 CO2 from diesel and electricity.
-- pseudofarm_total_CO2_kgCO2e: adds scope 3 CO2 from fertiliser
-  production.
-- farm_total_N2O_kgCO2e: total N2O from managed soils and manure
-  management.
-- farm_total_CH4_kgCO2e: total CH4 from enteric fermentation and
-  manure management.
+\itemize{
+\item farm_total_ghge_kgCO2e: total scope 1 & 2 emissions (on-farm crops +
+livestock; note that on-farm feed is already counted in the crop
+footprint and is not double-counted).
+\item pseudofarm_total_ghge_kgCO2e: total scope 1, 2 & 3 emissions, adding
+upstream fertiliser production and purchased feed emissions.
+\item farm_total_CO2_kgCO2e: scope 1 & 2 CO2 from diesel and electricity.
+\item pseudofarm_total_CO2_kgCO2e: adds scope 3 CO2 from fertiliser
+production.
+\item farm_total_N2O_kgCO2e: total N2O from managed soils and manure
+management.
+\item farm_total_CH4_kgCO2e: total CH4 from enteric fermentation and
+manure management.
+}
 
 All NA values in emission components are treated as zero before summation.
 
 The function returns cached results stored in
-`object@footprints$GHGE$GHGE_farm` when present and overwrite = FALSE.
+\code{object@footprints$GHGE$GHGE_farm} when present and overwrite = FALSE.
 }
 \examples{
 \dontrun{

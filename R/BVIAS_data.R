@@ -9,9 +9,8 @@
 #' data_for_BVIAS(object = fadn_fict_obj)
 #' @export
 
-#' @import dplyr
-#' @import tidyr
-#' @import tidyselect
+#' @importFrom dplyr select all_of matches bind_rows filter summarise left_join mutate case_when distinct semi_join
+#' @importFrom tidyr pivot_longer
 #'
 #' @concept footprint-biodiv
 #'
@@ -61,7 +60,7 @@ data_for_BVIAS <- function(object,...){
     # add max
     dplyr::left_join(
       tmp_max,
-      by = join_by(land_use_type,metric_code)) |>
+      by = c('land_use_type', 'metric_code')) |>
     ## calculate BV = Normalize data
     dplyr::mutate(
       x_norm =

@@ -9,12 +9,20 @@
   ],
   "ppm.enabled": null,
   "ppm.ignored.urls": [],
-  "r.version": null,
   "snapshot.dev": false,
   "snapshot.type": "explicit",
   "use.cache": true,
   "vcs.ignore.cellar": true,
   "vcs.ignore.library": true,
   "vcs.ignore.local": true,
-  "vcs.manage.ignores": true
+  "vcs.manage.ignores": true,
+  "r.version": "4.5.0",
+  "r.term.options": [
+    "--r-binary=/usr/bin/R",
+    "--no-save",
+    "--no-restore",
+    "--no-site-file",
+    "--no-init-file",
+    "--no-environ"
+  ]
 }

@@ -20,12 +20,14 @@ cached GHGE results are ignored and computations are re-run.}
 }
 \value{
 The input FADN2Footprint S4 object updated with GHGE footprints:
-  - object@footprints$GHGE$GHGE_crops: table with crop GHGE results (per
-    traceable farm / activity as produced by f_GHGE_crops),
-  - object@footprints$GHGE$GHGE_milk: table with GHGE allocated to milk (as
-    produced by f_GHGE_herd_output).
-  The returned object can be further processed by downstream functions in
-  the package or inspected to extract GHGE tables.
+\itemize{
+\item object@footprints$GHGE$GHGE_crops: table with crop GHGE results (per
+traceable farm / activity as produced by f_GHGE_crops),
+\item object@footprints$GHGE$GHGE_milk: table with GHGE allocated to milk (as
+produced by f_GHGE_herd_output).
+The returned object can be further processed by downstream functions in
+the package or inspected to extract GHGE tables.
+}
 }
 \description{
 compute_footprint_ghg is a high-level wrapper that computes and caches
@@ -37,29 +39,35 @@ results in the object@footprints$GHGE slot.
 }
 \details{
 The function performs the following steps:
-- validates that the supplied object inherits from the S4 class
-  "FADN2Footprint";
-- if cached GHGE results already exist in object@footprints$GHGE and
-  overwrite = FALSE, the function returns the cached results (with a
-  message) and no further computation is performed;
-- otherwise the function:
-    1. calls f_GHGE_crops(object) to compute per‑farm / per‑activity crop
-       greenhouse gas emissions and stores the returned table in
-       object@footprints$GHGE$GHGE_crops;
-    2. calls f_GHGE_herd_output(object) to compute GHGE allocated to herd
-       outputs and stores the milk result in
-       object@footprints$GHGE$GHGE_milk (the herd function may return a
-       list with multiple elements for milk/meat/eggs);
-- finally the updated FADN2Footprint object (with added/updated footprints)
-  is returned.
+\itemize{
+\item validates that the supplied object inherits from the S4 class
+"FADN2Footprint";
+\item if cached GHGE results already exist in object@footprints$GHGE and
+overwrite = FALSE, the function returns the cached results (with a
+message) and no further computation is performed;
+\item otherwise the function:
+\enumerate{
+\item calls f_GHGE_crops(object) to compute per‑farm / per‑activity crop
+greenhouse gas emissions and stores the returned table in
+object@footprints$GHGE$GHGE_crops;
+\item calls f_GHGE_herd_output(object) to compute GHGE allocated to herd
+outputs and stores the milk result in
+object@footprints$GHGE$GHGE_milk (the herd function may return a
+list with multiple elements for milk/meat/eggs);
+}
+\item finally the updated FADN2Footprint object (with added/updated footprints)
+is returned.
+}
 
 Note:
-- The function delegates the domain-specific computations to f_GHGE_crops
-  and f_GHGE_herd_output; those helper functions must be available and
-  compatible with the structure of the provided FADN2Footprint object.
-- The object returned is the original S4 object with updated footprints
-  stored under object@footprints$GHGE. Users can inspect those slots after
-  the call to access per‑farm GHGE results.
+\itemize{
+\item The function delegates the domain-specific computations to f_GHGE_crops
+and f_GHGE_herd_output; those helper functions must be available and
+compatible with the structure of the provided FADN2Footprint object.
+\item The object returned is the original S4 object with updated footprints
+stored under object@footprints$GHGE. Users can inspect those slots after
+the call to access per‑farm GHGE results.
+}
 }
 \examples{
 \dontrun{

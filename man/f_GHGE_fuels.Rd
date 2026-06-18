@@ -13,25 +13,25 @@ f_GHGE_fuels(object, account_pseudoherd = FALSE, ...)
 A \code{\link[tibble]{tibble}} with one row per farm observation,
 containing:
 \describe{
-  \item{...}{Traceability identifier columns
-    (\code{object@traceability$id_cols}).}
-  \item{diesel_l}{\code{numeric}. Diesel consumption (litres yr\eqn{^{-1}}).}
-  \item{heating_fuels_l}{\code{numeric}. Heating fuel consumption
-    (litres yr\eqn{^{-1}}).}
-  \item{diesel_MJ}{\code{numeric}. Diesel consumption
-    (MJ yr\eqn{^{-1}}).}
-  \item{heating_fuels_MJ}{\code{numeric}. Heating fuel consumption
-    (MJ yr\eqn{^{-1}}).}
-  \item{EF_fuel_CO2}{\code{numeric}. CO2 emission factor for fuel
-    combustion (t CO2 TJ\eqn{^{-1}}), from UNFCCC submissions.}
-  \item{EF_fuel_CO2_kgCO2MJ}{\code{numeric}. CO2 emission factor
-    converted to kg CO2 MJ\eqn{^{-1}}.}
-  \item{ghg_diesel_kgCO2e}{\code{numeric}. GHG emissions from diesel
-    combustion (kg CO2-eq yr\eqn{^{-1}}).}
-  \item{ghg_heat_fuel_kgCO2e}{\code{numeric}. GHG emissions from heating
-    fuel combustion (kg CO2-eq yr\eqn{^{-1}}).}
-  \item{ghg_all_fuels_kgCO2e}{\code{numeric}. Total GHG emissions from
-    all fuel combustion (kg CO2-eq yr\eqn{^{-1}}).}
+\item{...}{Traceability identifier columns
+(\code{object@traceability$id_cols}).}
+\item{diesel_l}{\code{numeric}. Diesel consumption (litres yr\eqn{^{-1}}).}
+\item{heating_fuels_l}{\code{numeric}. Heating fuel consumption
+(litres yr\eqn{^{-1}}).}
+\item{diesel_MJ}{\code{numeric}. Diesel consumption
+(MJ yr\eqn{^{-1}}).}
+\item{heating_fuels_MJ}{\code{numeric}. Heating fuel consumption
+(MJ yr\eqn{^{-1}}).}
+\item{EF_fuel_CO2}{\code{numeric}. CO2 emission factor for fuel
+combustion (t CO2 TJ\eqn{^{-1}}), from UNFCCC submissions.}
+\item{EF_fuel_CO2_kgCO2MJ}{\code{numeric}. CO2 emission factor
+converted to kg CO2 MJ\eqn{^{-1}}.}
+\item{ghg_diesel_kgCO2e}{\code{numeric}. GHG emissions from diesel
+combustion (kg CO2-eq yr\eqn{^{-1}}).}
+\item{ghg_heat_fuel_kgCO2e}{\code{numeric}. GHG emissions from heating
+fuel combustion (kg CO2-eq yr\eqn{^{-1}}).}
+\item{ghg_all_fuels_kgCO2e}{\code{numeric}. Total GHG emissions from
+all fuel combustion (kg CO2-eq yr\eqn{^{-1}}).}
 }
 }
 \description{
@@ -42,18 +42,21 @@ year-specific, sourced from UNFCCC national inventory submissions, following
 IPCC stationary and mobile combustion methodology.
 }
 \details{
-## Activity Data
+\subsection{Activity Data}{
+
 Fuel consumption is retrieved from \code{object@input} and expressed in
 both litres and megajoules (MJ). The conversion from litres to MJ is
 assumed to be performed upstream (see \code{\link{infer_practices}}):
 \itemize{
-  \item \code{diesel_l}, \code{diesel_MJ}: diesel consumption for farm
-    machinery and field operations.
-  \item \code{heating_fuels_l}, \code{heating_fuels_MJ}: heating fuel
-    consumption for farm buildings and livestock facilities.
+\item \code{diesel_l}, \code{diesel_MJ}: diesel consumption for farm
+machinery and field operations.
+\item \code{heating_fuels_l}, \code{heating_fuels_MJ}: heating fuel
+consumption for farm buildings and livestock facilities.
+}
 }
 
-## Emission Factors
+\subsection{Emission Factors}{
+
 Country- and year-specific CO2 emission factors (\eqn{EF_{fuel,CO2}},
 t CO2 TJ\eqn{^{-1}}) are sourced from UNFCCC submissions
 (\code{\link{UNFCCC_data}}\code{$EF_fuel}), matched by
@@ -63,22 +66,25 @@ used as fallback when country- or year-specific values are missing.
 Emission factors are converted to kg CO2 MJ\eqn{^{-1}} for calculation:
 \deqn{EF_{fuel,CO2} \; [\text{kg CO}_2 \text{ MJ}^{-1}] =
   EF_{fuel,CO2} \; [\text{t CO}_2 \text{ TJ}^{-1}] \times 10^{-3}}
+}
 
-## Emission Calculation
+\subsection{Emission Calculation}{
+
 \deqn{ghg_{diesel} = Q_{diesel,MJ} \times EF_{fuel,CO2}}
 \deqn{ghg_{heat} = Q_{heat,MJ} \times EF_{fuel,CO2}}
 \deqn{ghg_{fuels} = ghg_{diesel} + ghg_{heat}}
 }
+}
 \note{
 \itemize{
-  \item A single average emission factor is applied to both diesel and
-    heating fuels. Differentiated factors by fuel type (e.g., gas oil vs.
-    natural gas) may be implemented in future versions.
-  \item Only CO2 emissions from fuel combustion are currently estimated.
-    CH4 and N2O emissions from mobile combustion represent a minor
-    contribution and are not yet included.
-  \item Indirect (upstream) emissions from fuel production are not included
-    here; this function covers direct (scope 1) combustion emissions only.
+\item A single average emission factor is applied to both diesel and
+heating fuels. Differentiated factors by fuel type (e.g., gas oil vs.
+natural gas) may be implemented in future versions.
+\item Only CO2 emissions from fuel combustion are currently estimated.
+CH4 and N2O emissions from mobile combustion represent a minor
+contribution and are not yet included.
+\item Indirect (upstream) emissions from fuel production are not included
+here; this function covers direct (scope 1) combustion emissions only.
 }
 }
 \references{

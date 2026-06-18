@@ -39,11 +39,11 @@ output_data(x)
 }
 \value{
 \itemize{
-  \item \code{farm_data}: A data frame containing farm structural characteristics.
-  \item \code{crop_data}: A data frame containing cropping data.
-  \item \code{herd_data}: A data frame containing herd and livestock data.
-  \item \code{input_data}: A data frame containing input costs and quantities.
-  \item \code{output_data}: A named list containing data frames for crops, meat, milk, and live animals.
+\item \code{farm_data}: A data frame containing farm structural characteristics.
+\item \code{crop_data}: A data frame containing cropping data.
+\item \code{herd_data}: A data frame containing herd and livestock data.
+\item \code{input_data}: A data frame containing input costs and quantities.
+\item \code{output_data}: A named list containing data frames for crops, meat, milk, and live animals.
 }
 }
 \description{

@@ -7,34 +7,34 @@
 \format{
 A named list with the following elements:
 \describe{
-  \item{sales_shares}{A data frame with one row per NUTS2 region containing
-    the average share of slaughter sales (\code{_share_SSN}) and rearing
-    sales (\code{_share_SRN}) over total livestock sales (\code{SN}), for
-    each livestock category. See Details for the imputation hierarchy.
-    Variables include:
-    \describe{
-      \item{NUTS2}{NUTS2 regional code (character).}
-      \item{COUNTRY}{Country code (character).}
-      \item{[PREFIX]_share_SSN}{Weighted average share of slaughter sales,
-        bounded in \eqn{[0, 1]}.}
-      \item{[PREFIX]_share_SRN}{Weighted average share of rearing sales,
-        bounded in \eqn{[0, 1]}.}
-    }
-  }
-  \item{nuts2_GE}{A data frame with one row per NUTS2 region x livestock
-    category containing the mean and standard deviation of daily gross energy
-    intake per animal, derived from \code{f_herd_feed()}. Variables include:
-    \describe{
-      \item{FADN_code_letter}{Livestock category code as used in FADN
-        (character).}
-      \item{NUTS2}{NUTS2 regional code (character).}
-      \item{COUNTRY}{Country code (character).}
-      \item{mean_GE_MJ_anim}{Mean daily gross energy intake per animal
-        (MJ animal\eqn{^{-1}} day\eqn{^{-1}}).}
-      \item{sd_GE_MJ_anim}{Standard deviation of daily gross energy intake
-        per animal (MJ animal\eqn{^{-1}} day\eqn{^{-1}}).}
-    }
-  }
+\item{sales_shares}{A data frame with one row per NUTS2 region containing
+the average share of slaughter sales (\code{_share_SSN}) and rearing
+sales (\code{_share_SRN}) over total livestock sales (\code{SN}), for
+each livestock category. See Details for the imputation hierarchy.
+Variables include:
+\describe{
+\item{NUTS2}{NUTS2 regional code (character).}
+\item{COUNTRY}{Country code (character).}
+\item{\verb{[PREFIX]}_share_SSN}{Weighted average share of slaughter sales,
+bounded in \eqn{`[0, 1]`}.}
+\item{\verb{[PREFIX]}_share_SRN}{Weighted average share of rearing sales,
+bounded in \eqn{`[0, 1]`}.}
+}
+}
+\item{nuts2_GE}{A data frame with one row per NUTS2 region x livestock
+category containing the mean and standard deviation of daily gross energy
+intake per animal, derived from \code{f_herd_feed()}. Variables include:
+\describe{
+\item{FADN_code_letter}{Livestock category code as used in FADN
+(character).}
+\item{NUTS2}{NUTS2 regional code (character).}
+\item{COUNTRY}{Country code (character).}
+\item{mean_GE_MJ_anim}{Mean daily gross energy intake per animal
+(MJ animal\eqn{^{-1}} day\eqn{^{-1}}).}
+\item{sd_GE_MJ_anim}{Standard deviation of daily gross energy intake
+per animal (MJ animal\eqn{^{-1}} day\eqn{^{-1}}).}
+}
+}
 }
 }
 \usage{
@@ -51,11 +51,11 @@ supply default parameter values when farm-level data are insufficient.
 Both datasets follow the same three-step geographic imputation hierarchy to
 handle missing values:
 \enumerate{
-  \item Weighted mean at \strong{NUTS2} level (primary).
-  \item Weighted mean at \strong{country} level if the NUTS2 value is
-    \code{NA}.
-  \item Unweighted mean at \strong{EU} level if both NUTS2 and country
-    values are \code{NA}.
+\item Weighted mean at \strong{NUTS2} level (primary).
+\item Weighted mean at \strong{country} level if the NUTS2 value is
+\code{NA}.
+\item Unweighted mean at \strong{EU} level if both NUTS2 and country
+values are \code{NA}.
 }
 
 \strong{sales_shares} — Shares are computed at farm level as:
@@ -71,9 +71,9 @@ annual estimate by 365:
 }
 \note{
 This is an internal package dataset produced during the
-  \code{FADN2Footprint} data preparation pipeline. It is not intended for
-  direct use by end users but can be accessed via
-  \code{FADN2Footprint:::FADN_averages}.
+\code{FADN2Footprint} data preparation pipeline. It is not intended for
+direct use by end users but can be accessed via
+\code{FADN2Footprint:::FADN_averages}.
 }
 \examples{
 \dontrun{
@@ -89,6 +89,6 @@ FADN2Footprint:::FADN_averages$nuts2_GE
 }
 \seealso{
 \code{\link{h_average_practices}},
-  \code{\link{f_herd_feed}}
+\code{\link{f_herd_feed}}
 }
 \keyword{internal}

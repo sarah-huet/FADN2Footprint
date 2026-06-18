@@ -9,13 +9,15 @@ f_herd_feed(object, overwrite = FALSE)
 \arguments{
 \item{object}{An S4 object of class "FADN2Footprint" prepared by the package
 workflow. The function depends on:
-- object@traceability$id_cols (vector of id column names used for joins),
-- f_herd_activities(object) to supply observed herd structure and activity
-  allocation,
-- f_feed_onfarm(object) and f_feed_offfarm(object) to supply feed quantity
-  and quality by crop and feed type,
-- package data (data_extra$Sailley_2021_feed_flows) and theoretical
-  ration helpers for feed estimation.}
+\itemize{
+\item object@traceability$id_cols (vector of id column names used for joins),
+\item f_herd_activities(object) to supply observed herd structure and activity
+allocation,
+\item f_feed_onfarm(object) and f_feed_offfarm(object) to supply feed quantity
+and quality by crop and feed type,
+\item package data (data_extra$Sailley_2021_feed_flows) and theoretical
+ration helpers for feed estimation.
+}}
 
 \item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
 the function returns
@@ -25,18 +27,18 @@ cached GHGE results are ignored and computations are re-run.}
 \value{
 A named list with four elements:
 \describe{
-  \item{feed_produced}{A tibble of on-farm produced feed quantities and
-    nutritional quality per farm and crop (output of f_feed_onfarm).}
-  \item{feed_purchased}{A tibble of purchased feed quantities and
-    nutritional quality per farm and feed type (output of f_feed_offfarm).}
-  \item{feed_intake$detail}{A tibble joining feed quantities (both origins)
-    to herd activity, with per-animal nutritional metrics
-    (DM_t_anim, GE_MJ_anim, GE_kcal_anim, CP_t_anim, Ash_t_anim).
-    Columns include traceability id columns, FADN_code_letter, species,
-    Qobs*, feed_origin, and nutritional summaries.}
-  \item{feed_intake$total}{A summarised tibble with total feed intake
-    per farm and animal category (FADN_code_letter): GE_MJ_anim,
-    DM_t_anim, and crude protein content CP_p100 (percent of DM).}
+\item{feed_produced}{A tibble of on-farm produced feed quantities and
+nutritional quality per farm and crop (output of f_feed_onfarm).}
+\item{feed_purchased}{A tibble of purchased feed quantities and
+nutritional quality per farm and feed type (output of f_feed_offfarm).}
+\item{feed_intake$detail}{A tibble joining feed quantities (both origins)
+to herd activity, with per-animal nutritional metrics
+(DM_t_anim, GE_MJ_anim, GE_kcal_anim, CP_t_anim, Ash_t_anim).
+Columns include traceability id columns, FADN_code_letter, species,
+Qobs*, feed_origin, and nutritional summaries.}
+\item{feed_intake$total}{A summarised tibble with total feed intake
+per farm and animal category (FADN_code_letter): GE_MJ_anim,
+DM_t_anim, and crude protein content CP_p100 (percent of DM).}
 }
 }
 \description{
@@ -47,40 +49,42 @@ The estimation is based on a theoretical feed ration constructed for each
 farm's livestock category, derived from dry matter intake requirements per
 livestock unit (AROPAJ model; Jayet et al., 2023) combined with
 species-specific national feed consumption volumes (Sailley et al., 2021;
-see `FADN2Footprint::data_extra$Sailley_2021_feed_flows`).
+see \code{FADN2Footprint::data_extra$Sailley_2021_feed_flows}).
 }
 \details{
 The function implements the following steps:
 
-**Step 1 – Retrieve observed herd structure:**
+\strong{Step 1 – Retrieve observed herd structure:}
 Calls f_herd_activities(object) to retrieve the farm herd composition,
 including the allocation of each animal category to activities
 (milk, meat, eggs). Observed animal stock is considered as the mean
 between average, opening, and closing stock variables.
 
-**Step 2 – Estimate livestock feed intake:**
+\strong{Step 2 – Estimate livestock feed intake:}
 Calls f_feed_onfarm(object) and f_feed_offfarm(object) to estimate the
 quantities and nutritional quality (dry matter, gross energy, crude
 protein, ash) of on-farm produced and purchased feed respectively.
 These are combined into a single feed intake table with a feed_origin
 label ("feed_produced" or "feed_purchased").
 
-**Step 3 – Combine herd structure with feed:**
+\strong{Step 3 – Combine herd structure with feed:}
 Joins the combined feed intake table to the herd activity table by
 traceability id columns and FADN animal code. Per-animal feed quantities
 and quality metrics are computed by dividing crop-level totals by the
 observed number of animals (Qobs):
-- DM_t_anim (tonnes dry matter per animal per year),
-- GE_MJ_anim, GE_kcal_anim (gross energy per animal),
-- CP_t_anim (crude protein per animal),
-- Ash_t_anim (ash per animal).
+\itemize{
+\item DM_t_anim (tonnes dry matter per animal per year),
+\item GE_MJ_anim, GE_kcal_anim (gross energy per animal),
+\item CP_t_anim (crude protein per animal),
+\item Ash_t_anim (ash per animal).
+}
 
 A summarised total feed intake per animal (GE_MJ_anim, DM_t_anim) and
 crude protein content (CP_p100) are then computed by aggregating across
 all feed sources per animal category.
 
 The function returns cached results stored in object@practices$herding$feed
-when present and `overwrite = FALSE`.
+when present and \code{overwrite = FALSE}.
 }
 \examples{
 \dontrun{
@@ -99,13 +103,13 @@ herd_feed2 <- f_herd_feed(f, overwrite = TRUE)
 
 }
 \references{
-Jayet, P.-A. et al. (2023). AROPAJ model. [reference details to be added]
+Jayet, P.-A. et al. (2023). AROPAJ model.
 
 Sailley, S.F. et al. (2021). National feed consumption volumes by species.
-See `FADN2Footprint::data_extra$Sailley_2021_feed_flows`.
+See \code{FADN2Footprint::data_extra$Sailley_2021_feed_flows}.
 }
 \seealso{
 f_feed_onfarm, f_feed_offfarm, f_herd_activities,
-  f_feed_theo_ration, [data_extra$Sailley_2021_feed_flows]
+f_feed_theo_ration, \verb{[data_extra$Sailley_2021_feed_flows]}
 }
 \concept{practice-herding}

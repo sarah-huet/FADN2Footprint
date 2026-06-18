@@ -10,17 +10,17 @@ m_prune_farms(object, ...)
 \item{object}{A FADN2Footprint object containing farm data and related information.}
 
 \item{...}{Additional filtering conditions to apply to the farm data. These should be valid
-expressions that can be used with dplyr::filter(). For example: `COUNTRY == "FRA"`,
-`ORGANIC == TRUE`, etc.}
+expressions that can be used with dplyr::filter(). For example: \code{COUNTRY == "FRA"},
+\code{ORGANIC == TRUE}, etc.}
 
 \item{id_cols}{A character string specifying the name of the column containing unique farm identifiers.}
 }
 \value{
 A FADN2Footprint object with:
 \itemize{
-  \item The farm data filtered according to the specified conditions
-  \item All related data slots (crop, herd, input, etc.) filtered to only include
-    data corresponding to the remaining farms
+\item The farm data filtered according to the specified conditions
+\item All related data slots (crop, herd, input, etc.) filtered to only include
+data corresponding to the remaining farms
 }
 }
 \description{
@@ -29,9 +29,11 @@ and cascades these filters through all related data slots to maintain consistenc
 }
 \details{
 The function performs a cascading filter operation:
-1. First filters the main farm data based on the provided conditions
-2. Then filters all other data slots to only include data for the remaining farms
-3. Handles both simple data.frame slots and nested list structures
+\enumerate{
+\item First filters the main farm data based on the provided conditions
+\item Then filters all other data slots to only include data for the remaining farms
+\item Handles both simple data.frame slots and nested list structures
+}
 }
 \examples{
 # Filter to keep only farms from France

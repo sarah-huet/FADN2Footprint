@@ -4,7 +4,7 @@
 \alias{f_GHGE_fuels}
 \title{Calculate GHG Emissions from On-Farm Fuel Combustion}
 \usage{
-f_GHGE_fuels(object, account_pseudoherd = FALSE, ...)
+f_GHGE_fuels(object, account_pseudoherd = FALSE, overwrite = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}

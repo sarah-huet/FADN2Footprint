@@ -139,6 +139,7 @@
 
 f_output_econ_alloc <- function(object,
                                 account_pseudoherd = FALSE,
+                                overwrite = FALSE,
                                 ...) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
@@ -185,8 +186,11 @@ f_output_econ_alloc <- function(object,
       activity = "crop"
     )
 
+
   ### Estimate feed crop value
-  fodder_crops <- object@practices$herding$feed$feed_produced |>
+  feed_produced = f_feed_onfarm(object, overwrite = overwrite)
+
+  fodder_crops <- feed_produced |>
     # total DM_t per crop
     dplyr::summarise(
       feed_t_DM = sum(DM_t_livcat),
@@ -274,7 +278,7 @@ f_output_econ_alloc <- function(object,
     dplyr::mutate(
       econ_alloc_ratio_herd_activity = sales_e / sum_sales_e_activity,
       econ_alloc_ratio_herd = sales_e / sum_sales_e_farm
-      )
+    )
 
   # 3. Return results ----------------------------------------------------------------------
 

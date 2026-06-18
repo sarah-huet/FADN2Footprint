@@ -136,7 +136,7 @@ f_GHGE_n2o_manure <- function(object,
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
-
+  id_cols = object@traceability$id_cols
   ## Steps:
   ## 1. Retrieve observed herd structure
   ## 2. Estimate livestock N excretion
@@ -146,7 +146,7 @@ f_GHGE_n2o_manure <- function(object,
   # 1. Retrieve observed herd structure ---------------------------------------------------------------------------------
 
   herd_data <- object@herd |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),FADN_code_letter,species,Qobs) |>
+    dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,species,Qobs) |>
     # add IPCC and UNFCCC categories
     dplyr::left_join(
       data_extra$livestock |>
@@ -167,15 +167,11 @@ f_GHGE_n2o_manure <- function(object,
 
   common_cols <- Reduce(intersect, lapply(N_excr, names))
 
-  N_excr_tbl <- do.call(
-    rbind,
-    lapply(names(N_excr), function(sp) {
-      cbind(
-        species = sp,
-        N_excr[[sp]][ , common_cols, drop = FALSE]
-      )
-    })
-  )
+  N_excr_tbl <- lapply(N_excr, function(df) {
+    df[, common_cols, drop = FALSE]
+  }) |>
+    dplyr::bind_rows(.id = "species")
+
 
   # 3. Calculate the total N2O emissions from manure management ---------------------------------------------------------------------------------
 
@@ -195,8 +191,8 @@ f_GHGE_n2o_manure <- function(object,
     # add livestock N excretion
     dplyr::left_join(
       N_excr_tbl |>
-        dplyr::select(dplyr::all_of(object@traceability$id_cols),FADN_code_letter,Nex_kgN_anim_y),
-      by = c(object@traceability$id_cols, "FADN_code_letter")) |>
+        dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,Nex_kgN_anim_y),
+      by = c(id_cols, "FADN_code_letter")) |>
 
     # add UNFCCC country specific values for:
 
@@ -245,7 +241,7 @@ f_GHGE_n2o_manure <- function(object,
     ) |>
 
     # Estimate direct N2O emission from MM per livestock category
-    dplyr::group_by(dplyr::across(dplyr::all_of(object@traceability$id_cols)),species,FADN_code_letter,Qobs) |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(id_cols)),species,FADN_code_letter,Qobs) |>
     dplyr::summarise(
       # EQUATION 10.25 (UPDATED) DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT
       ## N2O_D_mm = direct N2O emissions from Manure Management in the country, kg N2O yr-1
@@ -273,8 +269,8 @@ f_GHGE_n2o_manure <- function(object,
     # add livestock N excretion
     dplyr::left_join(
       N_excr_tbl |>
-        dplyr::select(dplyr::all_of(object@traceability$id_cols),FADN_code_letter,Nex_kgN_anim_y),
-      by = c(object@traceability$id_cols, "FADN_code_letter")) |>
+        dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,Nex_kgN_anim_y),
+      by = c(id_cols, "FADN_code_letter")) |>
 
     # add UNFCCC country specific values for:
 
@@ -326,7 +322,7 @@ f_GHGE_n2o_manure <- function(object,
     ) |>
 
     # Estimate direct N2O emission from MM per livestock category
-    dplyr::group_by(dplyr::across(dplyr::all_of(object@traceability$id_cols)),species,FADN_code_letter,Qobs,EF4) |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(id_cols)),species,FADN_code_letter,Qobs,EF4) |>
     dplyr::summarise(
       # EQUATION 10.26 (UPDATED) N LOSSES DUE TO VOLATILISATION FROM MANURE MANAGEMENT
       ## N_{volatilization-MMS} = amount of manure nitrogen that is lost due to volatilisation of NH3 and NOx, kg N yr-1
@@ -356,8 +352,8 @@ f_GHGE_n2o_manure <- function(object,
     # add livestock N excretion
     dplyr::left_join(
       N_excr_tbl |>
-        dplyr::select(dplyr::all_of(object@traceability$id_cols),FADN_code_letter,Nex_kgN_anim_y),
-      by = c(object@traceability$id_cols, "FADN_code_letter")) |>
+        dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,Nex_kgN_anim_y),
+      by = c(id_cols, "FADN_code_letter")) |>
 
     # add UNFCCC country specific values for:
 
@@ -407,7 +403,7 @@ f_GHGE_n2o_manure <- function(object,
     ) |>
 
     # Estimate direct N2O emission from MM per livestock category
-    dplyr::group_by(dplyr::across(dplyr::all_of(object@traceability$id_cols)),species,FADN_code_letter,Qobs,EF5) |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(id_cols)),species,FADN_code_letter,Qobs,EF5) |>
     dplyr::summarise(
 
       # EQUATION 10.27 (UPDATED) N LOSSES DUE TO LEACHING FROM MANURE MANAGEMENT
@@ -454,9 +450,9 @@ f_GHGE_n2o_manure <- function(object,
                             tmp_N2O_MM_gas,
                             tmp_N2O_MM_leach),
                    f = function(x,y) dplyr::left_join(x,y,
-                                                      by = c(object@traceability$id_cols,
+                                                      by = c(id_cols,
                                                              "FADN_code_letter","species","Qobs"))) |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
+    dplyr::select(dplyr::all_of(id_cols),
                   FADN_code_letter,
                   species,Qobs,
                   N2O_D_MM_kgCO2e_livcat,N2O_G_mm_kgCO2e_livcat,N2O_L_mm_kgCO2e_livcat)

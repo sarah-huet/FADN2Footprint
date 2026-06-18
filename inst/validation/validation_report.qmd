@@ -49,10 +49,10 @@ devtools::load_all()
 
 ## Load raw data and run model
 #source("validation_FADN_data.R")
-#source("validation_FADN_data_offline.R")
+source("validation_FADN_data_offline.R")
 ## 
 #load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
-load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+#load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
 
 cat("FADN dataset loaded:", nrow(my_object_GHGE@farm), "farm-year observations\n")
 cat("Countries covered:", paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "), "\n")
@@ -756,7 +756,7 @@ F2F_output_agri_pract <- tibble::tribble(
 F2F_output_ghge <- tibble::tribble(
   ~indicator,        ~unit,             ~product,  ~estimate,
   "GHGE_kgCO2e_ha",  "kgCO2e_per_ha",  "wheat",   mean(tmp_ghge_wheat$total_ghg_crop_kgCO2e_per_ha,                    na.rm = TRUE),
-  "GHGE_kgCO2e_t",   "kgCO2e_per_t",   "wheat",   mean(tmp_ghge_wheat$total_ghg_crop_kgCO2e_per_t,                     na.rm = TRUE),
+  "GHGE_kgCO2e_t",   "kgCO2e_per_t",   "wheat",   mean(tmp_ghge_wheat |> dplyr::filter(is.finite(total_ghg_crop_kgCO2e_per_t)) |> dplyr::pull(total_ghg_crop_kgCO2e_per_t),                     na.rm = TRUE),
   "GHGE_kgCO2e_ha",  "kgCO2e_per_ha",  "milk",    mean(tmp_ghge_milk$pseudofarm_ghge_herd_kgCO2e_per_ha_pseudofarm,    na.rm = TRUE),
   "GHGE_kgCO2e_t",   "kgCO2e_per_t",   "milk",    mean(tmp_ghge_milk$pseudofarm_ghge_herd_kgCO2e_per_t,                na.rm = TRUE),
   "GHGE_kgCO2e_ha",  "kgCO2e_per_ha",  "cattle_meat", mean(tmp_ghge_beef$pseudofarm_ghge_herd_kgCO2e_per_ha_pseudofarm,    na.rm = TRUE),
@@ -889,6 +889,66 @@ comparison |>
 ```
 
 # Checks
+
+```{r chack_UAA}
+
+object = my_object
+
+id_cols = object@traceability$id_cols
+
+tmp_tot_UAA = object@farm |>
+  dplyr::select(dplyr::all_of(id_cols),
+                SE025)
+
+tmp_sum_UAA = object@crop |>
+  #dplyr::filter(!grepl("CTOT",FADN_code_letter)) |>
+  dplyr::summarise(
+    sum_UAA = sum(area_ha, na.rm = TRUE),
+      .by = dplyr::all_of(id_cols)
+  )
+
+tmp_check = dplyr::left_join(
+  tmp_tot_UAA,
+  tmp_sum_UAA,
+  by = id_cols
+)
+
+plot(tmp_check$SE025, tmp_check$sum_UAA)
+abline(0,1)
+
+```
+
+```{r under_glass}
+
+object = my_object
+
+id_cols = object@traceability$id_cols
+
+tmp_tot_UG = object@farm |>
+  dplyr::select(dplyr::all_of(id_cols),
+                CTOTUG_TO)
+
+tmp_sum_UG = object@crop |>
+  dplyr::filter(grepl("UG$",FADN_code_letter)) |>
+  dplyr::summarise(
+    sum_UG_TO = sum(TO, na.rm = TRUE),
+    sum_UG_SV = sum(SV, na.rm = TRUE),
+      .by = dplyr::all_of(id_cols)
+  )
+
+tmp_check = dplyr::left_join(
+  tmp_tot_UG,
+  tmp_sum_UG,
+  by = id_cols
+)
+
+plot(tmp_check$CTOTUG_TO, tmp_check$sum_UG_SV)
+abline(0,1)
+
+
+```
+
+
 
 ```{r check_LU}
 

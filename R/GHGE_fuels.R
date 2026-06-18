@@ -94,8 +94,9 @@
 
 
 f_GHGE_fuels <- function(object,
-                       account_pseudoherd = FALSE,
-                       ...){
+                         account_pseudoherd = FALSE,
+                         overwrite = FALSE,
+                         ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -152,8 +153,10 @@ f_GHGE_fuels <- function(object,
     ) |>
     # add EF
     dplyr::left_join(
-      UNFCCC_data$EF_fuel,
-      by = c('Country_ISO_3166_1_A3','YEAR')
+      UNFCCC_data$EF_fuel |>
+        dplyr::select(-YEAR),
+      by = c('Country_ISO_3166_1_A3')
+      #TODO: by = c('Country_ISO_3166_1_A3','YEAR')
     ) |>
     ## replace NAs by EF mean
     dplyr::mutate(
@@ -182,8 +185,35 @@ f_GHGE_fuels <- function(object,
   #For diesel specifically, we first allocate emissions related to ploughing to crops than economically allocate the remaining emissions to all outputs
 
   ## Output economic allocation ratio
-  tmp_econ_alloc = f_output_econ_alloc(object, account_pseudoherd = account_pseudoherd)
+  ### Economic allocation across all products for diesel
+  tmp_econ_alloc = f_output_econ_alloc(object, account_pseudoherd = account_pseudoherd, overwrite = overwrite)
+  ### Economic allocation across crop under glass and livestock for fuels (or across all products if no glass nor livestock)
+  econ_alloc_heating_fuels = tmp_econ_alloc$all_outputs |>
+    dplyr::filter(output != "crop" | grepl("UG$",FADN_code_letter)) |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, output , species, sales_e) |>
+      dplyr::mutate(
+      total_sales_e = sum(sales_e, na.rm = TRUE),
+      .by = dplyr::all_of(id_cols)
+    ) |>
+      dplyr::mutate(
+        econ_alloc_ratio_heating_fuel = sales_e / total_sales_e
+      )
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  # Combine data
   tmp_GHGE_fuels_alloc = tmp_econ_alloc$all_outputs |>
     dplyr::filter(econ_alloc_ratio_farm >0) |>
     # add GHGE

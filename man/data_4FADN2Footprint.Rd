@@ -7,7 +7,7 @@
 data_4FADN2Footprint(
   df,
   landscape_metrics = NULL,
-  var_dict = NULL,
+  var_dict = dict_FADN,
   id_cols = c("ID", "YEAR", "COUNTRY"),
   ...
 )

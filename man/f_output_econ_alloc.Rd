@@ -4,7 +4,7 @@
 \alias{f_output_econ_alloc}
 \title{Economic allocation of farm outputs}
 \usage{
-f_output_econ_alloc(object, account_pseudoherd = FALSE, ...)
+f_output_econ_alloc(object, account_pseudoherd = FALSE, overwrite = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{FADN2Footprint}. Must contain at

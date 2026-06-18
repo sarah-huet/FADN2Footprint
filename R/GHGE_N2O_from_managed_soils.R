@@ -235,9 +235,11 @@ f_GHGE_n2o_msoils <- function(object,
     ) |>
     # add EF from UNFCCC data
     dplyr::left_join(
-      UNFCCC_data$EF_managed_soils,
-      by = c('Country_ISO_3166_1_A3', 'YEAR')
-    ) |>
+      UNFCCC_data$EF_managed_soils |>
+        dplyr::select(-YEAR),
+      by = c('Country_ISO_3166_1_A3')
+      #TODO: by = c('Country_ISO_3166_1_A3', 'YEAR')
+      ) |>
     ## replace NAs by EF mean
     dplyr::mutate(
       dplyr::across(

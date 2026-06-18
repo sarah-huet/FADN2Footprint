@@ -120,6 +120,8 @@
       dplyr::matches("SE080"),
       # SE025	Total Utilised Agricultural Area	in ha	STANDARD RESULTS
       dplyr::matches("SE025"),
+      # Total area under glass
+      dplyr::matches("CTOTUG"),
       # Farm certification
       # Note: PDO variable excluded due to poor registration (e.g., missing in FR 2016-2018)
       "ORGANIC"
@@ -287,9 +289,15 @@
 ) {
 
   # 1. Identify Crop Codes --------------------------------------------------
-  # Filter out codes ending in _X (aggregates) and sort by length (longest first)
   crop_codes <- data_extra$crops$FADN_code_letter |>
-    (\(x) x[!grepl("_X", x)])() |>
+    # Filter out codes
+    ## ending in _X (pre-2014 versions)
+    ## beginning with CTOT (aggregates)
+    ## CFLNDNOSUB	11210	Fallow land without any subsidies
+    ## CFLNDSUB	11220	Fallow land subject to the payment of subsidies
+    ## CLNDREADSOW	11300	Land ready for sowing leased to others
+    ## CUNUSEDLND		Unutilised agricultural land
+    (\(x) x[!grepl("_X$|^CTOT|CFLNDNOSUB|CFLNDSUB|CLNDREADSOW|CUNUSEDLND", x)])() |>
     unique() |>
     sort(decreasing = TRUE)
   # Create a regex pattern once
@@ -309,7 +317,7 @@
       values_to = "value"
     ) |>
     # Early filtering of zeros to reduce memory usage before string ops
-    dplyr::filter(value > 0) |>
+    #dplyr::filter(value > 0) |>
     # Create code variables
     # Regex explanation:
     # ^(crop_codes): Match the code at start (Group 1)
@@ -386,6 +394,11 @@
     dplyr::summarise(
       yield_SAA = mean(yield_SAA, na.rm = TRUE),
       .by = c(SAA_Agreste_2020, Departement)
+    ) |>
+    # fallback on global average
+    dplyr::mutate(
+      yield_SAA_country = mean(yield_SAA, na.rm = TRUE),
+      .by = SAA_Agreste_2020
     )
 
   # 5. Impute Forage Yields -------------------------------------------------
@@ -409,31 +422,59 @@
           by = dplyr::join_by(SAA_Agreste_2020, NUTS3 == Departement)
         )
       } else {
-        # Compute global average reference yields per crop
-        ref_yields_avg <- ref_yields |>
-          dplyr::summarise(
-            yield_SAA = mean(yield_SAA, na.rm = TRUE),
-            .by = SAA_Agreste_2020
-          )
-
+        # Attach global average reference yields per crop
         dplyr::left_join(
           df,
-          ref_yields_avg,
-          by = "SAA_Agreste_2020"
+          ref_yields |>
+            dplyr::select(SAA_Agreste_2020, yield_SAA_country) |>
+            dplyr::distinct() |>
+            dplyr::mutate(yield_SAA = yield_SAA_country),
+          by = dplyr::join_by(SAA_Agreste_2020)
         )
       } })() |>
     dplyr::mutate(
       # Impute Yield: Keep existing yield, otherwise use SAA yield
       ## TODO: check for French FADN
-      yield = dplyr::coalesce(yield, yield_SAA),
+      #yield = dplyr::coalesce(yield, yield_SAA),
+      yield = dplyr::case_when(
+        !is.na(SAA_Agreste_2020) & (!is.finite(yield) | yield ==0) ~ dplyr::coalesce(yield_SAA, yield_SAA_country),
+        .default = yield
+      ),
 
       # Impute Production: Keep existing prod, otherwise calc Area * Yield
-      prod_t = dplyr::coalesce(prod_t, area_ha * yield)
+      #prod_t = dplyr::coalesce(prod_t, area_ha * yield)
+      prod_t = dplyr::case_when(
+        !is.na(SAA_Agreste_2020) & (!is.finite(prod_t) | prod_t ==0) ~ area_ha * yield,
+        .default = prod_t
+      )
     ) |>
     # Clean up temporary columns
-    dplyr::select(-yield_SAA, -SAA_Agreste_2020, -dplyr::any_of("NUTS3"))
+    dplyr::select(-dplyr::any_of("yield_SAA"), -SAA_Agreste_2020, -dplyr::any_of("NUTS3"))
 
-  return(final_df)
+  # Filter crop or farms with missing values
+  final_df_flt <- final_df |>
+    ## we keep crop with at least an area or a production
+    dplyr::filter(area_ha >0 | prod_t >0) |>
+    ## some culture have null area or null production
+    ### if crop with a null value represent <= 5% area or production, respectively
+    dplyr::mutate(
+      sum_area_ha = sum(area_ha, na.rm = TRUE),
+      sum_prod_t = sum(prod_t, na.rm = TRUE),
+      .by = dplyr::all_of(id_cols)
+    ) |>
+    dplyr::mutate(
+      keep_sup5pc = dplyr::case_when(
+        is.na(area_ha) ~ ifelse(prod_t > 0.05*sum_prod_t, TRUE, FALSE),
+        is.na(prod_t) ~ ifelse(area_ha > 0.05*sum_area_ha, TRUE, FALSE),
+        .default = TRUE
+      )
+    ) |>
+    #### we remove crop
+    dplyr::filter(keep_sup5pc)
+  ### else
+  #### we remove farm (NB: we keep farm id in another table for traceability)
+
+  return(final_df_flt)
 }
 
 # HERD DATA ----
@@ -648,8 +689,9 @@
     dplyr::filter(Qobs > 0)
 
   # 6. Final Imputations (Business Logic) -----------------------------------
-  # If sales variables are missing, assume all sales are for slaughter.
-  # We use check if columns exist, if not create them with NA, then coalesce.
+  ## Variables differentiating sales between slaughter and rearing are not always well registered in FADN.
+  ## Hence, when not properly register, we apply a default share estimated from our test data set
+  ## We use check if columns exist, if not create them with NA, then coalesce.
 
   # Ensure columns exist to avoid errors in coalesce
   cols_needed <- c("SSN", "SN", "SSV", "SV", "SRN", "SRV")
@@ -658,6 +700,34 @@
   }
 
   final_data <- processed_data |>
+    # add NUTS2
+    dplyr::left_join(
+      df_harmonized |>
+        dplyr::select(dplyr::all_of(id_cols), NUTS2),
+      by = id_cols
+    ) |>
+    # add average share of SSN and SRN
+    dplyr::left_join(
+      FADN_averages$sales_shares,
+      by = c('FADN_code_letter', 'NUTS2')
+    ) |>
+    # check if SN = SRN + SSN
+    #dplyr::mutate(
+    #  complete_sales = dplyr::coalesce(SN == (SRN + SSN), FALSE),
+    #  SSN = ifelse(complete_sales,
+    #               dplyr::coalesce(SSN, 0),
+    #               SN * share_SSN),
+    #  SRN = ifelse(complete_sales,
+    #               dplyr::coalesce(SRN, 0),
+    #               SN * share_SRN),
+    #  SSV = ifelse(complete_sales,
+    #               dplyr::coalesce(SSV, 0),
+    #               SV * share_SSN),
+    #  SRV = ifelse(complete_sales,
+    #               dplyr::coalesce(SRV, 0),
+    #               SV * share_SRN)
+    #) |>
+    # old version
     dplyr::mutate(
       SSN = dplyr::coalesce(SSN, SN), # If SSN missing, take SN
       SSV = dplyr::coalesce(SSV, SV), # If SSV missing, take SV

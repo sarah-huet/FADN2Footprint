@@ -10,7 +10,7 @@ devtools::load_all("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/")
 
 # Load FADN raw data (2016-2018) ----
 
-load("../FADN2Footprint/data_raw/raw_FADN_FRA_18_21.RData")
+load("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/data_raw/raw_FADN_FRA_18_21.RData")
 
 
 # Create the FADN2Footprint S4 object ----

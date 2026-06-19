@@ -461,7 +461,7 @@
     # Clean up temporary columns
     dplyr::select(-dplyr::matches("yield_SAA"), -SAA_Agreste_2020)
 
-  # 6. Replace other missing yield
+  # 6. Replace other missing yield ---------------------------------------------
 
   # TODO: replace missing yields
 
@@ -483,13 +483,21 @@
       yield = ifelse(default_crop_yield, avrg_FADN_yield, yield),
 
       # Impute Production: Keep existing prod, otherwise calc Area * Yield
+      ## if sales quantity > default, we set sales quantity as production
       default_crop_prod = ifelse((!is.finite(prod_t) | prod_t ==0), TRUE, FALSE),
+      default_sales_to_prod = dplyr::case_when(default_crop_prod & is.finite(sales_t) & sales_t >0 & (area_ha * yield) < sales_t ~ TRUE,
+                                               .default = FALSE),
       #prod_t = dplyr::coalesce(prod_t, area_ha * yield)
       #prod_t = dplyr::case_when(
       #  (!is.finite(prod_t) | prod_t ==0) ~ area_ha * yield,
       #  .default = prod_t
       #)
-      prod_t = ifelse(default_crop_prod, area_ha * yield, prod_t)
+      #prod_t = ifelse(default_crop_prod, area_ha * yield, prod_t)
+      prod_t = dplyr::case_when(
+        default_sales_to_prod ~ sales_t,
+        default_crop_prod ~ (area_ha * yield),
+        .default = prod_t
+      )
     ) |>
     # Clean up temporary columns
     dplyr::select(-avrg_FADN_yield)

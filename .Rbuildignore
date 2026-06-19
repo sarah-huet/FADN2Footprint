@@ -2,3 +2,8 @@
 ^renv\.lock$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^\.*\\.tmp\\.csv#$$
+^\.*\\.xlsx#$$
+^vignettes/\\.quarto$
+^vignettes/\\.trackdown$
+^vignettes/\.*_files$

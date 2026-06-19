@@ -225,6 +225,8 @@ setMethod("m_remove_farms", "FADN2Footprint", function(object, farms_to_remove) 
       dplyr::distinct(dplyr::across(tidyselect::all_of(id_cols)), .keep_all = TRUE)
   }
 
+  message("\n","Removed farms are stored in `object@traceability$discarded_farms`.","\n")
+
   return(object)
 })
 

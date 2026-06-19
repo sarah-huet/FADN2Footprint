@@ -160,7 +160,11 @@
       by = best_match_col
     )
 
-  message("\n", paste0(dict_FADN |> filter(var_common %in% colnames(farm_data)) |> pull(DESCRIPTION), collapse = ", "))
+  #message("\n", paste0(dict_FADN |> filter(var_common %in% colnames(farm_data)) |> pull(DESCRIPTION), collapse = ", "))
+  message("Farm-level variables kept in object:")
+  print(dict_FADN |>
+          dplyr::filter(var_common %in% colnames(farm_data)) |>
+          dplyr::select(var_common, DESCRIPTION, Comment, Group))
 
   return(farm_data)
 }
@@ -303,7 +307,7 @@
   # Create a regex pattern once
   crop_regex <- paste(crop_codes, collapse = "|")
 
-  message("Make sure that your area variables are in hectare and your production variables are in tonnes.")
+  message("Make sure that your area variables are in hectare and your production variables are in tonnes.\n")
   message("Only variables for these crop codes are considered: ",
           paste(crop_codes, collapse = ", "))
 
@@ -336,17 +340,19 @@
       names_from = variable,
       values_from = value
     ) |>
+    # Add missing columns with NA
+    dplyr::bind_rows(tibble::tibble(A = numeric(), TA = numeric(), PRQ = numeric(), SQ = numeric())) |>
     # area in hectares for each crop: A or TA
     # production quantity in kg for each crop: PRQ
     # sales quantity in kg for each crop: SQ
     # Ensure expected columns exist
-    (\(df) {
-      if (!"TA" %in% names(df)) df$TA <- NA_real_
-      if (!"A"  %in% names(df)) df$A  <- NA_real_
-      if (!"PRQ" %in% names(df)) df$PRQ <- NA_real_
-      if (!"SQ"  %in% names(df)) df$SQ  <- NA_real_
-      df
-    })() |>
+    #(\(df) {
+    #  if (!"TA" %in% names(df)) df$TA <- NA_real_
+    #  if (!"A"  %in% names(df)) df$A  <- NA_real_
+    #  if (!"PRQ" %in% names(df)) df$PRQ <- NA_real_
+    #  if (!"SQ"  %in% names(df)) df$SQ  <- NA_real_
+    #  df
+    #})() |>
     dplyr::mutate(
       area_ha = pmax(as.numeric(TA), as.numeric(A), na.rm = T),
       prod_t  = PRQ,
@@ -405,12 +411,12 @@
   # Strategy: Join NUTS3 and SAA yields to the main table.
   # Use coalesce() to fill gaps only where needed.
 
-  final_df <- crop_df |>
+  final_df0 <- crop_df |>
     # Attach NUTS3 region from farm_data (if available)
     dplyr::left_join(
       farm_data |>
-        dplyr::select(dplyr::all_of(id_cols), dplyr::any_of("NUTS3"))|>
-        dplyr::mutate(dplyr::across(dplyr::any_of("NUTS3"),as.character)),
+        dplyr::select(dplyr::all_of(id_cols), dplyr::matches("NUTS"))|>
+        dplyr::mutate(dplyr::across(dplyr::matches("NUTS"),as.character)),
       by = id_cols
     ) |>
     # Attach Reference Yields based on Crop Mapping + NUTS3 (or global average per crop)
@@ -434,47 +440,61 @@
       } })() |>
     dplyr::mutate(
       # Impute Yield: Keep existing yield, otherwise use SAA yield
+      default_forage_yield = ifelse(!is.na(SAA_Agreste_2020) & (!is.finite(yield) | yield ==0), TRUE, FALSE),
       ## TODO: check for French FADN
       #yield = dplyr::coalesce(yield, yield_SAA),
-      yield = dplyr::case_when(
-        !is.na(SAA_Agreste_2020) & (!is.finite(yield) | yield ==0) ~ dplyr::coalesce(yield_SAA, yield_SAA_country),
-        .default = yield
-      ),
+      #yield = dplyr::case_when(
+      #  !is.na(SAA_Agreste_2020) & (!is.finite(yield) | yield ==0) ~ dplyr::coalesce(yield_SAA, yield_SAA_country),
+      #  .default = yield
+      #),
+      yield = ifelse(default_forage_yield, dplyr::coalesce(yield_SAA, yield_SAA_country), yield),
 
       # Impute Production: Keep existing prod, otherwise calc Area * Yield
+      default_forage_prod = ifelse(!is.na(SAA_Agreste_2020) & (!is.finite(prod_t) | prod_t ==0), TRUE, FALSE),
       #prod_t = dplyr::coalesce(prod_t, area_ha * yield)
-      prod_t = dplyr::case_when(
-        !is.na(SAA_Agreste_2020) & (!is.finite(prod_t) | prod_t ==0) ~ area_ha * yield,
-        .default = prod_t
-      )
+      #prod_t = dplyr::case_when(
+      #  !is.na(SAA_Agreste_2020) & (!is.finite(prod_t) | prod_t ==0) ~ area_ha * yield,
+      #  .default = prod_t
+      #)
+      prod_t = ifelse(default_forage_prod, area_ha * yield, prod_t)
     ) |>
     # Clean up temporary columns
-    dplyr::select(-dplyr::any_of("yield_SAA"), -SAA_Agreste_2020, -dplyr::any_of("NUTS3"))
+    dplyr::select(-dplyr::matches("yield_SAA"), -SAA_Agreste_2020)
 
-  # Filter crop or farms with missing values
-  final_df_flt <- final_df |>
-    ## we keep crop with at least an area or a production
-    dplyr::filter(area_ha >0 | prod_t >0) |>
-    ## some culture have null area or null production
-    ### if crop with a null value represent <= 5% area or production, respectively
-    dplyr::mutate(
-      sum_area_ha = sum(area_ha, na.rm = TRUE),
-      sum_prod_t = sum(prod_t, na.rm = TRUE),
-      .by = dplyr::all_of(id_cols)
+  # 6. Replace other missing yield
+
+  # TODO: replace missing yields
+
+  final_df <- final_df0 |>
+    # Attach Reference Yields based on Crop Mapping + NUTS3 (or global average per crop)
+    dplyr::left_join(
+      FADN_averages$crop_yields,
+      by = dplyr::join_by(FADN_code_letter, NUTS2)
     ) |>
     dplyr::mutate(
-      keep_sup5pc = dplyr::case_when(
-        is.na(area_ha) ~ ifelse(prod_t > 0.05*sum_prod_t, TRUE, FALSE),
-        is.na(prod_t) ~ ifelse(area_ha > 0.05*sum_area_ha, TRUE, FALSE),
-        .default = TRUE
-      )
-    ) |>
-    #### we remove crop
-    dplyr::filter(keep_sup5pc)
-  ### else
-  #### we remove farm (NB: we keep farm id in another table for traceability)
+      # Impute Yield: Keep existing yield, otherwise use average yield
+      default_crop_yield = ifelse((!is.finite(yield) | yield ==0), TRUE, FALSE),
+      ## TODO: check for French FADN
+      #yield = dplyr::coalesce(yield, yield_SAA),
+      #yield = dplyr::case_when(
+      #  (!is.finite(yield) | yield ==0) ~ avrg_FADN_yield,
+      #  .default = yield
+      #),
+      yield = ifelse(default_crop_yield, avrg_FADN_yield, yield),
 
-  return(final_df_flt)
+      # Impute Production: Keep existing prod, otherwise calc Area * Yield
+      default_crop_prod = ifelse((!is.finite(prod_t) | prod_t ==0), TRUE, FALSE),
+      #prod_t = dplyr::coalesce(prod_t, area_ha * yield)
+      #prod_t = dplyr::case_when(
+      #  (!is.finite(prod_t) | prod_t ==0) ~ area_ha * yield,
+      #  .default = prod_t
+      #)
+      prod_t = ifelse(default_crop_prod, area_ha * yield, prod_t)
+    ) |>
+    # Clean up temporary columns
+    dplyr::select(-avrg_FADN_yield)
+
+  return(final_df)
 }
 
 # HERD DATA ----

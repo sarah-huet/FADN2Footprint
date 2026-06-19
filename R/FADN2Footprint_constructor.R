@@ -156,14 +156,17 @@ data_4FADN2Footprint <- function(df,
     var_dict %>%
       dplyr::filter(!is.na(needed_in_FADN2Footprint) & !is.na(var_common)) %>%
       dplyr::pull(var_common))
-  ## Remove numeric columns with only zeros
+  # Remove names starting with C (for crop variables) or L (for livestock variables) or P (for animal products variables)
+  columns_with_zeros <- str_subset(columns_with_zeros, "^[CLP]", negate = TRUE)
+  ## Remove any columns in the list
   df_harmonized <- df %>%
-    dplyr::select(-dplyr::matches(columns_with_zeros))
+    dplyr::select(-dplyr::any_of(columns_with_zeros))
   message(length(columns_with_zeros)," columns contain only zeros and will be removed.")
-  traceability$columns$columns_with_zeros <- columns_with_zeros
+  message((ncol(df) - ncol(df_harmonized))," are removed. Their names are stored in `object@traceability$columns$columns_removed`")
+  traceability$columns$columns_removed <- sort(setdiff(colnames(df), colnames(df_harmonized)))
 
   ## Detect FADN version
-    # TODO: remove this part as the conversion from national to European FADN is handled beforehands
+    # TODO: check this part for FADN version older than 2014
   version <- f_infer_fadn_version(df, var_dict)
   message("Detected FADN column version: ", version)
   traceability$version <- version
@@ -204,11 +207,50 @@ data_4FADN2Footprint <- function(df,
   ## CROPS ----
   message("\n~~~ Parsing crop data ~~~\n")
 
-  crop_data <- .parse_crop_data(
+  crop_data0 <- .parse_crop_data(
     df_harmonized = df_harmonized,
     farm_data = farm_data,
     id_cols = id_cols
   )
+
+  # Filter minor crops with missing values ----
+  crop_data <- crop_data0 |>
+    ## we keep crop with at least an area or a production
+    dplyr::filter(area_ha >0 | prod_t >0) |>
+    ## some culture have null area or null production
+    ### if crop with a null value represent <= 5% area or production, respectively
+    dplyr::mutate(
+      sum_area_ha = sum(area_ha, na.rm = TRUE),
+      sum_prod_t = sum(prod_t, na.rm = TRUE),
+      .by = dplyr::all_of(id_cols)
+    ) |>
+    dplyr::mutate(
+      keep_sup5pc = dplyr::case_when(
+        is.na(area_ha) ~ ifelse(prod_t > 0.05*sum_prod_t, TRUE, FALSE),
+        is.na(prod_t) ~ ifelse(area_ha > 0.05*sum_area_ha, TRUE, FALSE),
+        .default = TRUE
+      )
+    ) #|>
+  #### we remove crop
+  #dplyr::filter(keep_sup5pc)
+  ### else
+  #### we remove farm (NB: we keep farm id in another table for traceability)
+
+  removed_crops <- dplyr::anti_join(
+    crop_data0 |>
+      dplyr::select(dplyr::all_of(id_cols), FADN_code_letter),
+    crop_data |>
+      dplyr::select(dplyr::all_of(id_cols), FADN_code_letter),
+    by = c(id_cols, 'FADN_code_letter')) |>
+    dplyr::left_join(
+      crop_data0,
+      by = c(id_cols, 'FADN_code_letter'))
+
+  message("\n",
+          "We remove ", nrow(removed_crops), " observations (",
+          round(nrow(removed_crops) / nrow(crop_data0) *100, 2), "% of initial crop x farm x year observations)",
+          " that had no area nor production. We store them in `object@traceability$removed_crops`.")
+  traceability$removed_crops <- removed_crops
 
   ## HERD ----
   message("\n~~~ Parsing herd data ~~~\n")

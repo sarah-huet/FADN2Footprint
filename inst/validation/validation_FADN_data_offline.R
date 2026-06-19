@@ -5,7 +5,7 @@
 # devtools::install_local("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/", dependencies = TRUE, force = TRUE)
 # library(FADN2Footprint)
 
-devtools::document("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/")
+#devtools::document("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/")
 devtools::load_all("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/")
 
 # Load FADN raw data (2016-2018) ----

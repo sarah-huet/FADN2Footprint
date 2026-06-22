@@ -158,7 +158,7 @@ f_output_econ_alloc <- function(object,
 
   # 1. Aggregate outputs -------------------------------------------------------------------
 
-  ## 1a. Herd outputs
+  ## 1a. Herd outputs ----
   herd_output <- Reduce(bind_rows, list(
     #object@output@living_animals,
     object@output$meat,
@@ -178,16 +178,16 @@ f_output_econ_alloc <- function(object,
       TO_e = dplyr::coalesce(sales_e,0)
     )
 
-  ## 1b. Crop outputs
+  ## 1b. Crop outputs ----
 
-  ### Retrieve cash crop value
+  ### Retrieve cash crop value ----
   cash_crops <- object@output$crop |>
     dplyr::mutate(
       activity = "crop"
     )
 
 
-  ### Estimate feed crop value
+  ### Estimate feed crop value ----
   feed_produced = f_feed_onfarm(object, overwrite = overwrite)
 
   fodder_crops <- feed_produced |>
@@ -202,16 +202,16 @@ f_output_econ_alloc <- function(object,
     # add herd product total output per farm
     dplyr::left_join(
       herd_output |>
-        dplyr::summarise(feed_TO = sum(sales_e,na.rm = T),
+        dplyr::summarise(feed_herd_prod_sales_e = sum(sales_e,na.rm = T),
                          .by = dplyr::all_of(id_cols)),
       by = id_cols
     )|>
     # estimate farm use value
     dplyr::mutate(
-      farm_use_e = feed_TO * (feed_t_DM / farm_t_DM)
+      farm_use_e = feed_herd_prod_sales_e * (feed_t_DM / farm_t_DM)
     )
 
-  ### Combine cash crop and feed crop value
+  ### Combine cash crop and feed crop value ----
 
   crop_output <- cash_crops |>
     dplyr::left_join(
@@ -223,10 +223,7 @@ f_output_econ_alloc <- function(object,
     dplyr::mutate(
       TO_e = dplyr::coalesce(sales_e,0) + dplyr::coalesce(farm_use_e, 0))
 
-
-
-
-  ## 1c. All outputs combined
+  ## 1c. All outputs combined ----
   all_output <- dplyr::bind_rows(crop_output, herd_output)
 
   # 2. Economic allocation -----------------------------------------------------------------

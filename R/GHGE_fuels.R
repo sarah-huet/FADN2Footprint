@@ -199,41 +199,32 @@ f_GHGE_fuels <- function(object,
         econ_alloc_ratio_heating_fuel = sales_e / total_sales_e
       )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   # Combine data
   tmp_GHGE_fuels_alloc = tmp_econ_alloc$all_outputs |>
-    dplyr::filter(econ_alloc_ratio_farm >0) |>
-    # add GHGE
+    # add economic allocation for heating fuels
     dplyr::left_join(
-      GHGE_fuels,
-      by = id_cols
+      econ_alloc_heating_fuels |>
+        dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, output, species,
+                      econ_alloc_ratio_heating_fuel),
+      by = c(id_cols, 'FADN_code_letter', 'output', 'species')
     ) |>
     # add tillage activity
     dplyr::left_join(
       tmp_diesel_tillage,
       by = c(id_cols, 'FADN_code_letter')
     ) |>
+    # add GHGE
+    dplyr::left_join(
+      GHGE_fuels,
+      by = id_cols
+    ) |>
     # GHG kg CO2-eq/MJ with an economic allocation to output
     dplyr::summarise(
-
+      # diesel
       ghg_diesel_tillage_kgCO2e_output = sum(farm_ghg_diesel_kgCO2e * (diesel_tillage_l / diesel_l), na.rm = TRUE),
       ghg_diesel_remain_kgCO2e_output = sum(farm_ghg_diesel_remain_kgCO2e * econ_alloc_ratio_farm, na.rm = TRUE),
-
-      ghg_heat_fuel_kgCO2e_output = sum(farm_ghg_heat_fuel_kgCO2e * econ_alloc_ratio_farm, na.rm = TRUE),
-
+      # heating fuel
+      ghg_heat_fuel_kgCO2e_output = sum(farm_ghg_heat_fuel_kgCO2e * econ_alloc_ratio_heating_fuel, na.rm = TRUE),
       .by = c(dplyr::all_of(id_cols), activity, species, output, FADN_code_letter, FADN_code_letter_output)
     )
 

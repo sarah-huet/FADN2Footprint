@@ -160,12 +160,18 @@ f_feed_offfarm <- function(object,
   # average crop quality
   ## average GE, DM & CP (DM is not estimated as it is always 100%)
   Sailley_crop_qlty <- data_extra$Sailley_2021_feed_flows |>
-    dplyr::select(Sailley_feed,feed_tables) |>
+    dplyr::select(Sailley_feed, feed_tables, NZ_feed_DE) |>
     tidyr::separate_longer_delim(feed_tables,";") |>
-    # add feed quality
+    tidyr::separate_longer_delim(NZ_feed_DE,";") |>
+    # add feed nutritional values
     dplyr::left_join(
       data_extra$feed_table_all_as_DM,
       by = 'feed_tables'
+    ) |>
+    # add feed digestibility
+    dplyr::left_join(
+      data_extra$NZ_feed_DE,
+      by = dplyr::join_by(NZ_feed_DE == Feed_Description)
     ) |>
     # summarise by Sailley crop name
     dplyr::summarise(
@@ -173,6 +179,7 @@ f_feed_offfarm <- function(object,
       GE_kcal_kg = mean(`GE kcal/kg`,na.rm = T),
       CP_pc = mean(`CP %`,na.rm = T),
       Ash_pc = mean(`Ash %`,na.rm = T),
+      DE_pc = mean(Dry_Matter_Digestibility_pct, na.rm = T),
       .by = 'Sailley_feed'
     )
 
@@ -185,7 +192,7 @@ f_feed_offfarm <- function(object,
     # add average feed quality
     dplyr::left_join(
       Sailley_crop_qlty,
-      by = join_by(Sailley_feed)
+      by = c('Sailley_feed')
     ) |>
     # convert
     dplyr::mutate(
@@ -201,7 +208,7 @@ f_feed_offfarm <- function(object,
     dplyr::select(dplyr::all_of(object@traceability$id_cols),
                   FADN_code_letter,
                   feed_type,Sailley_feed,
-                  GE_MJ_livcat,GE_kcal_livcat,DM_t_livcat,CP_t_livcat,Ash_t_livcat) |>
+                  GE_MJ_livcat, GE_kcal_livcat, DM_t_livcat, CP_t_livcat, Ash_t_livcat, DE_pc) |>
     dplyr::filter(DM_t_livcat >0)
 
 

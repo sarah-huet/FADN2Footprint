@@ -238,10 +238,10 @@ f_GHGE_ch4_manure <- function(object,
       UNFCCC_data$table3Bas1 |>
         #dplyr::filter(species == "cattle") |>
         dplyr::summarise(
-          VS = weighted.mean(`VS(2)_daily_excretion_(average)`,Population__size),
-          Bo = weighted.mean(`CH4_producing_potential_(Bo)(2)_(average)`,Population__size),
-          .by = c(UNFCCC_cat,Country_ISO_3166_1_A3)),
-      by = dplyr::join_by(UNFCCC_cat, Country_ISO_3166_1_A3)
+          VS = weighted.mean(`VS(2)_daily_excretion_(average)`, Population__size),
+          Bo = weighted.mean(`CH4_producing_potential_(Bo)(2)_(average)`, Population__size),
+          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3)),
+      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3')
     ) |>
 
     # sum of MCF weighted by AWMS
@@ -252,11 +252,11 @@ f_GHGE_ch4_manure <- function(object,
         #dplyr::filter(species == "cattle") |>
         dplyr::summarise(
           Population__size = unique(Population__size),
-          sum_MCF_AWMS = sum(MCF/100*AWMS/100,na.rm = T),
-          .by = c(Animal_cat,UNFCCC_cat,Country_ISO_3166_1_A3)) |>
+          sum_MCF_AWMS = sum(MCF/100 * AWMS/100, na.rm = T),
+          .by = c(Animal_cat,UNFCCC_cat, Country_ISO_3166_1_A3)) |>
         dplyr::summarise(
-          sum_MCF_AWMS = weighted.mean(sum_MCF_AWMS,Population__size),
-          .by = c(UNFCCC_cat,Country_ISO_3166_1_A3)),
+          sum_MCF_AWMS = weighted.mean(sum_MCF_AWMS, Population__size),
+          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3)),
       by = dplyr::join_by(UNFCCC_cat, Country_ISO_3166_1_A3)) |>
 
     # estimate
@@ -285,7 +285,7 @@ f_GHGE_ch4_manure <- function(object,
       ## ASH = the ash content of feed calculated as a fraction of the dry matter feed intake (e.g., 0.06 for sows: Dämmgen et al. 2011). Use country-specific values where available.
       ASH = Ash_p100/100,
       ## 18.45 = conversion factor for dietary GE per kg of dry matter (MJ kg-1). This value is relatively constant across a wide range of forage and grain-based feeds commonly consumed by livestock.
-      VS = (GE*(1-(DE/100))+(UE_GE))*((1-ASH)/18.45),
+      VS = (GE*(1-(DE_pc/100))+(UE_GE))*((1-ASH)/18.45),
 
       # EQUATION 10.23 CH4 EMISSION FACTOR FROM MANURE MANAGEMENT
       ## EF = annual CH4 emission factor for livestock category T, kg CH4 animal-1 yr-1
@@ -296,7 +296,7 @@ f_GHGE_ch4_manure <- function(object,
       ## MCF = methane conversion factors for each manure management system S by climate region k, percent
       ## AWMS = fraction of livestock category T's manure handled using animal waste management system S in climate region k, dimensionless
 
-      EF = (VS*365)*(Bo* 0.67 * sum_MCF_AWMS),
+      EF = (VS*365) * (Bo* 0.67 * sum_MCF_AWMS),
 
       # Total CH4 emission from manure management
       ## To estimate total emissions, the country specific emission factor is then multiplied by the population number (Step 1).

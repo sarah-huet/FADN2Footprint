@@ -130,8 +130,8 @@
 
 
 f_GHGE_n2o_manure <- function(object,
-                            overwrite = F,
-                            ...){
+                              overwrite = FALSE,
+                              ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -207,11 +207,11 @@ f_GHGE_n2o_manure <- function(object,
         # proportion by country and matching category
         dplyr::mutate(
           AWMS = pop_MMS/sum(pop_MMS,na.rm = T),
-          .by = c(UNFCCC_cat,Country_ISO_3166_1_A3)
+          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3)
         ) |>
         dplyr::summarise(AWMS = sum(AWMS, na.rm = T),
-                         .by = c(Country_ISO_3166_1_A3,UNFCCC_cat,MMS)),
-      by = join_by(UNFCCC_cat, Country_ISO_3166_1_A3),
+                         .by = c(Country_ISO_3166_1_A3, UNFCCC_cat,MMS)),
+      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3'),
       relationship = "many-to-many") |>
 
     ## EF3
@@ -221,7 +221,7 @@ f_GHGE_n2o_manure <- function(object,
         dplyr::filter(!is.na(EF3)) |>
         # TODO: change when accounting for year in UNFCCC data
         dplyr::select(-YEAR),
-      by = join_by(MMS, Country_ISO_3166_1_A3),
+      by = c('MMS', 'Country_ISO_3166_1_A3'),
       relationship = "many-to-many"
     ) |>
     ### add IPCC default EF for country-specific missing values
@@ -233,7 +233,7 @@ f_GHGE_n2o_manure <- function(object,
                       species = condition_species,
                       default_EF3 = value) |>
         tidyr::separate_longer_delim(species,";"),
-      by = join_by(species, MMS),
+      by = c('species', 'MMS'),
       relationship = "many-to-many"
     ) |>
     dplyr::mutate(
@@ -269,7 +269,7 @@ f_GHGE_n2o_manure <- function(object,
     # add livestock N excretion
     dplyr::left_join(
       N_excr_tbl |>
-        dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,Nex_kgN_anim_y),
+        dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, Nex_kgN_anim_y),
       by = c(id_cols, "FADN_code_letter")) |>
 
     # add UNFCCC country specific values for:
@@ -285,11 +285,11 @@ f_GHGE_n2o_manure <- function(object,
         # proportion by country and matching category
         dplyr::mutate(
           AWMS = pop_MMS/sum(pop_MMS,na.rm = T),
-          .by = c(UNFCCC_cat,Country_ISO_3166_1_A3)
+          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3)
         ) |>
         dplyr::summarise(AWMS = sum(AWMS, na.rm = T),
-                         .by = c(Country_ISO_3166_1_A3,UNFCCC_cat,MMS)),
-      by = join_by(UNFCCC_cat, Country_ISO_3166_1_A3),
+                         .by = c(Country_ISO_3166_1_A3, UNFCCC_cat,MMS)),
+      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3'),
       relationship = "many-to-many") |>
 
     ## add IPCC default values for country-specific missing parameters:
@@ -308,12 +308,12 @@ f_GHGE_n2o_manure <- function(object,
     dplyr::left_join(
       data_extra$IPCC_default_values |>
         dplyr::filter(parameter == "frac_Gas_MS") |>
-        dplyr::select(condition_tech,condition_species,value) |>
+        dplyr::select(condition_tech, condition_species, value) |>
         dplyr::summarise(frac_Gas_MS = mean(value, na.rm = T),
-                         .by = c(condition_tech,condition_species)
+                         .by = c(condition_tech, condition_species)
         ) |>
         dplyr::rename(MMS = condition_tech),
-      by = join_by(condition_species, MMS)
+      by = c('condition_species', 'MMS')
     ) |>
 
     ## EF_4 = = emission factor for N2O emissions from atmospheric deposition of nitrogen on soils and water surfaces, kg N2O-N (kg NH3-N + NOx-N volatilised)-1 ; given in Chapter 11, Table 11.3
@@ -368,10 +368,10 @@ f_GHGE_n2o_manure <- function(object,
         # proportion by country and matching category
         dplyr::mutate(
           AWMS = pop_MMS/sum(pop_MMS,na.rm = T),
-          .by = c(UNFCCC_cat,Country_ISO_3166_1_A3)) |>
+          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3)) |>
         dplyr::summarise(AWMS = sum(AWMS, na.rm = T),
-                         .by = c(Country_ISO_3166_1_A3,UNFCCC_cat,MMS)),
-      by = join_by(UNFCCC_cat, Country_ISO_3166_1_A3),
+                         .by = c(Country_ISO_3166_1_A3, UNFCCC_cat,MMS)),
+      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3'),
       relationship = "many-to-many") |>
 
     ## add IPCC default values for country-specific missing parameters:
@@ -390,11 +390,11 @@ f_GHGE_n2o_manure <- function(object,
     dplyr::left_join(
       data_extra$IPCC_default_values |>
         dplyr::filter(parameter == "frac_leach_MS") |>
-        dplyr::select(condition_tech,condition_species,value) |>
+        dplyr::select(condition_tech, condition_species, value) |>
         dplyr::summarise(frac_leach_MS = mean(value, na.rm = T),
-                         .by = c(condition_tech,condition_species)) |>
+                         .by = c(condition_tech, condition_species)) |>
         dplyr::rename(MMS = condition_tech),
-      by = join_by(condition_species, MMS)
+      by = c('condition_species', 'MMS')
     ) |>
 
     ## EF_5 = emission factor for N2O emissions from nitrogen leaching and runoff, kg N 2O-N/kg N leached and runoff, given in Chapter 11, Table 11.3
@@ -403,14 +403,14 @@ f_GHGE_n2o_manure <- function(object,
     ) |>
 
     # Estimate direct N2O emission from MM per livestock category
-    dplyr::group_by(dplyr::across(dplyr::all_of(id_cols)),species,FADN_code_letter,Qobs,EF5) |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(id_cols)), species, FADN_code_letter, Qobs, EF5) |>
     dplyr::summarise(
 
       # EQUATION 10.27 (UPDATED) N LOSSES DUE TO LEACHING FROM MANURE MANAGEMENT
       ## N_{leaching-MMS} = amount of manure nitrogen that is lost due to leaching, kg N yr-1
       ## Frac_{LeachMS(T,S)} = fraction of managed manure nitrogen for livestock category T that is leached from the manure management system S (from Table 10.22)
       N_leach_mms = sum(
-        Nex_kgN_anim_y*Qobs*AWMS*frac_leach_MS,
+        Nex_kgN_anim_y * Qobs * AWMS * frac_leach_MS,
         na.rm = T),
       .groups = "drop"
     ) |>

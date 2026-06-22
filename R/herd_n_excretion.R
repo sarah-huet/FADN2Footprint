@@ -109,6 +109,7 @@ f_n_excr <- function(object,
     return(object@practices$herding$N_excretion)  # use cached value
   }
 
+  id_cols = object@traceability$id_cols
   ## Steps:
   ## 1. Estimate livestock intake of feed (both produced and purchased)
   ## 2. Calculate the amount of nitrogen excreted by livestock in accordance with IPCC recommendations (IPCC, 2019, 2006)
@@ -129,32 +130,32 @@ f_n_excr <- function(object,
   tmp_grazing_share <- herd_feed$feed_intake$detail |>
     # sum total GE per animal
     mutate(total_GE_MJ = sum(GE_MJ_anim,na.rm = T),
-           .by = c(object@traceability$id_cols,'FADN_code_letter')) |>
+           .by = c(dplyr::all_of(id_cols), FADN_code_letter)) |>
     # sum total grazed GE per animal
     filter(
       feed_origin == "feed_produced" &
         Sailley_feed == "Herbe_paturee") |>
     mutate(
       grazed_GE_MJ = sum(GE_MJ_anim,na.rm = T),
-      .by = c(object@traceability$id_cols,'FADN_code_letter', 'feed_origin', 'Sailley_feed')) |>
+      .by = c(dplyr::all_of(id_cols), FADN_code_letter, feed_origin, Sailley_feed)) |>
     # share of GE per feed type and per animal
     mutate(GE_grazed = grazed_GE_MJ / total_GE_MJ) |>
     # select
-    dplyr::select(all_of(object@traceability$id_cols),FADN_code_letter, GE_grazed) |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, GE_grazed) |>
     distinct()
 
   ### estimate milk production for diary cows
   milk_prod <- object@output$other_herd_products |>
     ### select milk data
     filter(output == "milk" & species == "cattle") |>
-    dplyr::select(all_of(object@traceability$id_cols),prod_t) |>
+    dplyr::select(dplyr::all_of(id_cols), prod_t) |>
     rename(MILK_total = prod_t) |>
     # add dairy cow population
     left_join(
       object@herd |>
         filter(FADN_code_letter == "LCOWDAIR") |>
-        dplyr::select(all_of(object@traceability$id_cols),FADN_code_letter,Qobs),
-      by = object@traceability$id_cols) |>
+        dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, Qobs),
+      by = id_cols) |>
     # calculate MILK t animal-1 day-1
     dplyr::mutate(MILK = (MILK_total / Qobs)/365)
 
@@ -170,23 +171,23 @@ f_n_excr <- function(object,
     dplyr::filter(species == "cattle") |>
     # add IPCC categories
     dplyr::left_join(data_extra$livestock |>
-                       dplyr::select(FADN_code_letter,IPCC_mix_cat),
+                       dplyr::select(FADN_code_letter, IPCC_mix_cat),
                      by = 'FADN_code_letter') |>
     # is cattle grazing?
     ## we considered that the more cattle is fed with grasslands, the more it graze
     ## we thus estimate here the share of grassland in the cattle feed, for use in the NE_a estimation afterwards
     dplyr::left_join(
       tmp_grazing_share |>
-        dplyr::select(dplyr::all_of(object@traceability$id_cols),
+        dplyr::select(dplyr::all_of(id_cols),
                       FADN_code_letter, GE_grazed),
-      by = c(object@traceability$id_cols,"FADN_code_letter")
+      by = c(id_cols,"FADN_code_letter")
     ) |>
     # add milk production for dairy cows
     dplyr::left_join(
       milk_prod |>
-        dplyr::select(dplyr::all_of(object@traceability$id_cols),
-                      FADN_code_letter,MILK),
-      by = c(object@traceability$id_cols,"FADN_code_letter")
+        dplyr::select(dplyr::all_of(id_cols),
+                      FADN_code_letter, MILK),
+      by = c(id_cols,"FADN_code_letter")
     ) |>
     # estimate N intake
     dplyr::mutate(
@@ -309,30 +310,12 @@ f_n_excr <- function(object,
 
       # TODO: add pregnancy % from UNFCCC
 
-      ## Digestibility
-
-      ### DE: digestibility of feed expressed as a fraction of gross energy (digestible energy/gross energy*100, i.e. DE%)
-      ### Tables 10A.1 & 10A.2
-      DE = dplyr::case_when(
-        str_detect(IPCC_mix_cat, "\\bcows_milk_prod\\b") ~ 71,
-        str_detect(IPCC_mix_cat, "\\bbulls_breed\\b") ~ 60,
-        str_detect(IPCC_mix_cat, "\\bother_mature_cattle\\b") ~ 60, # as mature males
-        str_detect(IPCC_mix_cat, "\\bgrowing_cattle_postweaning\\b") ~ 65,
-        str_detect(IPCC_mix_cat, "\\bgrowing_cattle\\b") ~ 65,
-        # WIP: how to distinguish calves on milk than calves on forage?
-        str_detect(IPCC_mix_cat, "\\bcalves_preweaning\\b") ~ (95+73)/2
-        #str_detect(IPCC_mix_cat, "\\bcalves_preweaning\\b") & code_livestock !=  932 ~ 95, # calves on milk
-        #str_detect(IPCC_mix_cat, "\\bcalves_preweaning\\b") & code_livestock == 932 ~ 73 # calves on forage (broutards only ???)
-      ),
-      # !!! we could estimate DE = qté aliment - prod lait
-      # TODO: use DE from UNFCCC
-
 
       ## Ratio of net energy for maintenance REM
 
       ### REM: ratio of net energy available in diet for maintenance to digestible energy
       ### Equation 10.14
-      REM = 1.123-(4.092*(10^-3)*DE)+(1.126*(10^-5)*(DE^2))-(25.4/DE),
+      REM = 1.123-(4.092*(10^-3)*DE_pc)+(1.126*(10^-5)*(DE_pc^2))-(25.4/DE_pc),
 
 
       ## Ratio of net energy for growth REG
@@ -340,13 +323,13 @@ f_n_excr <- function(object,
       # /!\ choice: even for non-growing cattle? seems yes as in Table 10.3
       ### REG: ratio of net energy available for growth in a diet to digestible energy consumed
       ### Equation 10.15
-      REG = 1.164 - (5.16*(10^-3)*DE)+(1.308*(10^-5)*(DE^2))-(37.4/DE),
+      REG = 1.164 - (5.16*(10^-3)*DE_pc)+(1.308*(10^-5)*(DE_pc^2))-(37.4/DE_pc),
 
       ## Gross Energy GE
 
       ### GE: gross energy, MJ animal-1 day-1
       ### Equation 10.16
-      GE_IPCC_MJ_anim_day = (((NE_m+NE_a+NE_l+NE_work+NE_p)/REM) + (NE_g/REG))/(DE/100),
+      GE_IPCC_MJ_anim_day = (((NE_m+NE_a+NE_l+NE_work+NE_p)/REM) + (NE_g/REG))/(DE_pc/100),
 
       ## CP
       ### CP: percent crude protein in dry matter for growth stage “i”

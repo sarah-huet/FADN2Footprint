@@ -107,7 +107,7 @@
 
 
 f_GHGE_ch4_enteric <- function(object,
-                             overwrite = F,
+                             overwrite = FALSE,
                              ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
@@ -160,7 +160,7 @@ f_GHGE_ch4_enteric <- function(object,
     dplyr::inner_join(
       feed_intake |>
         dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter,
-                      GE_MJ_anim, DE, DM_t_anim, CP_p100),
+                      GE_MJ_anim, DM_t_anim, CP_p100, DE_pc),
       by = c(object@traceability$id_cols, "FADN_code_letter"))
 
   ## CATTLE ----
@@ -187,10 +187,14 @@ f_GHGE_ch4_enteric <- function(object,
         stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim < 5.000 ~ 6.5,
 
         # other cattle
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE <= 62 ~ 7.0,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE > 62 & DE <= 71 ~ 6.3,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE >= 72 & DE < 75 ~ 4.0,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE >= 75 ~ 3.0
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc <= 62 ~ 7.0,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 62 & DE_pc <= 71 ~ 6.3,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 72 & DE_pc < 75 ~ 4.0,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 75 ~ 3.0,
+        ## In Table 10.12, there is no default MY for cattle with a feed DE >71 & <72 which introduce NAs
+        ## Hence, for this range of DE, we use the average of the adjacent DE categories
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 71 & DE_pc < 72 ~ (6.3+4.0)/2
+
       ),
 
       # EQUATION 10.21 METHANE EMISSION FACTORS FOR ENTERIC FERMENTATION FROM A LIVESTOCK CATEGORY
@@ -213,10 +217,14 @@ f_GHGE_ch4_enteric <- function(object,
         stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim < 5.000 ~ 21.4,
 
         # other cattle
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE <= 62 ~ 23.3,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE > 62 & DE <= 71 ~ 21,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE >= 72 & DE < 75 ~ 13.6,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE >= 75 ~ 10
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc <= 62 ~ 23.3,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 62 & DE_pc <= 71 ~ 21,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 72 & DE_pc < 75 ~ 13.6,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 75 ~ 10,
+        ## In Table 10.12, there is no default MY for cattle with a feed DE >71 & <72 which introduce NAs
+        ## Hence, for this range of DE, we use the average of the adjacent DE categories
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 71 & DE_pc < 72 ~ (21+13.6)/2
+
       ),
 
       # EQUATION 10.21A (NEW) METHANE EMISSION FACTORS FOR ENTERIC FERMENTATION FROM A LIVESTOCK CATEGORY

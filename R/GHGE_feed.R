@@ -153,6 +153,7 @@ f_GHGE_feed <- function(object,
     return(object@footprints$GHGE$GHGE_feed)  # use cached value
   }
 
+  id_cols = object@traceability$id_cols
   # STEPS:
   ## 1. Estimate on-farm and off-farm feed
   ## 2. Estimate on-farm crop impact
@@ -162,12 +163,14 @@ f_GHGE_feed <- function(object,
 
   #object <- infer_practices(object, overwrite = overwrite)
 
-  herd_feed <- object@practices$herding$feed$feed_intake$detail |>
+  herd_feed <- f_herd_feed(object, overwrite = overwrite)
+
+  herd_feed <- herd_feed$feed_intake$detail |>
     # add farm characteristics
     dplyr::left_join(object@farm |>
-                       dplyr::select(dplyr::all_of(object@traceability$id_cols),
-                                     COUNTRY,ORGANIC,SYS02),
-                     by = object@traceability$id_cols)
+                       dplyr::select(dplyr::all_of(id_cols),
+                                     ORGANIC, SYS02),
+                     by = id_cols)
 
   # 2. Estimate on-farm crop practices and impact ------------------------------------------------------------------------------
 
@@ -178,17 +181,14 @@ f_GHGE_feed <- function(object,
     # add impact
     dplyr::left_join(
       onfarm_crops_ghge |>
-        dplyr::select(dplyr::all_of(object@traceability$id_cols),
-                      FADN_code_letter,
-                      dplyr::matches("kgCO2e")) |>
         dplyr::rename(FADN_code_feed = FADN_code_letter),
-      by = c(object@traceability$id_cols, "FADN_code_feed")
+      by = c(id_cols, "FADN_code_feed")
     ) |>
     # recalculate area for feed
     dplyr::mutate(area_ha_livcat = DM_t_livcat / yield) |>
     # select variables
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
-                  COUNTRY,ORGANIC,SYS02,
+    dplyr::select(dplyr::all_of(id_cols),
+                  ORGANIC, SYS02,
                   FADN_code_letter, FADN_code_feed, feed_type, feed_origin, Sailley_feed,
                   dplyr::matches("Qobs"),
                   DM_t_livcat, yield, area_ha_livcat,
@@ -196,71 +196,46 @@ f_GHGE_feed <- function(object,
 
   # 3. Estimate off-farm crop practices and impact ------------------------------------------------------------------------------
 
-  ## 3.1. Average crop impact ----
+  ## 3.1. Average feed impact ----
 
-  # Estimate average crop impact
+  # To estimate off-farm feed impact, we use the averages of on-farm feed, not all crop averages
+  ## as the practices applied to on-farm feed production are likely closer to those used for off-farm feed production
+  ## (e.g., if a farmer sells his maize as livestock feed, he will sell it for less than he would have for human consumption
+  ## and will therefore likely have used as many inputs as a farmer who produces his own maize for his livestock)
+
   tmp_target_vars = c("yield",grep("kgCO2e", names(feed_produced_impact), value = TRUE))
 
-  tmp_avrg_crop_impact = h_average_practices(data = feed_produced_impact,
-                                             target_vars = tmp_target_vars,
-                                             primary_grp = c('FADN_code_letter','FADN_code_feed','YEAR','COUNTRY','ORGANIC'),
-                                             secondary_grp = c('FADN_code_letter','FADN_code_feed','ORGANIC'),
-                                             weight_var = 'SYS02')
-  # Estimate average feed impact
-  tmp_avrg_Sailley_feed_impact <- data_extra$Sailley_2021_feed_flows |>
-    # retrieve feed categories
-    dplyr::select(Sailley_feed,FADN_code_feed) |>
-    tidyr::separate_longer_delim(FADN_code_feed,";") |>
-    dplyr::filter(!is.na(FADN_code_feed)) |>
-    # add average crop impact
-    dplyr::left_join(tmp_avrg_crop_impact,
-                     by = 'FADN_code_feed',
-                     relationship = "many-to-many") |>
-    # sum up per Sailley feed category
-    dplyr::summarise(
-      dplyr::across(
-        dplyr::all_of(tmp_target_vars),
-        ~ mean(.x, na.rm = T),
-        .names = "{.col}"
-
-      ),
-      .by =  c('YEAR', 'FADN_code_letter', 'Sailley_feed', 'COUNTRY', 'ORGANIC')
-    )
-
-  ## look at missing averages
-  ### e.g., some farmers buy all their feed and do not have registered crops
-  missing_avrg = dplyr::anti_join(
-    herd_feed |>
-      dplyr::select(YEAR,FADN_code_letter,Sailley_feed,COUNTRY,ORGANIC) |>
-      dplyr::distinct(),
-    tmp_avrg_Sailley_feed_impact |>
-      dplyr::select(YEAR,FADN_code_letter,Sailley_feed,COUNTRY,ORGANIC) |>
-      dplyr::distinct(),
-    by = c('YEAR', 'FADN_code_letter', 'Sailley_feed', 'COUNTRY', 'ORGANIC')
-  ) |>
-    # add global average
+  tmp_avrg_crop_impact0 <- onfarm_crops_ghge  |>
+    # add farm characteristics
+    dplyr::left_join(object@farm |>
+                       dplyr::select(dplyr::all_of(id_cols),
+                                     ORGANIC, SYS02),
+                     by = id_cols)  |>
+    # add yields
+    dplyr::left_join(object@crop |>
+                       dplyr::select(dplyr::all_of(id_cols),
+                                     FADN_code_letter, yield),
+                     by = c(id_cols, 'FADN_code_letter')) |>
+    # add all Sailley feed names
+    dplyr::rename(FADN_code_feed = FADN_code_letter) |>
     dplyr::left_join(
-      tmp_avrg_Sailley_feed_impact |>
-        # sum up per Sailley feed category
-        dplyr::summarise(
-          dplyr::across(
-            dplyr::all_of(tmp_target_vars),
-            ~ mean(.x, na.rm = T),
-            .names = "{.col}"
-
-          ),
-          .by =  c('Sailley_feed','ORGANIC')
-        ),
-      by = c('Sailley_feed', 'ORGANIC')
+      data_extra$Sailley_2021_feed_flows |>
+        dplyr::select(Sailley_feed, FADN_code_feed) |>
+        tidyr::separate_longer_delim(FADN_code_feed,";") |>
+        dplyr::filter(!is.na(FADN_code_feed)),
+      by = 'FADN_code_feed',
+      relationship = "many-to-many"
     )
 
-  ## add missing average
-  tmp_avrg_Sailley_feed_impact <- dplyr::bind_rows(
-    tmp_avrg_Sailley_feed_impact,
-    missing_avrg
-  )
+  tmp_avrg_crop_impact = h_average_practices(data = tmp_avrg_crop_impact0,
+                                             target_vars = tmp_target_vars,
+                                             primary_grp = c( 'Sailley_feed', 'YEAR', 'COUNTRY', 'ORGANIC'),
+                                             secondary_grp = c( 'Sailley_feed', 'ORGANIC'),
+                                             weight_var = 'SYS02')
+
 
   ## 3.2. Estimate purchased feed impact ----
+
   feed_purchased_impact = herd_feed |>
     dplyr::filter(feed_origin == "feed_purchased") |>
     # add land use type
@@ -271,70 +246,95 @@ f_GHGE_feed <- function(object,
       )
     ) |>
     # select variables
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
+    dplyr::select(dplyr::all_of(id_cols),
                   COUNTRY,ORGANIC,SYS02,
-                  FADN_code_letter, feed_type, feed_origin, Sailley_feed,
+                  FADN_code_letter, FADN_code_feed, Sailley_feed,
+                  feed_type, feed_origin,
                   dplyr::matches("Qobs"),
                   DM_t_livcat) |>
-    # add average practices
-    dplyr::left_join(tmp_avrg_Sailley_feed_impact |>
-                       # select variables
-                       dplyr::select(YEAR,
-                                     COUNTRY,ORGANIC,
-                                     FADN_code_letter, Sailley_feed,
-                                     dplyr::all_of(tmp_target_vars)),
-                     by = c('YEAR', 'FADN_code_letter', 'Sailley_feed', 'COUNTRY', 'ORGANIC')) |>
+    # add average impact
+    dplyr::left_join(tmp_avrg_crop_impact,
+                     by = c('Sailley_feed', 'YEAR', 'COUNTRY', 'ORGANIC')) |>
     # recalculate area for feed
     dplyr::mutate(area_ha_livcat = DM_t_livcat / yield)
 
   ## 3.3. Soybean ----
 
   # soybean meal used to feed livestock in France mostly comes from Brasil (Overmars et al.,  2015)
+  # we have default values for Brazilian soybean meal yields and total emission per ton
+  ## to decompose total ghge, we
+  # TODO: we could retrieve values from the different sources of emissions from other sources
 
-  # soybean values from literature
+  # soybean estimates from literature values
   soy_impact <- feed_purchased_impact |>
     # select soy meal
     dplyr::filter(Sailley_feed == "Dont_tourteau_de_soja") |>
-    # select variables
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
-                  COUNTRY,ORGANIC,SYS02,
-                  FADN_code_letter, feed_type, feed_origin, Sailley_feed,
-                  dplyr::matches("Qobs"),
-                  DM_t_livcat) |>
-    # replace value with literature values
+    # sum up variables
+    dplyr::summarise(
+      dplyr::across(
+        dplyr::all_of(tmp_target_vars),
+        ~ mean(.x, na.rm = TRUE)
+      ),
+      .by =  c(Sailley_feed, ORGANIC)
+    ) |>
     dplyr::mutate(
-      # From Overmars et al. 2015: 2.45 t/ha for Latin America soybean
-      yield = 2.45,
-      area_ha_livcat = DM_t_livcat / 2.45,
       # version 9 of Ecoalim: 0.85 kgCO2e/kg soybean meal,  excluding deforestation
-      total_ghg_crop_kgCO2e_per_t = 0.85*10^3,
-      # Calculate kg CO2 ha-1 = kg CO2 t-1 * yield
-      total_ghg_crop_kgCO2e_per_ha = (0.85*10^3)*2.45
-    )
+      ecoalim_total_ghg_per_t = 0.85*10^3,
+      # estimate a correction ratio for GHGE variables
+      correction_ratio = if_else(
+        Sailley_feed == "Dont_tourteau_de_soja",
+        ecoalim_total_ghg_per_t / total_ghg_crop_kgCO2e_per_t,
+        1  # ratio = 1 for all other feeds → values unchanged
+      )
+    ) |>
+    # Apply the ratio to all target variables
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(tmp_target_vars),
+        ~ if_else(
+          Sailley_feed == "Dont_tourteau_de_soja",
+          .x * correction_ratio,
+          .x
+        )
+      ),
+      # From Overmars et al. 2015: 2.45 t/ha for Latin America soybean
+      yield = ifelse(Sailley_feed == "Dont_tourteau_de_soja", 2.45, yield),
+    ) |>
+    # Drop helper columns
+    dplyr::select(-ecoalim_total_ghg_per_t, -correction_ratio)
 
-  # replace soybean values in pseudofarm
-  feed_purchased_impact <- feed_purchased_impact |>
-    # filter out soy meal
+
+  tmp_cols <- setdiff(dplyr::intersect(colnames(feed_purchased_impact), colnames(soy_impact)),
+                      c('Sailley_feed', 'YEAR', 'COUNTRY', 'ORGANIC'))
+
+  tmp_impact_soy <- feed_purchased_impact |>
+    dplyr::filter(Sailley_feed == "Dont_tourteau_de_soja") |>
+    dplyr::select(-dplyr::all_of(tmp_cols)) |>
+    dplyr::left_join(soy_impact,
+                     by = c('ORGANIC', 'Sailley_feed'))
+
+  # TODO: just add estimates for soybean (soy_impact) into feed_purchased_impact (keep ID columns and Sailley feed and organic)
+
+  feed_purchased_impact_w_soy <- feed_purchased_impact |>
     dplyr::filter(Sailley_feed != "Dont_tourteau_de_soja") |>
-    # add literature values
-    dplyr::bind_rows(
-      soy_impact
-    )
+    # add Brazilian soybean values
+    dplyr::bind_rows(tmp_impact_soy)
+
 
   # 4. Aggregate feed impact for herd ------------------------------------------------------------------------------
 
   herd_feed_GHGE <- dplyr::bind_rows(
     feed_produced_impact,
-    feed_purchased_impact
+    feed_purchased_impact_w_soy
   ) |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
+    dplyr::select(dplyr::all_of(id_cols),
                   FADN_code_letter,
                   Qobs,
                   Sailley_feed,FADN_code_feed,feed_origin,
                   DM_t_livcat,area_ha_livcat,
                   dplyr::matches("per_ha$|per_t$"))
 
-    # Output ----
+  # Output ----
 
   return(herd_feed_GHGE)
 

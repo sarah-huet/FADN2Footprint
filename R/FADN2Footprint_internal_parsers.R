@@ -121,7 +121,7 @@
       # SE025	Total Utilised Agricultural Area	in ha	STANDARD RESULTS
       dplyr::matches("SE025"),
       # Total area under glass
-      dplyr::matches("CTOTUG"),
+      #dplyr::matches("CTOTUG"),
       # Farm certification
       # Note: PDO variable excluded due to poor registration (e.g., missing in FR 2016-2018)
       "ORGANIC"
@@ -731,7 +731,8 @@
     # add NUTS2
     dplyr::left_join(
       df_harmonized |>
-        dplyr::select(dplyr::all_of(id_cols), NUTS2),
+        dplyr::select(dplyr::all_of(id_cols), NUTS2) |>
+        dplyr::mutate(NUTS2 = as.character(NUTS2)),
       by = id_cols
     ) |>
     # add average share of SSN and SRN

@@ -156,10 +156,6 @@ f_herd_feed <- function(object,
       )
     )
 
-
-  #  # WIP !!! we could estimate DE = qté aliment - prod lait
-
-
   ## Total feed per livestock category ----
   feed_intake <- herd_feed_detail |>
     # estimate total feed intake per animal

@@ -233,6 +233,17 @@ f_herd_activities <- function(object,
       Qobs_meat = Qobs
     )
 
+  ## RABBITS ----
+  herd_others <- object@herd |>
+    dplyr::filter(species == "others") |>
+    # dplyr::select columns
+    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    # restrain to activity
+    dplyr::mutate(
+      # TODO: check activity for horse
+      Qobs_meat = Qobs
+    )
+
 
   # combine tables ----
   herd <- Reduce(
@@ -243,7 +254,8 @@ f_herd_activities <- function(object,
       herd_poultry,
       herd_sheep,
       herd_goats,
-      herd_horse
+      herd_horse,
+      herd_others
     ))|>
     dplyr::filter(Qobs >0) |>
     # add species

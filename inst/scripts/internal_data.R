@@ -24,6 +24,9 @@ for (file in file_path) {
 
 load("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/R/sysdata.rda")
 
+
+source("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/data_extra.R")
+
 usethis::use_data(
   data_extra,
   dict_FADN,

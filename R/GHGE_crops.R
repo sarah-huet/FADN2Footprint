@@ -218,7 +218,7 @@ f_GHGE_crops <- function(object,
     dplyr::mutate(
       dplyr::across(dplyr::all_of(co2_cols),
                     list(per_ha = ~ .x / area_ha,
-                         per_t  = ~ .x / prod_t),
+                         per_t  = ~ ifelse(prod_t >0, .x / prod_t, NA_real_)),
                     .names = "{.col}_{.fn}")
     )
 

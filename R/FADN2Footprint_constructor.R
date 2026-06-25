@@ -213,8 +213,33 @@ data_4FADN2Footprint <- function(df,
     id_cols = id_cols
   )
 
+  # Keep only arable and grassland land use types
+  crop_data_f <- crop_data0 |>
+    dplyr::filter(FADN_code_letter %in% data_extra$crops$FADN_code_letter[data_extra$crops$land_use_type %in% c("arable", "grassland")]) |>
+    # remove fallow and rented land
+    ## CFLNDNOSUB	11210	Fallow land without any subsidies
+    ## CFLNDSUB	11220	Fallow land subject to the payment of subsidies
+    ## CLNDREADSOW	11300	Land ready for sowing leased to others
+    dplyr::filter(!grepl("CFLNDNOSUB|CFLNDSUB|CLNDREADSOW", FADN_code_letter))
+
+  other_land_use <- dplyr::anti_join(
+    crop_data0 |>
+      dplyr::select(dplyr::all_of(id_cols), FADN_code_letter),
+    crop_data_f |>
+      dplyr::select(dplyr::all_of(id_cols), FADN_code_letter),
+    by = c(id_cols, 'FADN_code_letter')) |>
+    dplyr::left_join(
+      crop_data0,
+      by = c(id_cols, 'FADN_code_letter'))
+
+  message("\n",
+          "We keep only arable and grass land use types (see`data_extra$crops`). We remove other land uses, fallows and rented land (",
+          round(nrow(other_land_use) / nrow(crop_data0) *100, 2), "% of initial crop x farm x year observations) and store them in `object@traceability$other_land_use`"
+  )
+  traceability$other_land_use <- other_land_use
+
   # Filter minor crops with missing values ----
-  crop_data <- crop_data0 |>
+  crop_data <- crop_data_f |>
     ## we keep crop with at least an area or a production
     dplyr::filter(area_ha >0 | prod_t >0) |>
     ## some culture have null area or null production
@@ -237,13 +262,13 @@ data_4FADN2Footprint <- function(df,
   #### we remove farm (NB: we keep farm id in another table for traceability)
 
   removed_crops <- dplyr::anti_join(
-    crop_data0 |>
+    crop_data_f |>
       dplyr::select(dplyr::all_of(id_cols), FADN_code_letter),
     crop_data |>
       dplyr::select(dplyr::all_of(id_cols), FADN_code_letter),
     by = c(id_cols, 'FADN_code_letter')) |>
     dplyr::left_join(
-      crop_data0,
+      crop_data_f,
       by = c(id_cols, 'FADN_code_letter'))
 
   message("\n",
@@ -251,6 +276,9 @@ data_4FADN2Footprint <- function(df,
           round(nrow(removed_crops) / nrow(crop_data0) *100, 2), "% of initial crop x farm x year observations)",
           " that had no area nor production. We store them in `object@traceability$removed_crops`.")
   traceability$removed_crops <- removed_crops
+
+
+
 
   ## HERD ----
   message("\n~~~ Parsing herd data ~~~\n")

@@ -150,7 +150,8 @@
 #'
 
 f_GHGE_n2o_msoils <- function(object,
-                            overwrite = FALSE){
+                              overwrite = FALSE,
+                              ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -239,7 +240,7 @@ f_GHGE_n2o_msoils <- function(object,
         dplyr::select(-YEAR),
       by = c('Country_ISO_3166_1_A3')
       #TODO: by = c('Country_ISO_3166_1_A3', 'YEAR')
-      ) |>
+    ) |>
     ## replace NAs by EF mean
     dplyr::mutate(
       dplyr::across(
@@ -262,8 +263,9 @@ f_GHGE_n2o_msoils <- function(object,
       ### EQUATION 11.3
       ## F_ON = annual amount of animal manure, compost, sewage sludge and other organic N additions applied to soils (Note: If including sewage sludge, cross-check with Waste Sector to ensure there is no double counting of N2O emissions from the N in sewage sludge), kg N yr-1
       F_ON = dplyr::case_when(
-        land_use_type == "arable" ~ N_ferti_org *area_ha,
-        land_use_type == "grassland" ~ 0
+        land_use_type == "grassland" ~ 0,
+        #land_use_type == "arable" ~ N_ferti_org *area_ha
+        .default = N_ferti_org * area_ha
       ),
 
       ### EQUATION 11.5
@@ -271,7 +273,8 @@ f_GHGE_n2o_msoils <- function(object,
       ### TODO: should I use AWMS to estimate fraction of manure deposited on pasture?
       F_PRP = dplyr::case_when(
         land_use_type == "arable" ~ 0,
-        land_use_type == "grassland" ~ N_ferti_org*area_ha
+        #land_use_type == "grassland" ~ N_ferti_org*area_ha
+        .default = N_ferti_org * area_ha
       ),
 
       ### EQUATION 11.6

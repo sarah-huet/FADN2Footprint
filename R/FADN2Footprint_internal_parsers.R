@@ -297,11 +297,7 @@
     # Filter out codes
     ## ending in _X (pre-2014 versions)
     ## beginning with CTOT (aggregates)
-    ## CFLNDNOSUB	11210	Fallow land without any subsidies
-    ## CFLNDSUB	11220	Fallow land subject to the payment of subsidies
-    ## CLNDREADSOW	11300	Land ready for sowing leased to others
-    ## CUNUSEDLND		Unutilised agricultural land
-    (\(x) x[!grepl("_X$|^CTOT|CFLNDNOSUB|CFLNDSUB|CLNDREADSOW|CUNUSEDLND", x)])() |>
+    (\(x) x[!grepl("_X$|^CTOT", x)])() |>
     unique() |>
     sort(decreasing = TRUE)
   # Create a regex pattern once

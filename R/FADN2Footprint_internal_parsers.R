@@ -469,7 +469,7 @@
     # Attach Reference Yields based on Crop Mapping + NUTS3 (or global average per crop)
     dplyr::left_join(
       FADN_averages$crop_yields,
-      by = dplyr::join_by(FADN_code_letter, NUTS2)
+      by = c('FADN_code_letter', 'NUTS2')
     ) |>
     dplyr::mutate(
       # Impute Yield: Keep existing yield, otherwise use average yield
@@ -500,7 +500,67 @@
       )
     ) |>
     # Clean up temporary columns
-    dplyr::select(-avrg_FADN_yield)
+    dplyr::select(-avrg_FADN_yield) |>
+    # if some yields still missing, we average per crop
+    dplyr::mutate(
+      avrg_yield_crop = mean(yield, na.rm = TRUE),
+      .by = FADN_code_letter
+    ) |>
+    dplyr::mutate(
+      default_avrg_yield_crop = ifelse(is.na(prod_t), TRUE, FALSE),
+      yield = ifelse(default_avrg_yield_crop, avrg_yield_crop, yield),
+      prod_t = ifelse(default_avrg_yield_crop, (area_ha * yield), prod_t)
+    ) |>
+    dplyr::select(-avrg_yield_crop)
+
+  # for crop with zero production, average of similar crops
+  ## Average yield of other arable crops (code 10110 to 10690; see `data_extra$crops`)
+  arable_crops <- median(final_df |>
+                           dplyr::filter(FADN_code_letter %in% data_extra$crops$FADN_code_letter[data_extra$crops$FADN_code_number %in%
+                                                                                                   seq(10110, 10690, 1)]) |>
+                           dplyr::pull(yield),
+                         na.rm = T)
+  ## Average yield of other permanent crops (code 40111 to 40500; see `data_extra$crops`)
+  permanent_crops <- median(final_df |>
+                              dplyr::filter(FADN_code_letter %in% data_extra$crops$FADN_code_letter[data_extra$crops$FADN_code_number %in%
+                                                                                                      seq(40111, 40500, 1)]) |>
+                              dplyr::pull(yield),
+                            na.rm = T)
+  ## Average yield of other fiber crops (code 10609 and 10610; see `data_extra$crops`)
+  fiber_crops <- median(final_df |>
+                          dplyr::filter(FADN_code_letter %in% data_extra$crops$FADN_code_letter[data_extra$crops$FADN_code_number %in%
+                                                                                                  seq(10609, 10610, 1)]) |>
+                          dplyr::pull(yield),
+                        na.rm = T)
+
+  ## Average of vegetables (code 10711 to 10790; see `data_extra$crops`)
+  vegetables <- median(final_df |>
+                         dplyr::filter(FADN_code_letter %in% data_extra$crops$FADN_code_letter[data_extra$crops$FADN_code_number %in%
+                                                                                                 seq(10711, 10790, 1)]) |>
+                         dplyr::pull(yield),
+                       na.rm = T)
+
+  ## impute yields
+  final_df <- final_df |>
+    dplyr::mutate(
+      yield = dplyr::case_when(
+        FADN_code_letter == "CARAOTH" & is.na(yield) ~ arable_crops,
+        FADN_code_letter == "CCRPPERMOTH" & is.na(yield) ~ permanent_crops,
+        FADN_code_letter == "CPERMUG" & is.na(yield) ~ permanent_crops,
+        FADN_code_letter == "CFIBOTH" & is.na(yield) ~ fiber_crops,
+        FADN_code_letter == "CKGAR" & is.na(yield) ~ vegetables,
+        FADN_code_letter == "CFLW" & is.na(yield) ~ 0,
+        FADN_code_letter == "CFLWB" & is.na(yield) ~ 0,
+        FADN_code_letter == "CFLWCUT" & is.na(yield) ~ 0,
+        FADN_code_letter == "CFLWOUT" & is.na(yield) ~ 0,
+        FADN_code_letter == "CFLWUG" & is.na(yield) ~ 0,
+        FADN_code_letter == "CNURS" & is.na(yield) ~ 0,
+        FADN_code_letter == "CLNDOTH" & is.na(yield) ~ 0,
+        .default = yield
+      ),
+      prod_t = ifelse(is.na(prod_t), area_ha * yield, prod_t)
+    )
+
 
   return(final_df)
 }

@@ -28,12 +28,13 @@ library(gt)
 # Why inference is needed (FADN doesn't record practices directly)
 
 Our objective is to estimate the impact of farming practices in terms of
-greenhouse gas (GHG) emissions and biodiversity impact. This requires first to characterize farming practices
-implemented at the farm level using data on the area of crop
-production, the quantity and type of inputs used, the number of
-livestock, the amount and type of feed, and the
-quantity and value of production ([Method article](articles/practice-inference.html#sec-method-practice-intro) for FADN primary variables used to
-characterize practices).
+greenhouse gas (GHG) emissions and biodiversity impact. This requires
+first to characterize farming practices implemented at the farm level
+using data on the area of crop production, the quantity and type of
+inputs used, the number of livestock, the amount and type of feed, and
+the quantity and value of production ([Method
+article](articles/practice-inference.html#sec-method-practice-intro) for
+FADN primary variables used to characterize practices).
 
 The **FADN2Footprint package** infers up to nine agricultural practices
 from both FADN and LPIS variables: four within-field practices (tillage,
@@ -42,16 +43,18 @@ landscape variables (livestock density, hedge density, mean field size,
 ground cover, and crop diversity). Note that hedge density, mean field
 size and ground cover cannot be inferred based solely on FADN.
 
-Besides, FADN2Footprint also infer herding practices: feed (e.g., dry matter intake and nitrogen excretion), rearing parameters (e.g., first calving age, culling age).
+Besides, FADN2Footprint also infer herding practices: feed (e.g., dry
+matter intake and nitrogen excretion), rearing parameters (e.g., first
+calving age, culling age).
 
-| Data source / Practices | FADN<br>(+ Farm practices survey & feed tables for allocation keys)           | \+ LPIS & SENTINEL-2<br>\+ parameters from national GHGIs |
-| ----------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Crop practices          | •Fertilizer quantity and quality •Pesticides •Tillage •Crop diversity •Yields | •Hedge density •Mean field size •Ground cover             |
-| Grassland practices     | •Fertilizer quantity and quality •Livestock density                           | •Hedge density •Yields                                    |
-| Herding practices       | •Feed intake •Rearing parameters •Production / Yields                         | •Manure management systems •Animal weight                 |
+| Data source / Practices | FADN<br>(+ Farm practices survey & feed tables for allocation keys)           | \+ LPIS & SENTINEL-2<br>+ parameters from national GHGIs |
+|-------------------|-------------------------------|-----------------------|
+| Crop practices          | •Fertilizer quantity and quality •Pesticides •Tillage •Crop diversity •Yields | •Hedge density •Mean field size •Ground cover            |
+| Grassland practices     | •Fertilizer quantity and quality •Livestock density                           | •Hedge density •Yields                                   |
+| Herding practices       | •Feed intake •Rearing parameters •Production / Yields                         | •Manure management systems •Animal weight                |
 
-
-To infer all these practices, install the package, build a S4 FADN2Footprint object and run the `infer_practices` function:
+To infer all these practices, install the package, build a S4
+FADN2Footprint object and run the `infer_practices` function:
 
 ```{r}
 
@@ -89,17 +92,20 @@ my_object_w_practices = FADN_16_18_GHGE
 ## Tillage
 
 Tillage intensity (L diesel/ha) is estimated from off-road diesel
-consumption, allocated to crops by area ([Method article](articles/practice-inference.html#sec-method-practices-tillage)).XX le lien ne fonctionne pas
+consumption, allocated to crops by area ([Method
+article](articles/practice-inference.html#sec-method-practices-tillage)).XX
+le lien ne fonctionne pas
 
 ## Nitrogen fertilization
 
 Nitrogen input is estimated separately for mineral and organic
-fertilizers ([Method article](articles/practice-inference.html#sec-method-practices-Nferti)). 
+fertilizers ([Method
+article](articles/practice-inference.html#sec-method-practices-Nferti)).
 
-For mineral fertilizers, the total
-farm-level amount (reported in FADN) is 
-allocated to the different crops using the French average mineral nitrogen input
-per crop as a distribution key (Ministère De L’Agriculture - SSP, 2019).
+For mineral fertilizers, the total farm-level amount (reported in FADN)
+is allocated to the different crops using the French average mineral
+nitrogen input per crop as a distribution key (Ministère De
+L’Agriculture - SSP, 2019).
 
 For organic fertilizers, since FADN data on organic nitrogen is
 incomplete, estimates depend on livestock presence. For farms without
@@ -107,11 +113,15 @@ livestock, a standard national average of organic nitrogen input per
 crop is assigned (Ministère De L’Agriculture - SSP, 2019). For farms
 with livestock, we assume all excreted nitrogen is spread on-farm, which
 is estimated in accordance with IPCC recommendations (Eggleston et al.,
-2006; Calvo Buendia et al., 2019; [Method article](articles/practice-inference.html#sec-method-practices-Nferti)). Nitrogen is then
-allocated across crops using the French average organic nitrogen input
-per crop as a distribution key (Ministère De L’Agriculture - SSP, 2019).
+2006; Calvo Buendia et al., 2019; [Method
+article](articles/practice-inference.html#sec-method-practices-Nferti)).
+Nitrogen is then allocated across crops using the French average organic
+nitrogen input per crop as a distribution key (Ministère De
+L’Agriculture - SSP, 2019).
 
-Let's have a look at the inferred fertilisation practice. What does it say for common wheat:
+Let's have a look at the inferred fertilisation practice. What does it
+say for common wheat:
+
 ```{r practice_Nferti_wheat, message=FALSE}
 
 my_Nferti_wheat <- my_object_w_practices@practices$crops$N_ferti |>
@@ -182,33 +192,67 @@ ggplot(my_Nferti_wheat_long) +
 
 ```
 
-
 ## Pesticide use {#sec-pesticides}
 
 Pesticide intensity is estimated using FADN pesticide expenditure (€),
 distributed across crops based on the national Treatment Frequency Index
 (TFI; Ministère De L’Agriculture - SSP, 2019). The indicator is divided
 by 3.8 in organic farms to account for the lower unit toxicity of
-mineral pesticides ([Method article](articles/practice-inference.html#sec-method-practices-pesticides)).
-
+mineral pesticides ([Method
+article](articles/practice-inference.html#sec-method-practices-pesticides)).
 
 ## Yield (observed vs. imputed)
 
-Yield in FADN2Footprint are obtained directly from FADN when both crop area and production are registered.
-When FADN production is missing — especially important for forage/grass where FADN often records area but not production, we impute yields from external reference data (French forage yields aggregated by crop type and NUTS3; Agreste SAA 2020), joined at a NUTS3 level and used to infer the missing production.
+Yield in FADN2Footprint are obtained directly from FADN when both crop
+area and production are registered. When FADN production is missing, we
+impute default average yields. For forage/grass, where FADN often
+records area but not production, we impute yields from external
+reference data (French forage yields aggregated by crop type and NUTS3;
+Agreste SAA 2020; `data_extra$yield_SAA_Agreste_2020`), joined at a
+NUTS3 level (when available, at country level when not) and used to
+infer the missing production. For missing production of others crops, we
+impute the user data set average of the same crop at the NUTS2 level if
+available, or at the whole data set level otherwise. For some crops
+where FADN record no production, we impute average of similar crops
+based on the following matching table:
+
+| **FADN code** | **Description**                           | **Crop average used**                                                                    |
+|------------------|------------------|-------------------------------------|
+| CARAOTH       | Other arable land crops                   | Average yield of other arable crops (code 10110 to 10690; see `data_extra$crops`)    |
+| CCRPPERMOTH   | Other permanent crops                     | Average yield of other permanent crops (code 40111 to 40500; see `data_extra$crops`) |
+| CPERMUG       | Permanent crops under glass               | Average yield of other permanent crops (code 40111 to 40500; see `data_extra$crops`) |
+| CFIBOTH       | Other fiber plants                        | Average yield of other fiber crops (code 10609 and 10610; see `data_extra$crops`) |
+| CKGAR         | Kitchen gardens                           | Average of vegetables (code 10711 to 10790; see `data_extra$crops`)                  |
+| CFLW          | Flowering and ornamental plants           | Set to zero                                                                              |
+| CFLWB         | Flower bulbs, corms and tubers            | Set to zero                                                                              |
+| CFLWCUT       | Cut flowers and flower buds               | Set to zero                                                                              |
+| CFLWOUT       | Flowers and ornamental plants Outdoor     | Set to zero                                                                              |
+| CFLWUG        | Flowers and ornamental plants Under glass | Set to zero                                                                              |
+| CNURS         | Nurseries                                 | Set to zero                                                                              |
+| CLNDOTH       | Other land                                | Set to zero as it is not arable nor grass lands                                          |
 
 # Landscape variables
 
-We estimate four landscape variables ([Method article](articles/practice-inference.html#sec-method-practices-landscape-var)). Hedge density is
-the total hedge length divided the utilized agricultural area (UAA) of
-the farm ([Method article](articles/practice-inference.html#sec-method-practices-hedge)). Mean field size is the UAA divided by the
-number of plots, based on LPIS data ([Method article](articles/practice-inference.html#sec-method-practices-mean-field-size)). Crop diversity is
-the Shannon diversity index derived from the FADN data ([Method article](articles/practice-inference.html#sec-method-practices-crop-div)). Ground cover is the average number of days per year without
-vegetation, estimated from Sentinel-2 raster data ([Method article](articles/practice-inference.html#sec-method-practices-ground-cover)).
+We estimate four landscape variables ([Method
+article](articles/practice-inference.html#sec-method-practices-landscape-var)).
+Hedge density is the total hedge length divided the utilized
+agricultural area (UAA) of the farm ([Method
+article](articles/practice-inference.html#sec-method-practices-hedge)).
+Mean field size is the UAA divided by the number of plots, based on LPIS
+data ([Method
+article](articles/practice-inference.html#sec-method-practices-mean-field-size)).
+Crop diversity is the Shannon diversity index derived from the FADN data
+([Method
+article](articles/practice-inference.html#sec-method-practices-crop-div)).
+Ground cover is the average number of days per year without vegetation,
+estimated from Sentinel-2 raster data ([Method
+article](articles/practice-inference.html#sec-method-practices-ground-cover)).
 
-Within a farm, all crops are associated to the same landscape variable (e.g. hedge density in m/ha). This constrasts with within
-field practices (fertilization, pesticides use, tillage, see allocation keys above). A different hedge density is associated with
-permanent grassland (see below).
+Within a farm, all crops are associated to the same landscape variable
+(e.g. hedge density in m/ha). This contrasts with within field practices
+(fertilization, pesticides use, tillage, see allocation keys above). A
+different hedge density is associated with permanent grassland (see
+below).
 
 # Practices in grasslands
 
@@ -303,12 +347,12 @@ combined_plot
 
 ## Herd structure
 
-Following the JRC ILCD handbook (JRC, 2010), we avoid allocation wherever
-possible by virtual subdivision of processes. In particular, we divide farms
-into a dairy activity (with all animals required to sustain observed milk
-production, including calves and heifers raised to renew dairy cows) and
-a meat activity (with all animals dedicated to meat, including calves
-and suckling cows necessary to renew fattening beefs).
+Following the JRC ILCD handbook (JRC, 2010), we avoid allocation
+wherever possible by virtual subdivision of processes. In particular, we
+divide farms into a dairy activity (with all animals required to sustain
+observed milk production, including calves and heifers raised to renew
+dairy cows) and a meat activity (with all animals dedicated to meat,
+including calves and suckling cows necessary to renew fattening beefs).
 Based on FADN data, we reconstruct the cattle herd structure and model
 the rearing process by estimating animal flows between categories
 (inflows and outflows). From these flows, we calculate key rearing
@@ -316,60 +360,76 @@ parameters, specifically residence time for each livestock category,
 offspring rates per breeder, and the age at first calving. Then, we
 calculate the number of animals involved in the dairy activity by
 partitioning the number of animals in categories upstream of dairy cows
-based on the estimated rearing parameters ([Method article](articles/practice-inference.html#sec-method-practices-rearing-param)).
+based on the estimated rearing parameters ([Method
+article](articles/practice-inference.html#sec-method-practices-rearing-param)).
 
 ## Feed
 
-We estimate the quantity and quality of the livestock feed,
-considering both on-farm (i.e., farm-grown) and off-farm (i.e.,
-purchased) feed to form a "pseudo-farm" ([Method article](articles/practice-inference.html#sec-method-practices-feed)). 
+We estimate the quantity and quality of the livestock feed, considering
+both on-farm (i.e., farm-grown) and off-farm (i.e., purchased) feed to
+form a "pseudo-farm" ([Method
+article](articles/practice-inference.html#sec-method-practices-feed)).
 
-On-farm produced feed quantity is calculated as the recorded crop production
-minus sales, with grass yield - not provided in FADN - assumed equal to
-the NUTS2 average (Agreste, 2020). This net available on-farm biomass is
-then allocated to the farm's livestock categories proportional to their
-theoretical dry matter requirements for each crop.
+On-farm produced feed quantity is calculated as the recorded crop
+production minus sales, with grass yield - not provided in FADN -
+assumed equal to the NUTS2 average (Agreste, 2020). This net available
+on-farm biomass is then allocated to the farm's livestock categories
+proportional to their theoretical dry matter requirements for each crop.
 
 Purchased feed quantity is estimated based on FADN expenditures
 variables for concentrated feedstuffs and coarse fodder (Section
-A.2.5.2). These expenditures are allocated to livestock species in proportion
-to their theoretical ration cost for each
-feedstuff (concentrates and roughage). The
-observed FADN expenditure is then allocated to specific feed types (e.g., wheat, barley, maize, soybean meal)
-according to these theoretical value shares. Finally, these allocated
-values per feed type and species are converted into physical quantities (tonnes) by dividing by
-the corresponding Eurostat unit prices.
+A.2.5.2). These expenditures are allocated to livestock species in
+proportion to their theoretical ration cost for each feedstuff
+(concentrates and roughage). The observed FADN expenditure is then
+allocated to specific feed types (e.g., wheat, barley, maize, soybean
+meal) according to these theoretical value shares. Finally, these
+allocated values per feed type and species are converted into physical
+quantities (tonnes) by dividing by the corresponding Eurostat unit
+prices.
 
 This estimation relies on a theoretical feed ration constructed for each
-livestock species. Theoretical rations are determined by
-combining the total dry matter intake requirements per livestock unit
-(derived from the AROPAJ model; Jayet et al., 2023) with the
-species-specific volumes of each feed consumed nationally (Sailley et
-al., 2021; see `FADN2Footprint::data_extra$Sailley_2021_feed_flows`).
+livestock species. Theoretical rations are determined by combining the
+total dry matter intake requirements per livestock unit (derived from
+the AROPAJ model; Jayet et al., 2023) with the species-specific volumes
+of each feed consumed nationally (Sailley et al., 2021; see
+`data_extra$Sailley_2021_feed_flows`).
 
 Feed quality parameters - gross energy (GE), crude protein content (CP),
 and ash – are calculated by applying nutritional coefficients from feed
-tables (Tran, 2002; [Method article](articles/practice-inference.html#sec-method-practices-feed-qty-qlty)) to the estimated dry matter
-quantities. To exclude aberrant estimations, we remove farms with
-extreme GE supplied to their main livestock category. Specifically, we
-exclude farms with, for the livestock category they have the highest number of livestock units,
-a GE exceeding the mean + 3 × standard deviation (a
-common threshold in the literature), below 0.25 × the mean GE for dairy
-cows (since even low-producing dairy cows are unlikely to be sustained
-on less than a quarter of the average energy intake), or below 0.10 x
-the mean GE for non-dairy cow livestock categories (Table A4).
+tables (Tran, 2002; [Method
+article](articles/practice-inference.html#sec-method-practices-feed-qty-qlty))
+to the estimated dry matter quantities. To exclude aberrant estimations,
+we remove farms with extreme GE supplied to their main livestock
+category. Specifically, we exclude farms with, for the livestock
+category they have the highest number of livestock units, a GE exceeding
+the mean + 3 × standard deviation (a common threshold in the
+literature), below 0.25 × the mean GE for dairy cows (since even
+low-producing dairy cows are unlikely to be sustained on less than a
+quarter of the average energy intake), or below 0.10 x the mean GE for
+non-dairy cow livestock categories (Table A4).
 
 Then, we estimate the crop practices implemented to produce the feed,
 and consider practices associated with both on-farm and purchased feed
-([Method article](articles/practice-inference.html#sec-method-practices-feed-qty-qlty)). Farming practices associated with on-farm feed are
-obtained from farm-specific data (Sectionto XX?). Practices associated with
-purchased feed reflect in-study national crop averages, distinguishing
-organic vs conventional, except for soybean meal. The soybean meals are
-assumed to be imported from Brazil (Overmars et al., 20xx) and asociated practices are retrieved from Lindner et al. (2022).
+([Method
+article](articles/practice-inference.html#sec-method-practices-feed-qty-qlty)).
+Farming practices associated with on-farm feed are obtained from
+farm-specific data (Sectionto XX?). Practices associated with purchased
+feed reflect in-study national crop averages, distinguishing organic vs
+conventional, except for soybean meal. The soybean meals are assumed to
+be imported from Brazil (Overmars et al., 20xx) and asociated practices
+are retrieved from Lindner et al. (2022).
 
 ## Manure management system
 
-The fraction of manure handled by each manure management system (AWMS) on a farm is not measured directly in FADN for most countries. Instead AWMS fractions are inferred by combining the observed herd and farm characteristics from FADN with country (and where available climate‑region) AWMS allocations reported in UNFCCC CRF tables, and then refined where farm‑level information exists (farm practices survey, LPIS, housing/grazing proxies). Those inferred AWMS fractions are then used together with IPCC/UNFCCC MCF and Bo parameters to compute CH4 and (together with N excretion and EF) N2O from manure management.
+The fraction of manure handled by each manure management system (AWMS)
+on a farm is not measured directly in FADN for most countries. Instead
+AWMS fractions are inferred by combining the observed herd and farm
+characteristics from FADN with country (and where available
+climate‑region) AWMS allocations reported in UNFCCC CRF tables, and then
+refined where farm‑level information exists (farm practices survey,
+LPIS, housing/grazing proxies). Those inferred AWMS fractions are then
+used together with IPCC/UNFCCC MCF and Bo parameters to compute CH4 and
+(together with N excretion and EF) N2O from manure management.
 
 ```{r}
 library(ggplot2)
@@ -414,7 +474,5 @@ awms_plot
 
 ## Animal weights
 
-Animal weights are not reported in FADN. We use the national animal weights
-reported in UNFCCC CRF tables.
-
-
+Animal weights are not reported in FADN. We use the national animal
+weights reported in UNFCCC CRF tables.

@@ -1,0 +1,30 @@
+Variable,Definition,Group,Crop_total,Herd_feed_onfarm_total,Herd_feed_pseudofarm_total,Herd_feed_purchased_net,Herd_level_aggregate,Farm_CO2,Pseudofarm_CO2,Farm_N2O,Pseudofarm_N2O,Farm_CH4,Pseudofarm_CH4,Farm_total_GHGE,Pseudofarm_total_GHGE
+"crop_N2O_d_kgCO2e","Direct soil N2O from managed crops (kg CO2e)","Crop emissions",✓,,,,, , ,✓, , ,✓,✓
+"crop_N2O_ATD_kgCO2e","Indirect/ATD soil N2O from crops (kg CO2e)","Crop emissions",✓,,,,, , ,✓, , ,✓,✓
+"crop_N2O_L_kgCO2e","N2O from leaching/runoff for crops (kg CO2e)","Crop emissions",✓,,,,, , ,✓, , ,✓,✓
+"crop_ghg_diesel_tillage_kgCO2e","CO2 from diesel for tillage (kg CO2e)","Crop emissions",✓,,,,,✓,✓,,,✓,✓
+"crop_ghg_diesel_remain_kgCO2e","CO2 from diesel for other crop operations (kg CO2e)","Crop emissions",✓,,,,,✓,✓,,,✓,✓
+"crop_ghg_heat_fuel_kgCO2e","CO2 from heating fuel used in crop activities (kg CO2e)","Crop emissions",✓,,,,,✓,✓,,,✓,✓
+"crop_ghg_elec_kgCO2e","CO2 (electricity scope 2) used by crops (kg CO2e)","Crop emissions",✓,,,,,✓,✓,,,✓,✓
+"crop_ghg_ferti_prod_kgCO2e","Upstream N fertiliser production (scope 3) associated with crops (kg CO2e)","Crop emissions",✓,,,,,acc.,✓,, , , ,✓,✓
+"herd_feed_farm_total_ghg_crop_kgCO2e","Total GHGE of feed produced on‑farm (kg CO2e) — from crop module","Herd feed — on‑farm",,✓,,,,,acc., , , , , 
+"herd_feed_farm_ghg_ferti_prod_kgCO2e","Fertiliser‑production share of on‑farm feed GHGE (kg CO2e)","Herd feed — on‑farm",,✓,,,,,acc., , , , , 
+"herd_feed_farm_ghg_diesel_tillage_kgCO2e","Diesel (tillage) share of on‑farm feed GHGE (kg CO2e)","Herd feed — on‑farm",,✓,,,,,acc., , , , , 
+"herd_feed_farm_ghg_diesel_remain_kgCO2e","Diesel (other) share of on‑farm feed GHGE (kg CO2e)","Herd feed — on‑farm",,✓,,,,,acc., , , , , 
+"herd_feed_farm_ghg_heat_fuel_kgCO2e","Heat fuel share of on‑farm feed GHGE (kg CO2e)","Herd feed — on‑farm",,✓,,,,,acc., , , , , 
+"herd_feed_farm_ghg_elec_kgCO2e","Electricity share of on‑farm feed GHGE (kg CO2e)","Herd feed — on‑farm",,✓,,,,,acc., , , , , 
+"herd_feed_pseudofarm_total_ghg_crop_kgCO2e","Total GHGE of feed when produced off‑farm (pseudofarm basis) (kg CO2e)","Herd feed — pseudofarm",,,✓,✓₋f,,, , , , ,✓
+"herd_feed_pseudofarm_ghg_ferti_prod_kgCO2e","Fertiliser‑production share of pseudofarm feed GHGE (kg CO2e)","Herd feed — pseudofarm",,,✓,✓₋f,,, ,✓₋f, , , ,✓₋f
+"herd_feed_pseudofarm_ghg_diesel_tillage_kgCO2e","Diesel (tillage) share of pseudofarm feed GHGE (kg CO2e)","Herd feed — pseudofarm",,,✓,✓₋f,,, ,✓₋f, , , ,✓₋f
+"herd_feed_pseudofarm_ghg_diesel_remain_kgCO2e","Diesel (other) share of pseudofarm feed GHGE (kg CO2e)","Herd feed — pseudofarm",,,✓,✓₋f,,, ,✓₋f, , , ,✓₋f
+"herd_feed_pseudofarm_ghg_heat_fuel_kgCO2e","Heat fuel share of pseudofarm feed GHGE (kg CO2e)","Herd feed — pseudofarm",,,✓,✓₋f,,, ,✓₋f, , , ,✓₋f
+"herd_feed_pseudofarm_ghg_elec_kgCO2e","Electricity share of pseudofarm feed GHGE (kg CO2e)","Herd feed — pseudofarm",,,✓,✓₋f,,, ,✓₋f, , , ,✓₋f
+"herd_purchased_feed_ghge_kgCO2e","Purchased feed GHGE (kg CO2e) = pseudofarm_feed − on‑farm_feed (scope 3)","Herd feed — purchased",,,,✓, , , , , , , ,✓
+"herd_CH4_enteric_kgCO2e","Enteric CH4 aggregated across the herd (kg CO2e)","Direct livestock emissions",,,,,✓,,, , ,✓, ,✓
+"herd_CH4_MM_kgCO2e","Manure management CH4 emissions (kg CO2e)","Direct livestock emissions",,,,,✓,,, , ,✓, ,✓
+"herd_N2O_D_MM_kgCO2e","Direct manure N2O from manure management (kg CO2e)","Direct livestock emissions",,,,,, , ,✓, , ,✓
+"herd_N2O_G_mm_kgCO2e","Indirect manure N2O via grazing (kg CO2e)","Direct livestock emissions",,,,,, , ,✓, , ,✓
+"herd_N2O_L_mm_kgCO2e","Indirect manure N2O via leaching/runoff (kg CO2e)","Direct livestock emissions",,,,,, , ,✓, , ,✓
+"herd_ghg_diesel_remain_kgCO2e","Diesel CO2 from herd operations (other) (kg CO2e)","Herd energy",,,,,,✓,✓,,, ,✓
+"herd_ghg_heat_fuel_kgCO2e","Heat fuel CO2 from herd operations (kg CO2e)","Herd energy",,,,,,✓,✓,,, ,✓
+"herd_ghg_elec_kgCO2e","Electricity CO2 from herd operations (kg CO2e)","Herd energy",,,,,,✓,✓,,, ,✓

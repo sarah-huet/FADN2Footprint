@@ -104,6 +104,11 @@
 #' }
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
+#' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
+#'   the function returns
+#'   the cached object and no recomputation is performed. If TRUE, existing
+#'   cached GHGE results are ignored and computations are re-run.
+#' @param ... Additional arguments.
 #'
 #' @return A \code{\link[tibble]{tibble}} with one row per farm observation ×
 #' crop category, containing:
@@ -137,8 +142,8 @@
 #' Federici, S. (eds). IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_n_ferti}}, \code{\link{f_n_excr}},
-#' \code{\link{GHGE_n2o_manure}}, \code{\link{UNFCCC_data}},
+#' \code{\link{f_n_ferti()}}, \code{\link{f_n_excr()}},
+#' \code{\link{f_GHGE_n2o_manure()}}, \code{\link{UNFCCC_data}},
 #' \code{\link{data_extra}}, \code{\link{GWP}},
 #' \code{\link{FADN2Footprint-class}}
 #'

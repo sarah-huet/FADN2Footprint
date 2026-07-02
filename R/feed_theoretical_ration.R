@@ -1,7 +1,8 @@
 #' Function to estimate theoretical rations of feed by livestock category
 #' `f_feed_theo_ration` Estimate the theoretical herd ration of the farm per livestock category and per crop using the total amount of dry matter per livestock category in AROPAJ and the total dry matter per crop in Sailley.
 #'
-#' @param my_object a FADN2Footprint object
+#' @param object An object of class \code{\link{FADN2Footprint}}.
+#'
 #' @returns a list with the following dataframes:
 #' - AROPAJ_ref_ration: reference total amount of feed per livestock category (in ton of dry matter per livestock unit per year)
 #' - Sailley_ref_feed_allocation: reference total amount of feed per crop and herd orientation (e.g., milk, meat) (in ton of dry matter per year)

@@ -9,6 +9,8 @@ data_for_BVIAS(object, ...)
 }
 \arguments{
 \item{object}{a FADN2Footprint object}
+
+\item{...}{Additional arguments.}
 }
 \value{
 a tibble

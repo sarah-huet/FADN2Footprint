@@ -120,6 +120,32 @@ slots:
 | `footprints`        | Environmental/economic footprints                           | Inferred                       |
 | `traceability`      | Data processing logs                                        | Populated with mapping details |
 
+In the crop, herd and output tables, the variable FADN_code_letter encode crops, animals and products using the EU FADN codes.
+
+```{r crop_codes}
+
+data_extra$crops |> 
+    dplyr::select(FADN_code_letter, FADN_code_description) |>
+    gt()
+
+```
+
+```{r livestock_codes}
+
+data_extra$livestock |> 
+    dplyr::select(FADN_code_letter, FADN_code_description) |>
+    gt()
+
+```
+
+```{r output_codes}
+
+data_extra$output |> 
+    dplyr::select(FADN_code_letter, FADN_code_description) |>
+    gt()
+
+```
+
 # Building a FADN2Footprint Object
 
 Constructing a valid `FADN2Footprint` object requires three main steps:

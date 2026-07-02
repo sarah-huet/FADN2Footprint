@@ -8,7 +8,12 @@
 infer_practices(object, overwrite = FALSE)
 }
 \arguments{
-\item{object}{a FADN2Footprint object}
+\item{object}{An object of class \code{\link{FADN2Footprint}}.}
+
+\item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
+the function returns
+the cached object and no recomputation is performed. If TRUE, existing
+cached GHGE results are ignored and computations are re-run.}
 }
 \value{
 a tibble

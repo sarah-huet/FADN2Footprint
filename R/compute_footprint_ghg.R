@@ -110,7 +110,7 @@ compute_footprint_ghg <- function(object,
   herd_prod_impact = f_GHGE_herd_output(object, overwrite = overwrite)
   object@footprints$GHGE$GHGE_milk <- herd_prod_impact$GHGE_milk
   object@footprints$GHGE$GHGE_meat <- herd_prod_impact$GHGE_meat
-
+  object@footprints$GHGE$GHGE_eggs <- herd_prod_impact$GHGE_eggs
 
   # FARMS ----------------------------------------------------------------------
 

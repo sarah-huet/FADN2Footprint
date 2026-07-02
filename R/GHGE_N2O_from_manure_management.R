@@ -82,6 +82,7 @@
 #'   the function returns
 #'   the cached object and no recomputation is performed. If TRUE, existing
 #'   cached GHGE results are ignored and computations are re-run.
+#' @param ... Additional arguments.
 #'
 #' @return A \code{\link[tibble]{tibble}} with one row per farm observation ×
 #' livestock category, containing:
@@ -118,8 +119,8 @@
 #' (eds). IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_n_excr}}, \code{\link{GHGE_ch4_manure}},
-#' \code{\link{GHGE_n2o_msoils}}, \code{\link{UNFCCC_data}},
+#' \code{\link{f_n_excr()}}, \code{\link{GHGE_ch4_manure()}},
+#' \code{\link{f_GHGE_n2o_msoils()}}, \code{\link{UNFCCC_data}},
 #' \code{\link{GWP}}, \code{\link{FADN2Footprint-class}}
 #'
 #' @importFrom dplyr select left_join filter mutate summarise group_by across all_of case_when join_by distinct summarise

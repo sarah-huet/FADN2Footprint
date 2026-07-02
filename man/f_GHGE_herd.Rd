@@ -27,13 +27,13 @@ animals (inferred from feed flows rather than directly observed) are
 included in the emission calculation. Currently reserved for future
 implementation.}
 
-\item{...}{Additional arguments passed to downstream helper functions.}
+\item{...}{Additional arguments.}
 }
 \value{
 A tibble with one row per farm × livestock category combination
 (identified by \code{object@traceability$id_cols} and \code{FADN_code_letter}) and
 columns including:
-\describe{
+\itemize{
 \item{species}{Livestock species label.}
 \item{Qobs}{Observed animal count.}
 \item{feed_farm_\emph{}{On-farm feed dry matter, area, and emission
@@ -135,7 +135,7 @@ IPCC (2019). \emph{2019 Refinement to the 2006 IPCC Guidelines for
 National Greenhouse Gas Inventories}, Volume 4. IPCC.
 }
 \seealso{
-GHGE_ch4_enteric, GHGE_ch4_manure, GHGE_n2o_manure,
-f_GHGE_feed, f_GHGE_herd_output, f_GHGE_farm
+f_GHGE_ch4_enteric(), f_GHGE_ch4_manure(), f_GHGE_n2o_manure(),
+f_GHGE_feed(), f_GHGE_herd_output(), f_GHGE_farm()
 }
 \concept{footprint-ghge}

@@ -21,24 +21,16 @@
 #' environmental burdens of a multi-output process are partitioned among
 #' co-products proportionally to their economic value.
 #'
-#' @param object An object of class \code{FADN2Footprint}. Must contain at
-#'   least the following slots:
-#'   \describe{
-#'     \item{\code{output$crop}}{A data frame of crop outputs with at least
-#'       \code{sales_e} (sales in EUR) and \code{FADN_code_letter} columns.}
-#'     \item{\code{output$meat}}{A data frame of meat outputs with at least
-#'       \code{sales_e}, \code{output}, \code{FADN_code_letter}, and
-#'       \code{species} columns.}
-#'     \item{\code{output$other_herd_products}}{A data frame of other herd
-#'       product outputs (milk, eggs, wool, etc.) with the same columns as
-#'       \code{output$meat}.}
-#'     \item{\code{practices$herding$feed$feed_produced}}{A data frame of
-#'       on-farm feed production with \code{FADN_code_feed} (crop code) and
-#'       \code{DM_t_livcat} (dry matter tonnes per livestock category) columns,
-#'       used to impute the economic value of feed crops.}
-#'     \item{\code{traceability$id_cols}}{A character vector of column names
-#'       used as farm/year identifiers for grouping operations.}
-#'   }
+#' @param object An object of class \code{\link{FADN2Footprint}}.
+#' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
+#'   the function returns
+#'   the cached object and no recomputation is performed. If TRUE, existing
+#'   cached GHGE results are ignored and computations are re-run.
+#' @param account_pseudoherd Logical, default FALSE. When TRUE, pseudo-herd
+#'   animals (inferred from feed flows rather than directly observed) are
+#'   included in the emission calculation. Currently reserved for future
+#'   implementation.
+#' @param ... Additional arguments.
 #'
 #' @return A named list with three data frames:
 #'   \describe{
@@ -167,6 +159,7 @@ f_output_econ_alloc <- function(object,
     dplyr::mutate(
       activity = dplyr::case_when(
         FADN_code_letter == "LCOWDAIR"   ~ "milk",
+        species == "goats" ~ "milk",
         grepl("milk", output)       ~ "milk",
         grepl("meat", output)       ~ "meat",
         grepl("egg", output)       ~ "eggs",
@@ -233,6 +226,7 @@ f_output_econ_alloc <- function(object,
   all_output_econ_alloc <- all_output |>
     dplyr::mutate(
       sum_sales_e_farm = sum(sales_e, na.rm = TRUE),
+      sum_output_e_farm = sum(output_e, na.rm = TRUE),
       .by = dplyr::all_of(id_cols)
     ) |>
     dplyr::mutate(

@@ -13,7 +13,6 @@
 #' and cascades these filters through all related data slots to maintain consistency.
 #'
 #' @param object A FADN2Footprint object containing farm data and related information.
-#' @param id_cols A character string specifying the name of the column containing unique farm identifiers.
 #' @param ... Additional filtering conditions to apply to the farm data. These should be valid
 #'   expressions that can be used with dplyr::filter(). For example: `COUNTRY == "FRA"`,
 #'   `ORGANIC == TRUE`, etc.

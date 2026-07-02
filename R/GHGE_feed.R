@@ -77,7 +77,11 @@
 #' }
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
-#' @param ... Additional arguments reserved for future use.
+#' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
+#'   the function returns
+#'   the cached object and no recomputation is performed. If TRUE, existing
+#'   cached GHGE results are ignored and computations are re-run.
+#' @param ... Additional arguments.
 #'
 #' @return A named \code{list} with two elements:
 #' \describe{
@@ -131,9 +135,9 @@
 #' INRAE, France. \url{https://ecoalim.inrae.fr}
 #'
 #' @seealso
-#' \code{\link{f_GHGE_crops}}, \code{\link{infer_practices}},
-#' \code{\link{f_feed_onfarm}}, \code{\link{f_feed_offfarm}},
-#' \code{\link{h_average_practices}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_GHGE_crops()}}, \code{\link{infer_practices()}},
+#' \code{\link{f_feed_onfarm()}}, \code{\link{f_feed_offfarm()}},
+#' \code{\link{h_average_practices()}}, \code{\link{FADN2Footprint-class}}
 #'
 #' @importFrom dplyr left_join filter select mutate across all_of bind_rows summarise distinct anti_join matches case_when
 #' @importFrom tidyr separate_longer_delim

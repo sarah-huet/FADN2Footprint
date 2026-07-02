@@ -52,6 +52,11 @@
 #' }
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
+#' @param account_pseudoherd Logical, default FALSE. When TRUE, pseudo-herd
+#'   animals (inferred from feed flows rather than directly observed) are
+#'   included in the emission calculation. Currently reserved for future
+#'   implementation.
+#' @param ... Additional arguments.
 #'
 #' @return A \code{\link[tibble]{tibble}} containing one row per farm
 #' observation, with the following columns:
@@ -78,8 +83,8 @@
 #'
 #' @seealso
 #' \code{\link{EF_electricity}}, \code{\link{EUROSTAT_elec_price}},
-#' \code{\link{GHGE_fuels}}, \code{\link{f_GHGE_crops}},
-#' \code{\link{f_GHGE_livestock}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_GHGE_fuels()}}, \code{\link{f_GHGE_crops()}},
+#' \code{\link{f_GHGE_herd()}}, \code{\link{FADN2Footprint-class}}
 #'
 #' @importFrom dplyr select left_join mutate across starts_with if_else join_by distinct
 #'

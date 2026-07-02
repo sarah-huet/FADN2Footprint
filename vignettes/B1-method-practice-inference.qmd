@@ -438,8 +438,7 @@ three rearing stage: juveniles, fattening, or breeders
 for which we have a least one animal in our whole dataset.
 
 ::: {#fig-herd-flows}
-![Cattle](FADN_prod_flow_cattle.png)
-![Swine](FADN_prod_flow_swine.png)
+![Cattle](FADN_prod_flow_cattle.png) ![Swine](FADN_prod_flow_swine.png)
 ![Poultry](FADN_prod_flow_poultry.png)
 
 Rearing process charts for cattle, swine and poultry. For each livestock
@@ -479,7 +478,9 @@ $$
 F_{l-1}^{out} = Q_{l-1}^{sales} + \sum_L (F_{l}^{in}  - Q_{l}^{purchases})
 $$ {#eq-Fout}
 
-where $F$ are flows $in$ or $out$ the considered livestock category $l$ ((encompassing all animals entering or leaving the category; upward category $l-1$), L is the ensemble of categories directly downward to
+where $F$ are flows $in$ or $out$ the considered livestock category $l$
+((encompassing all animals entering or leaving the category; upward
+category $l-1$), L is the ensemble of categories directly downward to
 $l-1$ and $Q$ are registered numbers of animals (i.e., $average$,
 $opening$, $closing$, $purchases$, or $sales$).
 
@@ -555,7 +556,8 @@ $$
 \bar{Q}_{l_F} = \bar{Q}_{l} \cdot \frac{\sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}})}{ \sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}}) + \sum (\bar{Q}_{l_B+1} \cdot \frac{1}{t_{l_B+1}}) }
 $$ {#eq-mixed_cat}
 
-where $l_F$ are fattening animals and $l_B$ are breeders in category $l$.
+where $l_F$ are fattening animals and $l_B$ are breeders in category
+$l$.
 
 ### Estimation of pseudo-herd {#sec-method-practices-pseudoherd}
 
@@ -573,22 +575,28 @@ they are present on-farm or not (i.e., off-farm).
 
 #### Restrain pseudo-herd animals to farm activities
 
-First, we estimate animals involved in each activity (i.e.,
-milk, eggs, and meat). 
+First, we estimate animals involved in each activity (i.e., milk, eggs,
+and meat).
 
-For cattle, we first estimate animals involved in 
-the dairy herd with Equation @eq-restrain_herd_act. We consider all 
-additional cattle as part of the meat activity (e.g. additional calves
-spawned from dairy cows).
+For cattle, we first estimate animals involved in the dairy herd with
+Equation @eq-restrain_herd_act. We consider all additional cattle as
+part of the meat activity (e.g. additional calves spawned from dairy
+cows).
 
 $$
 \sum \bar{Q}_{l-1, \; \text{milk}} = \sum (\frac{t_{l-1} \cdot \bar{Q}_{l-1}}{\bar{Q}_{l-1}}) \cdot \frac{\bar{Q}_{l, \; \text{milk}} }{t_{l}}
 $$ {#eq-restrain_herd_act}
 
-For swine, we consider all animals as involved in the meat activity.
-For poultry, we consider that all animals needed in the production of
-either eggs (i.e., laying hens) or meat (i.e., broilers and other
-poultry) are present on-farm, the pseudo-herd thus equaling the herd.
+For swine, we consider all animals as involved in the meat activity. For
+poultry, we consider that all animals needed in the production of either
+eggs (i.e., laying hens) or meat (i.e., broilers and other poultry) are
+present on-farm, the pseudo-herd thus equaling the herd. For sheep, we
+assume that a ewe produce 255 l/year in France (CAP2ER, 2025) and thus
+estimate the number of ewes involved in the milk activity as
+$Qobs_{milk} = prod_t / 0.255$ (where $prod_t$ is the milk production in
+tonnes). We assign at least one ewe to the milk activity if the farm has
+any milk production \< 255 L. All other sheep are assigned to the meat
+activity. For goats, we assign all animals to the milk activity.
 
 Second, we estimate the pseudo herd by calculating the balanced number
 of animals (see next section).
@@ -855,14 +863,14 @@ Lindner et al. (2022).
 
 The fraction of manure handled by each manure management system (AWMS)
 on a farm is not measured directly in FADN for most countries. Instead
-AWMS fractions are inferred from UNFCCC CRF tables together with 
-IPCC/UNFCCC MCF and Bo parameters to compute CH4 and
-(together with N excretion and EF) N2O from manure management.
+AWMS fractions are inferred from UNFCCC CRF tables together with
+IPCC/UNFCCC MCF and Bo parameters to compute CH4 and (together with N
+excretion and EF) N2O from manure management.
 
 ## Animal weight estimation {#sec-method-practices-animal-weight}
 
-Animal weights are not reported in FADN. We use the national animal liveweights
-reported in UNFCCC CRF tables.
+Animal weights are not reported in FADN. We use the national animal
+liveweights reported in UNFCCC CRF tables.
 
 # Yields (observed vs. imputed) {#sec-method-practices-yields}
 

@@ -2,6 +2,8 @@
 #' `data_for_BVIAS` Create a tibble with the following variables: "farm_id", "crop",  "land_use_type", "metric_code", "value", "max", "x_norm", "org_farming"
 #'
 #' @param object a FADN2Footprint object
+#' @param ... Additional arguments.
+#'
 #' @returns a tibble
 #' @examples
 #' data(fadn_fict)
@@ -17,7 +19,8 @@
 
 
 # data preparation (first step) -----------------------------------------------------------------------------------------------------
-data_for_BVIAS <- function(object,...){
+data_for_BVIAS <- function(object,
+                           ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }

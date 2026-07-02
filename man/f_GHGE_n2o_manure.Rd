@@ -4,7 +4,7 @@
 \alias{f_GHGE_n2o_manure}
 \title{Calculate N2O Emissions from Manure Management}
 \usage{
-f_GHGE_n2o_manure(object, overwrite = F, ...)
+f_GHGE_n2o_manure(object, overwrite = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}
@@ -13,6 +13,8 @@ f_GHGE_n2o_manure(object, overwrite = F, ...)
 the function returns
 the cached object and no recomputation is performed. If TRUE, existing
 cached GHGE results are ignored and computations are re-run.}
+
+\item{...}{Additional arguments.}
 }
 \value{
 A \code{\link[tibble]{tibble}} with one row per farm observation ×
@@ -140,8 +142,8 @@ Ngarize, S., Osako, A., Pyrozhenko, Y., Shermanau, P. and Federici, S.
 (eds). IPCC, Switzerland.
 }
 \seealso{
-\code{\link{f_n_excr}}, \code{\link{GHGE_ch4_manure}},
-\code{\link{GHGE_n2o_msoils}}, \code{\link{UNFCCC_data}},
+\code{\link{f_n_excr()}}, \code{\link{GHGE_ch4_manure()}},
+\code{\link{f_GHGE_n2o_msoils()}}, \code{\link{UNFCCC_data}},
 \code{\link{GWP}}, \code{\link{FADN2Footprint-class}}
 }
 \concept{footprint-ghge}

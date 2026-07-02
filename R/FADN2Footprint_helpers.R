@@ -391,6 +391,7 @@ h_read_dictionary <- function(dictionary_path) {
 #'
 #' @param dictionary_path Path to the filled Excel workbook.
 #' @param raw_tables Named list of raw national FADN data frames.
+#' @param id_cols Identifier variables (e.g., ID, YEAR, COUNTRY)
 #' @param table_config Named list mapping product groups to table/code_col.
 #' @param verbose Logical. Print report? Default \code{TRUE}.
 #'

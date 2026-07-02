@@ -48,6 +48,15 @@
 #' }
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
+#' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
+#'   the function returns
+#'   the cached object and no recomputation is performed. If TRUE, existing
+#'   cached GHGE results are ignored and computations are re-run.
+#' @param account_pseudoherd Logical, default FALSE. When TRUE, pseudo-herd
+#'   animals (inferred from feed flows rather than directly observed) are
+#'   included in the emission calculation. Currently reserved for future
+#'   implementation.
+#' @param ... Additional arguments.
 #'
 #' @return A \code{\link[tibble]{tibble}} with one row per farm observation,
 #' containing:

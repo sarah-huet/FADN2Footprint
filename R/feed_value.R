@@ -1,7 +1,8 @@
 #' Function to estimate feed value
 #' `f_feed_value` Estimate the feed value based on EUROSTAT feed stuff prices
 #'
-#' @param my_object a FADN2Footprint object
+#' @param object An object of class \code{\link{FADN2Footprint}}.
+#'
 #' @returns a list of two tables
 #' @examples
 #' data(fadn_fict)

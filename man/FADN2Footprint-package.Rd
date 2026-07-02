@@ -4,7 +4,7 @@
 \name{FADN2Footprint-package}
 \alias{FADN2Footprint}
 \alias{FADN2Footprint-package}
-\title{FADN2Footprint: Infer agricultural practices and compute environmental footprints from FADN data.}
+\title{FADN2Footprint: Infer agricultural practices and compute environmental footprints from FADN data}
 \description{
 Infers agricultural practices and computes environmental footprints from Farm Accountancy Data Network (FADN) data. The package supports two input configurations: national FADN combined with national Land Parcel Identification System (LPIS), hedges and cover crop maps; or European Union FADN data. Additional internal data sets include farm practices surveys, feed composition tables, and parameters from national greenhouse gas inventories or Intergovernmental Panel on Climate Change (IPCC) guidelines. Following a life cycle assessment approach (scope 3), it derives farm practices (fertilizer use, pesticides, tillage, crop diversity, hedge density, field size, ground cover, livestock density, feed intake, rearing parameters, manure management, animal weight) and estimates environmental footprints (greenhouse gas emissions, biodiversity impact, water consumption and pollution). Results are estimated at farm, activity, and product level.
 }

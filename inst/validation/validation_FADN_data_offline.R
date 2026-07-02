@@ -26,6 +26,8 @@ save(
 )
 # Infer the practices ----
 
+#load("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/data_raw/FADN_FRA_2018_2021_obj.RData")
+
 my_object_w_practices <- FADN2Footprint::infer_practices(my_object, overwrite = F)
 
 save(

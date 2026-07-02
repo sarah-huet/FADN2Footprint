@@ -8,6 +8,18 @@ f_GHGE_fuels(object, account_pseudoherd = FALSE, overwrite = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}
+
+\item{account_pseudoherd}{Logical, default FALSE. When TRUE, pseudo-herd
+animals (inferred from feed flows rather than directly observed) are
+included in the emission calculation. Currently reserved for future
+implementation.}
+
+\item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
+the function returns
+the cached object and no recomputation is performed. If TRUE, existing
+cached GHGE results are ignored and computations are re-run.}
+
+\item{...}{Additional arguments.}
 }
 \value{
 A \code{\link[tibble]{tibble}} with one row per farm observation,

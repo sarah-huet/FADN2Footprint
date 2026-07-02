@@ -17,6 +17,8 @@ h_validate_dictionary(
 
 \item{raw_tables}{Named list of raw national FADN data frames.}
 
+\item{id_cols}{Identifier variables (e.g., ID, YEAR, COUNTRY)}
+
 \item{table_config}{Named list mapping product groups to table/code_col.}
 
 \item{verbose}{Logical. Print report? Default \code{TRUE}.}

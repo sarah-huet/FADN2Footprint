@@ -48,7 +48,7 @@ matter intake and nitrogen excretion), rearing parameters (e.g., first
 calving age, culling age).
 
 | Data source / Practices | FADN<br>(+ Farm practices survey & feed tables for allocation keys)           | \+ LPIS & SENTINEL-2<br>+ parameters from national GHGIs |
-|-------------------|-------------------------------|-----------------------|
+|-------------------------|-------------------------------------------------------------------------------|----------------------------------------------------------|
 | Crop practices          | •Fertilizer quantity and quality •Pesticides •Tillage •Crop diversity •Yields | •Hedge density •Mean field size •Ground cover            |
 | Grassland practices     | •Fertilizer quantity and quality •Livestock density                           | •Hedge density •Yields                                   |
 | Herding practices       | •Feed intake •Rearing parameters •Production / Yields                         | •Manure management systems •Animal weight                |
@@ -216,20 +216,20 @@ available, or at the whole data set level otherwise. For some crops
 where FADN record no production, we impute average of similar crops
 based on the following matching table:
 
-| **FADN code** | **Description**                           | **Crop average used**                                                                    |
-|------------------|------------------|-------------------------------------|
+| **FADN code** | **Description**                           | **Crop average used**                                                                |
+|---------------|-------------------------------------------|--------------------------------------------------------------------------------------|
 | CARAOTH       | Other arable land crops                   | Average yield of other arable crops (code 10110 to 10690; see `data_extra$crops`)    |
 | CCRPPERMOTH   | Other permanent crops                     | Average yield of other permanent crops (code 40111 to 40500; see `data_extra$crops`) |
 | CPERMUG       | Permanent crops under glass               | Average yield of other permanent crops (code 40111 to 40500; see `data_extra$crops`) |
-| CFIBOTH       | Other fiber plants                        | Average yield of other fiber crops (code 10609 and 10610; see `data_extra$crops`) |
+| CFIBOTH       | Other fiber plants                        | Average yield of other fiber crops (code 10609 and 10610; see `data_extra$crops`)    |
 | CKGAR         | Kitchen gardens                           | Average of vegetables (code 10711 to 10790; see `data_extra$crops`)                  |
-| CFLW          | Flowering and ornamental plants           | Set to zero                                                                              |
-| CFLWB         | Flower bulbs, corms and tubers            | Set to zero                                                                              |
-| CFLWCUT       | Cut flowers and flower buds               | Set to zero                                                                              |
-| CFLWOUT       | Flowers and ornamental plants Outdoor     | Set to zero                                                                              |
-| CFLWUG        | Flowers and ornamental plants Under glass | Set to zero                                                                              |
-| CNURS         | Nurseries                                 | Set to zero                                                                              |
-| CLNDOTH       | Other land                                | Set to zero as it is not arable nor grass lands                                          |
+| CFLW          | Flowering and ornamental plants           | Set to zero                                                                          |
+| CFLWB         | Flower bulbs, corms and tubers            | Set to zero                                                                          |
+| CFLWCUT       | Cut flowers and flower buds               | Set to zero                                                                          |
+| CFLWOUT       | Flowers and ornamental plants Outdoor     | Set to zero                                                                          |
+| CFLWUG        | Flowers and ornamental plants Under glass | Set to zero                                                                          |
+| CNURS         | Nurseries                                 | Set to zero                                                                          |
+| CLNDOTH       | Other land                                | Set to zero as it is not arable nor grass lands                                      |
 
 # Landscape variables
 
@@ -398,7 +398,10 @@ Feed quality parameters - gross energy (GE), crude protein content (CP),
 and ash – are calculated by applying nutritional coefficients from feed
 tables (Tran, 2002; [Method
 article](articles/practice-inference.html#sec-method-practices-feed-qty-qlty))
-to the estimated dry matter quantities. To exclude aberrant estimations,
+to the estimated dry matter quantities. Feed digestibility is retrieved
+from the methodoly of the New Zealand Ministry for Primary Industries
+(*New Zealand Farm Emissions Method: A farm-level approach for
+estimating biogenic emissions*, 2024). To exclude aberrant estimations,
 we remove farms with extreme GE supplied to their main livestock
 category. Specifically, we exclude farms with, for the livestock
 category they have the highest number of livestock units, a GE exceeding

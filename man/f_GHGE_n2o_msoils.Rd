@@ -4,10 +4,17 @@
 \alias{f_GHGE_n2o_msoils}
 \title{Calculate N2O Emissions from Managed Soils}
 \usage{
-f_GHGE_n2o_msoils(object, overwrite = FALSE)
+f_GHGE_n2o_msoils(object, overwrite = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}
+
+\item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
+the function returns
+the cached object and no recomputation is performed. If TRUE, existing
+cached GHGE results are ignored and computations are re-run.}
+
+\item{...}{Additional arguments.}
 }
 \value{
 A \code{\link[tibble]{tibble}} with one row per farm observation ×
@@ -155,8 +162,8 @@ J., Fukuda, M., Ngarize, S., Osako, A., Pyrozhenko, Y., Shermanau, P. and
 Federici, S. (eds). IPCC, Switzerland.
 }
 \seealso{
-\code{\link{f_n_ferti}}, \code{\link{f_n_excr}},
-\code{\link{GHGE_n2o_manure}}, \code{\link{UNFCCC_data}},
+\code{\link{f_n_ferti()}}, \code{\link{f_n_excr()}},
+\code{\link{f_GHGE_n2o_manure()}}, \code{\link{UNFCCC_data}},
 \code{\link{data_extra}}, \code{\link{GWP}},
 \code{\link{FADN2Footprint-class}}
 }

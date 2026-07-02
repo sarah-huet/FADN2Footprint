@@ -86,6 +86,7 @@ Collate:
     'feed_onfarm.R'
     'feed_theoretical_ration.R'
     'feed_value.R'
+    'globals.R'
     'herd_activities.R'
     'herd_feed.R'
     'herd_n_excretion.R'

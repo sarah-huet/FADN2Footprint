@@ -8,7 +8,7 @@
 f_feed_value(object)
 }
 \arguments{
-\item{my_object}{a FADN2Footprint object}
+\item{object}{An object of class \code{\link{FADN2Footprint}}.}
 }
 \value{
 a list of two tables

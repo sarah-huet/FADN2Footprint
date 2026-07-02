@@ -146,6 +146,14 @@ f_GHGE_herd_output <- function(object,
     message("Using cached values stored in object@footprints$GHGE$GHGE_milk.")
     return(object@footprints$GHGE$GHGE_milk)  # use cached value
   }
+  if (!is.null(object@footprints$GHGE$GHGE_meat)&& !overwrite) {
+    message("Using cached values stored in object@footprints$GHGE$GHGE_meat.")
+    return(object@footprints$GHGE$GHGE_meat)  # use cached value
+  }
+  if (!is.null(object@footprints$GHGE$GHGE_eggs)&& !overwrite) {
+    message("Using cached values stored in object@footprints$GHGE$GHGE_eggs.")
+    return(object@footprints$GHGE$GHGE_eggs)  # use cached value
+  }
 
   id_cols = object@traceability$id_cols
 
@@ -296,7 +304,7 @@ f_GHGE_herd_output <- function(object,
                     list(per_ha_pseudofarm = ~ .x / feed_pseudofarm_area_ha_output),
                     .names = "{str_replace(.col, '_output$', '')}_{.fn}"  # Remove "_output" and append {.fn}
       ),
-      # per t of milk
+      # per t of product
       dplyr::across(dplyr::all_of(co2_cols),
                     list(per_t  = ~ .x / prod_t),
                     .names = "{str_replace(.col, '_output$', '')}_{.fn}"  # Remove "_output" and append {.fn}
@@ -312,11 +320,15 @@ f_GHGE_herd_output <- function(object,
   meat_impact <- herd_output_impact_ha_t |>
     dplyr::filter(activity == "meat")
 
+  eggs_impact <- herd_output_impact_ha_t |>
+    dplyr::filter(activity == "eggs")
+
+
 
   return(list(
     GHGE_milk = milk_impact,
     GHGE_meat = meat_impact,
-    GHGE_eggs = NULL
+    GHGE_eggs = eggs_impact
   ))
 
 }

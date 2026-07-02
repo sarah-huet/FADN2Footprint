@@ -70,27 +70,25 @@
 #'   animals (inferred from feed flows rather than directly observed) are
 #'   included in the emission calculation. Currently reserved for future
 #'   implementation.
-#' @param ... Additional arguments passed to downstream helper functions.
+#' @param ... Additional arguments.
 #'
 #' @return A tibble with one row per farm × livestock category combination
 #'   (identified by `object@traceability$id_cols` and `FADN_code_letter`) and
 #'   columns including:
 #' \describe{
-#'   \item{species}{Livestock species label.}
-#'   \item{Qobs}{Observed animal count.}
-#'   \item{feed_farm_*}{On-farm feed dry matter, area, and emission
-#'     components (kg CO2e per livestock category).}
-#'   \item{feed_pseudofarm_*}{Pseudo-farm (on-farm + purchased) feed dry
-#'     matter, area, and emission components.}
-#'   \item{CH4_enteric_kgCO2e_livcat}{Enteric fermentation CH4 emissions.}
-#'   \item{CH4_MM_kgCO2e_livcat}{Manure management CH4 emissions.}
-#'   \item{N2O_D_MM_kgCO2e_livcat}{Direct manure management N2O.}
-#'   \item{N2O_G_mm_kgCO2e_livcat}{Indirect N2O from grazing.}
-#'   \item{N2O_L_mm_kgCO2e_livcat}{Indirect N2O from leaching/runoff.}
-#'   \item{farm_ghge_herd_kgCO2e_livcat}{Total scope 1 & 2 herd GHGE.}
-#'   \item{pseudofarm_ghge_herd_kgCO2e_livcat}{Total scope 1, 2 & 3 GHGE.}
-#'   \item{farm_ghge_herd_kgCO2e_per_anim}{Scope 1 & 2 GHGE per animal.}
-#'   \item{pseudofarm_ghge_herd_kgCO2e_per_anim}{Scope 3 GHGE per animal.}
+#'   \item{`species`}{Livestock species label.}
+#'   \item{`Qobs`}{Observed animal count.}
+#'   \item{`feed_farm_*`}{On-farm feed dry matter, area, and emission components (kg CO2e per livestock category).}
+#'   \item{`feed_pseudofarm_*`}{Pseudo-farm (on-farm + purchased) feed dry matter, area, and emission components.}
+#'   \item{`CH4_enteric_kgCO2e_livcat`}{Enteric fermentation CH4 emissions.}
+#'   \item{`CH4_MM_kgCO2e_livcat`}{Manure management CH4 emissions.}
+#'   \item{`N2O_D_MM_kgCO2e_livcat`}{Direct manure management N2O.}
+#'   \item{`N2O_G_mm_kgCO2e_livcat`}{Indirect N2O from grazing.}
+#'   \item{`N2O_L_mm_kgCO2e_livcat`}{Indirect N2O from leaching/runoff.}
+#'   \item{`farm_ghge_herd_kgCO2e_livcat`}{Total scope 1 & 2 herd GHGE.}
+#'   \item{`pseudofarm_ghge_herd_kgCO2e_livcat`}{Total scope 1, 2 & 3 GHGE.}
+#'   \item{`farm_ghge_herd_kgCO2e_per_anim`}{Scope 1 & 2 GHGE per animal.}
+#'   \item{`pseudofarm_ghge_herd_kgCO2e_per_anim`}{Scope 3 GHGE per animal.}
 #' }
 #'
 #' @examples
@@ -106,8 +104,8 @@
 #' herd_ghge3 <- f_GHGE_herd(f, overwrite = TRUE)
 #' }
 #'
-#' @seealso GHGE_ch4_enteric, GHGE_ch4_manure, GHGE_n2o_manure,
-#'   f_GHGE_feed, f_GHGE_herd_output, f_GHGE_farm
+#' @seealso f_GHGE_ch4_enteric(), f_GHGE_ch4_manure(), f_GHGE_n2o_manure(),
+#'   f_GHGE_feed(), f_GHGE_herd_output(), f_GHGE_farm()
 #'
 #' @references
 #' IPCC (2006). \emph{2006 IPCC Guidelines for National Greenhouse Gas

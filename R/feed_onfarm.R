@@ -40,14 +40,12 @@
 #'   the helper f_feed_theo_ration; these must be available in the package
 #'   environment and compatible with the FADN2Footprint object structure.
 #'
-#' @param object An S4 object of class "FADN2Footprint". The object must
-#'   contain standard slots used by the package (for example:
-#'   object@crop, object@traceability$id_cols) and be prepared by the package
-#'   workflow so that helper functions (f_feed_theo_ration) work correctly.
+#' @param object An object of class \code{\link{FADN2Footprint}}.
 #' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
 #'   the function returns
 #'   the cached object and no recomputation is performed. If TRUE, existing
 #'   cached GHGE results are ignored and computations are re-run.
+#' @param ... Additional arguments.
 #'
 #' @return A tibble/data.frame with one or more rows per traceable farm and
 #' feed line containing:
@@ -206,7 +204,7 @@ f_feed_onfarm <- function(object,
 
   # Output ---------------------------------------------------------------------
   feed_produced <- feed_produced_qlty |>
-    dplyr::select(all_of(object@traceability$id_cols), 
+    dplyr::select(all_of(object@traceability$id_cols),
                   FADN_code_letter,
                   FADN_code_feed, feed_type,Sailley_feed,
                   yield, DM_t_livcat, GE_MJ_livcat, GE_kcal_livcat, CP_t_livcat, Ash_t_livcat, DE_pc) |>

@@ -95,6 +95,8 @@ f_herd_activities <- function(object,
     return(object@practices$herding$activities)  # use cached value
   }
 
+  id_cols = object@traceability$id_cols
+
   # On-farm herd ----
 
   ## CATTLE ----
@@ -139,10 +141,10 @@ f_herd_activities <- function(object,
 
     )  |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), dplyr::matches("Qobs"), -dplyr::matches("fattening|breeders")) |>
+    dplyr::select(dplyr::all_of(id_cols), dplyr::matches("Qobs"), -dplyr::matches("fattening|breeders")) |>
     # pivot table
     tidyr::pivot_longer(
-      cols = -dplyr::all_of(object@traceability$id_cols),
+      cols = -dplyr::all_of(id_cols),
       names_to = c("FADN_code_letter", "variable"),
       names_pattern = "(.+)_(Qobs(?:_milk)?)"  # captures 'LHEIFFAT' and 'Qobs' or 'Qobs_milk'
     ) |>
@@ -162,10 +164,10 @@ f_herd_activities <- function(object,
   ## SWINE ----
   herd_swine <- f_herd_rearing_param_swine(object) |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), dplyr::matches("Qobs")) |>
+    dplyr::select(dplyr::all_of(id_cols), dplyr::matches("Qobs")) |>
     # pivot table
     tidyr::pivot_longer(
-      cols = -dplyr::all_of(object@traceability$id_cols),
+      cols = -dplyr::all_of(id_cols),
       names_to = "FADN_code_letter",
       names_pattern = "(.+)_",
       values_to = "Qobs"
@@ -178,10 +180,10 @@ f_herd_activities <- function(object,
   ## POULTRY ----
   herd_poultry <- f_herd_rearing_param_poultry(object) |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), dplyr::matches("Qobs")) |>
+    dplyr::select(dplyr::all_of(id_cols), dplyr::matches("Qobs")) |>
     # pivot table
     tidyr::pivot_longer(
-      cols = -dplyr::all_of(object@traceability$id_cols),
+      cols = -dplyr::all_of(id_cols),
       names_to = "FADN_code_letter",
       names_pattern = "(.+)_",
       values_to = "Qobs"
@@ -215,7 +217,7 @@ f_herd_activities <- function(object,
   herd_sheep <- object@herd |>
     dplyr::filter(species == "sheep") |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
     # add milk production
     dplyr::left_join(
       tmp_milk_prod |>
@@ -236,7 +238,7 @@ f_herd_activities <- function(object,
   herd_goats <- object@herd |>
     dplyr::filter(species == "goats") |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
     # restrain to activity
     dplyr::mutate(
       # TODO: check activity for goats
@@ -247,7 +249,7 @@ f_herd_activities <- function(object,
   herd_horse <- object@herd |>
     dplyr::filter(species == "horse") |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
     # restrain to activity
     dplyr::mutate(
       # TODO: check activity for horse
@@ -258,7 +260,7 @@ f_herd_activities <- function(object,
   herd_others <- object@herd |>
     dplyr::filter(species == "others") |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
     # restrain to activity
     dplyr::mutate(
       # TODO: check activity for horse

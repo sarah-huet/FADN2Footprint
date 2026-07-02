@@ -83,8 +83,8 @@ summary(object@crop)
 #
 summary(object@footprints$GHGE$GHGE_crops)
 #
-View(object@footprints$GHGE$GHGE_crops |> 
-       dplyr::filter(!is.finite(N2O_d_kgCO2e_per_t)))
+object@footprints$GHGE$GHGE_crops |> 
+       dplyr::filter(!is.finite(N2O_d_kgCO2e_per_t)) #|> View()
 #sort(table(object@footprints$GHGE$GHGE_crops |> filter(is.na(prod_t)) |> pull(FADN_code_letter)), decreasing = TRUE)
 
 ```
@@ -1606,16 +1606,16 @@ mean(tmp_lwp_LU$lwp_t_LU)
 ```
 ```{r}
 
-View(object@herd |> filter(ID == "52100000050798"))
+object@herd |> filter(ID == "52100000050798")
 
-View(object@output$meat |> filter(ID == "52100000050798"))
+object@output$meat |> filter(ID == "52100000050798")
 
 ```
 
 
 ```{r}
 
-View(my_FADN_data |> filter(ID == "52100000050798") |> dplyr::select(dplyr::all_of(id_cols),dplyr::matches("LBOV")) |> tidyr::pivot_longer(cols = -dplyr::all_of(id_cols)))
+my_FADN_data |> filter(ID == "52100000050798") |> dplyr::select(dplyr::all_of(id_cols),dplyr::matches("LBOV")) |> tidyr::pivot_longer(cols = -dplyr::all_of(id_cols))
 
 ```
 
@@ -1716,7 +1716,7 @@ tmp_comp |>
     tidyr::pivot_wider(names_from = species, values_from = Qobs),
     #by = c(id_cols, 'species')
     by = c(id_cols)
-  ) |> View()
+  ) #|> View()
 
 
 
@@ -1735,7 +1735,7 @@ semi_join(
                      .by = dplyr::all_of(id_cols)) |>
     dplyr::filter(ghg_heat_fuel_kgCO2e_livcat == 0),
     my_object_GHGE@input |> dplyr::filter(heating_fuels_l >0)
-) |> View()
+) #|> View()
 
 tmp_farms = semi_join(
     my_object_GHGE@footprints$GHGE$GHGE_herd |>
@@ -1752,8 +1752,7 @@ tmp_econ_alloc = f_output_econ_alloc(tmp_obbj)
 
 summary(tmp_econ_alloc$all_outputs)
 
-tmp_econ_alloc$all_outputs |>
-  View()
+tmp_econ_alloc$all_outputs #|> View()
 
 ```
 

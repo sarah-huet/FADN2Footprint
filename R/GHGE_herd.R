@@ -209,7 +209,7 @@ f_GHGE_herd <- function(object,
     ) |>
     # pivot and distinguish feed origin
     tidyr::pivot_wider(
-      id_cols = c(id_cols, FADN_code_letter),
+      id_cols = c(dplyr::all_of(id_cols), FADN_code_letter),
       names_from = feed_origin,
       names_glue = "{feed_origin}_{.value}",
       values_from = c(DM_t_livcat,area_ha_livcat,
@@ -332,10 +332,12 @@ f_GHGE_herd <- function(object,
   ) |>
     # aggregate impact
     dplyr::mutate(
+
       farm_ghge_herd_kgCO2e_livcat = (feed_farm_total_ghg_crop_kgCO2e_livcat
                                       + CH4_enteric_kgCO2e_livcat + CH4_MM_kgCO2e_livcat
                                       + N2O_D_MM_kgCO2e_livcat + N2O_G_mm_kgCO2e_livcat + N2O_L_mm_kgCO2e_livcat
                                       + ghg_diesel_remain_kgCO2e_livcat + ghg_heat_fuel_kgCO2e_livcat + ghg_elec_kgCO2e_livcat),
+
       pseudofarm_ghge_herd_kgCO2e_livcat = (feed_pseudofarm_total_ghg_crop_kgCO2e_livcat
                                             + CH4_enteric_kgCO2e_livcat + CH4_MM_kgCO2e_livcat
                                             + N2O_D_MM_kgCO2e_livcat + N2O_G_mm_kgCO2e_livcat + N2O_L_mm_kgCO2e_livcat

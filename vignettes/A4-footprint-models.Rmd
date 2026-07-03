@@ -30,18 +30,20 @@ library(kableExtra)
 # General LCA-spirit approach & system boundaries diagram
 
 ## Estimated impacts
+
 The package estimates the following environmental impacts
 
 -   **Climate impact** (IPCC Guidelines): estimation of GHG emissions from agriculture
-    (nitrogen use, enteric fermentation, manure management), energy and upstream industrial processes
-    (production of fertilizers, fuel and electricity use), and changes in carbon stocks
-    (LULUCF, **not yet available in the current package version**).
+    (nitrogen use, enteric fermentation, manure management), energy and upstream
+    industrial processes (production of fertilizers, fuel and electricity use), and
+    changes in carbon stocks (LULUCF, **not yet available in the current package
+    version**).
 -   **Biodiversity impact** (BVIAS model): evaluated from on-farm practices (nitrogen
     fertilisation, pesticide use, crop diversity, field size, hedge density, and
     organic/conventional label) applied to farm cropland and grassland areas.
 -   **Water consumption and pollution**: blue/green water footprint and nutrient
-    surplus–driven water pollution pathway (**not yet available in the current package version**).
-
+    surplus–driven water pollution pathway (**not yet available in the current package
+    version**).
 
 ## Scope definition
 
@@ -53,69 +55,96 @@ transport, and consumption are excluded.
 
 The package covers two main scopes of emissions and impacts:
 
--   **Scope 1 and 2 – On-farm direct emissions** (named farm): environmental impacts occurring
-    physically on the farm, including emissions from enteric fermentation (CH~4~), manure management
-    (CH~4~ and N~2~O), managed soils (N~2~O), and on-farm energy combustion (CO~2~ from
-    electricity and diesel consumption), biodiversity impact of crop and pasture management.
--   **Scope 3 without purchased animals – Upstream supply chain emissions** (named pseudofarm): GHG emissions from the production of
-    mineral (synthetic) nitrogen fertilisers, using a supply-chain-wide life cycle
-    emission factor (4.572 kg CO~2~-eq kg^-1^ N; Edwards et al., 2019), environmental impact of
-    the production of the purchased feed.
--   **Scope 3 with animals** (named pseudo-herd): the classical LCA approach would consist in
-    accounting for the environmental impact of purchased animals. In the case of livestock farms,
-    this would result in inconsistent perimeters between farms specialized in breeding, which sell "unfinished" animals
-    to other farms, and farms specialized in rearing, which sell "finished" animals to slaughterhouses.
-    We therefore extend the approach by estimating the impact of the pseudo-herd, that is the complete herd
-    consistent with the largest animal category: if fattening bovines are fewer than the expected number based on
-    the number of suckling cows, fattening bovines are added to the pseudo-herd, and vice versa. See XX for details.
+-   **Scope 1 and 2 – On-farm direct emissions** (named farm): environmental impacts
+    occurring physically on the farm, including emissions from enteric fermentation
+    (CH~4~), manure management (CH~4~ and N~2~O), managed soils (N~2~O), and on-farm
+    energy combustion (CO~2~ from electricity and diesel consumption), biodiversity impact
+    of crop and pasture management.
+-   **Scope 3 without purchased animals – Upstream supply chain emissions** (named
+    pseudofarm): GHG emissions from the production of mineral (synthetic) nitrogen
+    fertilisers, using a supply-chain-wide life cycle emission factor (4.572 kg CO~2~-eq
+    kg^-1^ N; Edwards et al., 2019), environmental impact of the production of the
+    purchased feed.
+-   **Scope 3 with animals** (named pseudo-herd): the classical LCA approach would consist
+    in accounting for the environmental impact of purchased animals. In the case of
+    livestock farms, this would result in inconsistent perimeters between farms
+    specialized in breeding, which sell "unfinished" animals to other farms, and farms
+    specialized in rearing, which sell "finished" animals to slaughterhouses. We therefore
+    extend the approach by estimating the impact of the pseudo-herd, that is the complete
+    herd consistent with the largest animal category: if fattening bovines are fewer than
+    the expected number based on the number of suckling cows, fattening bovines are added
+    to the pseudo-herd, and vice versa. See XX for details.
 
-![System boundary diagram](FADN2Footprint_system_bound.png)
-XX Bizarre, le diagramme a disparu .. En tous les cas, il faudrait visualiser farm, pseudo-farm et pseudo-herd dessus. Je peux le faire si tu me donnes le ppt.
+![System boundary diagram](FADN2Footprint_system_bound.png) XX Bizarre, le diagramme a
+disparu .. En tous les cas, il faudrait visualiser farm, pseudo-farm et pseudo-herd
+dessus. Je peux le faire si tu me donnes le ppt.
 
 ## Impact Allocation Strategy
 
 Most of our data is only available at the farm level and we are interested in the impact
-at the individual product level. Following the JRC ILCD handbook (JRC, 2010), we avoid economic allocation wherever
-possible by virtual subdivision of processes. In particular, we divide farms
-into a dairy workshop (with all animals required to sustain observed milk
-production, including calves and heifers raised to renew dairy cows) and
-a meat workshop (with all animals dedicated to meat, including calves
-and suckling cows necessary to renew fattening beefs).
+at the individual product level. Following the JRC ILCD handbook (JRC, 2010), we avoid
+economic allocation wherever possible by virtual subdivision of processes. In particular,
+we divide farms into a dairy workshop (with all animals required to sustain observed milk
+production, including calves and heifers raised to renew dairy cows) and a meat workshop
+(with all animals dedicated to meat, including calves and suckling cows necessary to renew
+fattening beefs).
 
 ### Fertilizers and pesticides
-Fertilizers and pesticides are virtually distributed to each crop through a national allocation 
-key based on the crop practices survey. See XX for details.
+
+Fertilizers and pesticides are virtually distributed to each crop through a national
+allocation key based on the crop practices survey. See XX for details.
 
 ### Off-road diesel
-Off-road diesel use was allocated in two steps. 
-First, diesel consumption for ploughing was estimated at crop level using tillage intensity in L/ha (see `f_tillage()`) multiplied by crop area, with crops not subject to tillage assigned zero tillage diesel. 
-Second, the remaining farm-level diesel consumption, after subtracting tillage diesel, was economically allocated across crops and livestock outputs. Crop-level diesel emissions hence sum up the tillage-related and residual components.
-Diesel consumption values are then multiplied by a fixed emission factor retrieve from the UNFCCC CRF tables (see `f_ghg_diesel()`).
+
+Off-road diesel use was allocated in two steps. First, diesel consumption for ploughing
+was estimated at crop level using tillage intensity in L/ha (see `f_tillage()`) multiplied
+by crop area, with crops not subject to tillage assigned zero tillage diesel. Second, the
+remaining farm-level diesel consumption, after subtracting tillage diesel, was
+economically allocated across crops and livestock outputs. Crop-level diesel emissions
+hence sum up the tillage-related and residual components. Diesel consumption values are
+then multiplied by a fixed emission factor retrieve from the UNFCCC CRF tables (see
+`f_ghg_diesel()`).
 
 ### Heating fuel
 
-We consider that heating fuels are mostly used for heating greenhouses and livestock buildings. Indeed, in our test dataset, more than 80% of crop specialists do not consume any heating fuel.  
-Thus, we economically allocated heating fuel emissions between greenhouse and livestock outputs. Nonetheless, if a farm do not have any greenhouse or livestock but do consume heating fuel, we economically allocate heating fuels to crop outputs.
+We consider that heating fuels are mostly used for heating greenhouses and livestock
+buildings. Indeed, in our test dataset, more than 80% of crop specialists do not consume
+any heating fuel.\
+Thus, we economically allocated heating fuel emissions between greenhouse and livestock
+outputs. Nonetheless, if a farm do not have any greenhouse or livestock but do consume
+heating fuel, we economically allocate heating fuels to crop outputs.
 
 $$ghg_{heating fuel,o} = ghg_{heating fuel,farm} \times econ\_alloc_o$$
 
 ### Electricity emissions
-Electricity emissions are economically allocated
-to individual products:
+
+Electricity emissions are economically allocated to individual products:
 
 $$econ\_alloc_p = \frac{TO_p}{\sum_o TO_p}$$
 
-where $TO_p$ is the economic output of product $p$. The allocated electricity
-emissions for each product were then:
+where $TO_p$ is the economic output of product $p$. The allocated electricity emissions
+for each product were then:
 
 $$ghg_{elec,p} = ghg_{elec,farm} \times econ\_alloc_p$$
 
-### Livestock products 
+### Livestock products
 
-Animals are virtually distributed to the dairy herd or the
-meat herd, and **economic allocation** is applied to co-products within each herd (e.g., milk and
-cull cow meat from dairy herd) [van der Werf et al., 2009, JRC - IES, 2010].
-The total herd impact is the sum of: (i) the impact of all feed consumed (on-farm grown and purchased), (ii) direct on-farm emissions from animals (e.g., manure management, enteric fermentation), and (iii) energy consumption allocated to the products.
+For cattle, animals are virtually distributed to the dairy herd or the meat herd, and
+**economic allocation** is applied to co-products within each herd (e.g., milk and cull
+cow meat from dairy herd) [van der Werf et al., 2009, JRC - IES, 2010].
+
+For sheep, as there is no "wool herd" per se, the wool production is allocated across milk
+and meat herd according to livestock units in each herd. Then, the herd impact is
+economically allocated across co-products within each herd (e.g., milk and wool from dairy
+herd).
+
+The herd impact is the sum of:
+
+-   the impact of all feed consumed (on-farm grown and purchased),
+
+-   direct on-farm emissions from animals (e.g., manure management, enteric fermentation),
+
+-   energy consumption allocated to the products.
 
 ## Functional units
 
@@ -125,7 +154,7 @@ products** using multiple functional units:
 -   per hectare (e.g., kg CO~2~-eq ha^-1^, BVI~ha~)
 -   per tonne of product (e.g., kg CO~2~-eq t^-1^, BVI~t~)
 -   per kcal (e.g., kg CO~2~-eq kcal^-1^, BVI~kcal~)
--   per kg of protein (e.g., kg CO~2~-eq kg protein^-1^, BVI~kg protein~)
+-   per kg of protein (e.g., kg CO~2~-eq kg protein^-1^, BVI\~kg protein\~)
 
 # Climate impact
 
@@ -149,21 +178,23 @@ on National Greenhouse Gas Inventories et al., 2019] for the following emission 
 
 -   CO2 from carbon stock changes (**not yet available in the current package version**).
 
-@tbl-ghg-source describes the emission sources included in our estimator for
-crops and animals.
+@tbl-ghg-source describes the emission sources included in our estimator for crops and
+animals.
 
 Our approach is consistent with previous work that adapted the IPCC framework for FADN
-data [Coderoni and Esposti, 2015, Dabkien˙e et al., 2020]. The package goes further on the 
-following aspects:
--   The diet of animals is estimated at farm level, replacing fixed emission factors per animal
-    with estimates of enteric fermentation and nitrogen excretion which reflect the amounts
-    actually ingested by animals;
--   Farms are made comparable to one another by using a consistent Scope 3 perimeter down to the first
-    processing stage (see Scope definition above);
--   The package can be used with the European FADN, which is less detailed than the national FADNs;
--   If used with a national FADN paired with the national LPIS, we estimate CO2 from carbon stock changes (**not yet available in the current package version**).
+data [Coderoni and Esposti, 2015, Dabkien˙e et al., 2020]. The package goes further on the
+following aspects: - The diet of animals is estimated at farm level, replacing fixed
+emission factors per animal with estimates of enteric fermentation and nitrogen excretion
+which reflect the amounts actually ingested by animals; - Farms are made comparable to one
+another by using a consistent Scope 3 perimeter down to the first processing stage (see
+Scope definition above); - The package can be used with the European FADN, which is less
+detailed than the national FADNs; - If used with a national FADN paired with the national
+LPIS, we estimate CO2 from carbon stock changes (**not yet available in the current
+package version**).
 
-Before 2014 or 2017 (depending on countries), fertilizer use and fuel use are approximated from their value. For more details see [Method article](articles/method-footprint-models.html#sec-method-ghge)).
+Before 2014 or 2017 (depending on countries), fertilizer use and fuel use are approximated
+from their value. For more details see [Method
+article](articles/method-footprint-models.html#sec-method-ghge)).
 
 ```{r}
 
@@ -191,10 +222,11 @@ my_object_GHGE <- FADN2Footprint::compute_footprint_ghg(my_object_w_practices)
 
 ## Output variables
 
-Table 1 maps each source-level GHG emission variable to the aggregate output 
-indicators computed by the package.
+Table 1 maps each source-level GHG emission variable to the aggregate output indicators
+computed by the package.
 
 :::
+
 ```{r tbl-farm-level-calculation-csv, echo=FALSE, message=FALSE, warning=FALSE}
 
 
@@ -240,19 +272,17 @@ no contribution to that aggregate.")
 
 ```
 
-Rows represent individual emission variables, 
-organized into four groups: **crop emissions** (N₂O and CO₂ from fertilizer 
-production, diesel, and electricity), **herd feed emissions from on-farm crops**, 
-**herd feed emissions from pseudofarm**, and **direct livestock 
-emissions** (enteric CH₄, manure CH₄, and manure N₂O). Columns represent aggregate 
-indicators grouped into crop totals, herd feed totals, herd-level GHG aggregates, 
-and farm-level totals disaggregated by greenhouse gas (CO₂, N₂O, CH₄). A 
-**✓** indicates that the source variable is directly summed into the aggregate; 
-**✓₋f** signals inclusion of the pseudofarm share *net of* the on-farm portion, 
-preventing double-counting when both farm-grown and purchased feeds contribute to 
-the same herd total; **acc.** denotes variables already consolidated within the 
-crop module and therefore not re-added at the farm level. Empty cells indicate 
-no contribution to that aggregate.
+Rows represent individual emission variables, organized into four groups: **crop
+emissions** (N₂O and CO₂ from fertilizer production, diesel, and electricity), **herd feed
+emissions from on-farm crops**, **herd feed emissions from pseudofarm**, and **direct
+livestock emissions** (enteric CH₄, manure CH₄, and manure N₂O). Columns represent
+aggregate indicators grouped into crop totals, herd feed totals, herd-level GHG
+aggregates, and farm-level totals disaggregated by greenhouse gas (CO₂, N₂O, CH₄). A **✓**
+indicates that the source variable is directly summed into the aggregate; **✓₋f** signals
+inclusion of the pseudofarm share *net of* the on-farm portion, preventing double-counting
+when both farm-grown and purchased feeds contribute to the same herd total; **acc.**
+denotes variables already consolidated within the crop module and therefore not re-added
+at the farm level. Empty cells indicate no contribution to that aggregate.
 
 :::
 
@@ -277,15 +307,18 @@ where:
 -   $N_2O_{ATD}$ = indirect N~2~O emissions from atmospheric deposition of volatilised
     nitrogen (kg CO~2~-eq);
 -   $N_2O_L$ = indirect N~2~O emissions from nitrogen leaching and run-off (kg CO~2~-eq);
--   $ghg_{ferti prod}$ = upstream N2O and CO2 emissions from the manufacturing of synthetic nitrogen
-    fertilisers (kg CO~2~-eq);
+-   $ghg_{ferti prod}$ = upstream N2O and CO2 emissions from the manufacturing of
+    synthetic nitrogen fertilisers (kg CO~2~-eq);
 -   $ghg_{diesel}$ = GHG emissions from off-road diesel combustion allocated to the crop
     (kg CO~2~-eq);
--   $ghg_{heating fuel}$ = GHG emissions from heating fuel combustion allocated to the crop
-    (kg CO~2~-eq);
+-   $ghg_{heating fuel}$ = GHG emissions from heating fuel combustion allocated to the
+    crop (kg CO~2~-eq);
 -   $ghg_{elec}$ = GHG emissions from on-farm electricity consumption allocated to the
-    crop (kg CO~2~-eq).
-XX Il faudrait séparer engrais minéraux vs organiques vs résidus. Ca permet de faire un test de sensibilité en allouant les émissions liées aux apports organiques aux animaux au lieu des végétaux. Par contre, pas forcément nécessaire de distinguer direct et indirect, mais si c'est déjà fait, c'est sans doute plus simple de garder comme ça.
+    crop (kg CO~2~-eq). XX Il faudrait séparer engrais minéraux vs organiques vs résidus.
+    Ca permet de faire un test de sensibilité en allouant les émissions liées aux apports
+    organiques aux animaux au lieu des végétaux. Par contre, pas forcément nécessaire de
+    distinguer direct et indirect, mais si c'est déjà fait, c'est sans doute plus simple
+    de garder comme ça.
 
 ### Limitations
 
@@ -599,8 +632,8 @@ Three emission sources were computed at the livestock category level:
 
 -   **Enteric fermentation CH~4~**: methane emissions from digestive processes;
 -   **Manure management CH~4~**: methane emissions from manure storage and treatment;
--   **Manure management N~2~O**: direct N~2~O emissions, N~2~O from volatilisation,
-    and indirect N~2~O from leaching.
+-   **Manure management N~2~O**: direct N~2~O emissions, N~2~O from volatilisation, and
+    indirect N~2~O from leaching.
 
 #### Feed-Related Emissions
 
@@ -616,7 +649,8 @@ footprint:
 
 $$ghg_{livestock} = ghg_{feed} + CH_4^{enteric} + CH_4^{MM} + N_2O_d^{MM} + N_2O_G^{MM} + N_2O_L^{MM}$$
 
-where $MM$ denotes manure management, $d$ direct emissions, $G$ gas from volatilization, and $L$ leaching and run-off.
+where $MM$ denotes manure management, $d$ direct emissions, $G$ gas from volatilization,
+and $L$ leaching and run-off.
 
 ### Step 2 — Allocation to Products
 
@@ -630,13 +664,14 @@ $$r_{alloc,p} = \frac{TO_p}{\sum_p TO_p}$$
 
 where $TO_p$ is the economic output value of product $p$ for a given livestock category.
 When accounting for off-farm animals (pseudo-herd), the economic allocation was extended
-to combine on-farm and off-farm herd outputs ([Method article](articles/method-footprint-models.html#sec-method-econ-alloc)).
+to combine on-farm and off-farm herd outputs ([Method
+article](articles/method-footprint-models.html#sec-method-econ-alloc)).
 
 #### Cow Milk
 
 For farms with a dairy cattle activity and positive milk production, total herd emissions
-were allocated to milk using the economic allocation ratio. GHG intensities
-were then expressed as:
+were allocated to milk using the economic allocation ratio. GHG intensities were then
+expressed as:
 
 $$ghg_{per\,ha} = \frac{ghg_{component} \times r_{alloc}}{A_{feed}}$$
 
@@ -649,55 +684,51 @@ total.
 ### Limitations
 
 Allocation to meat and egg outputs is currently reserved for future implementation. Only
-cow milk is fully implemented at this stage. XX ? Pourquoi ? Le rapport coût/bénef me semble aller dans le sens d'une inclusion dès maintenant.
+cow milk is fully implemented at this stage. XX ? Pourquoi ? Le rapport coût/bénef me
+semble aller dans le sens d'une inclusion dès maintenant.
 
 # Biodiversity impact
 
 ## The BVI model
 
 This work is based on the Biodiversity Value Increment (BVI) implemented by Lindner et al.
-(2022, 2019). The BVI is not an empirical measurement of biodiversity (e.g.,
-richness, abundance, extinction risk) but rather a unit-less index of the biodiversity
-quality, reflecting the naturalness of an ecosystem.
-Natural ecosystems have a BVI equal to 1, and artificialised areas (e.g. building, parking lot)
-have a BVI equal to 0.
-The BVI reflects the pressure put by
-agricultural practices on biodiversity (i.e., the lowest the BVI, the highest the
-biodiversity quality and the more intact the biophysical integrity of the considered
-ecosystem). It assesses the incremental impact on biodiversity of agricultural practices
-implemented at both the plot level and adjacent semi-natural elements, incorporating land
-use type (natural ecosystem, permanent grassland, or arable land), landscape effects, and
-farming intensity. BVIAS retains the BVI model’s principle that optimal biodiversity
-exists in natural ecosystems, while the actual biodiversity value of a plot depends on the
-intensity of the implemented practices, within land-use-specific ranges (i.e., the
-biodiversity value range of arable land differs from the grassland one). To obtain a
-single biodiversity value, the input practice values cross four steps.
-First, each practice value is normalized between 0 and 1, on the 95th percentile
-of the practice values: practice values equaling zero are normalized at 0, while practice
-values at the 95th percentile or above are normalized at 1; hence a normalized intensity
-of 0.5 corresponds to half the 95th percentile.
-Second, normalized
-practice intensities are translated into a biodiversity value through a practice-specific
-response function.
-Third, practices are aggregated into a unique unit-less
-biodiversity value (BVLU) using a weighted average. While Lindner et al. (2022) equally
-weights all practices, here weights are based on the relative importance of each practice
-in driving biodiversity loss (see next paragraph on calibration).
-Fourth, BVIAS projects
-the biodiversity value within the land-use-specific range to obtain a per hectare
-biodiversity value (BVIha). Considering yields, BVIAS also allows the estimation of an
-impact at different product functional units (e.g., per ton, per kcal).
+(2022, 2019). The BVI is not an empirical measurement of biodiversity (e.g., richness,
+abundance, extinction risk) but rather a unit-less index of the biodiversity quality,
+reflecting the naturalness of an ecosystem. Natural ecosystems have a BVI equal to 1, and
+artificialised areas (e.g. building, parking lot) have a BVI equal to 0. The BVI reflects
+the pressure put by agricultural practices on biodiversity (i.e., the lowest the BVI, the
+highest the biodiversity quality and the more intact the biophysical integrity of the
+considered ecosystem). It assesses the incremental impact on biodiversity of agricultural
+practices implemented at both the plot level and adjacent semi-natural elements,
+incorporating land use type (natural ecosystem, permanent grassland, or arable land),
+landscape effects, and farming intensity. BVIAS retains the BVI model’s principle that
+optimal biodiversity exists in natural ecosystems, while the actual biodiversity value of
+a plot depends on the intensity of the implemented practices, within land-use-specific
+ranges (i.e., the biodiversity value range of arable land differs from the grassland one).
+To obtain a single biodiversity value, the input practice values cross four steps. First,
+each practice value is normalized between 0 and 1, on the 95th percentile of the practice
+values: practice values equaling zero are normalized at 0, while practice values at the
+95th percentile or above are normalized at 1; hence a normalized intensity of 0.5
+corresponds to half the 95th percentile. Second, normalized practice intensities are
+translated into a biodiversity value through a practice-specific response function. Third,
+practices are aggregated into a unique unit-less biodiversity value (BVLU) using a
+weighted average. While Lindner et al. (2022) equally weights all practices, here weights
+are based on the relative importance of each practice in driving biodiversity loss (see
+next paragraph on calibration). Fourth, BVIAS projects the biodiversity value within the
+land-use-specific range to obtain a per hectare biodiversity value (BVIha). Considering
+yields, BVIAS also allows the estimation of an impact at different product functional
+units (e.g., per ton, per kcal).
 
 The present BVIAS model extends the BVI framework originally chosen by ADEME for
 environmental labeling (Lindner et al., 2022) in two main ways: the input farming
-practices and the parameter calibration. Instead of three (Lindner et al.,
-2022), BVIAS evaluates nine key farming practices affecting biodiversity: nitrogen
-fertilizer use (quantity and quality), hedge density, livestock density, plant protection
-agents, ground cover duration, tillage, field size, and crop diversity (the latter six
-applying only to arable land and livestock density applying only to grassland). Instead of
-being retrieved from a life cycle inventory (Lindner et al., 2022), each practice
-intensity is here derived from FADN and LPIS data (Section 3), hence relying on a large
-farm dataset (e.g., \> 7,500 farms for French FADN in 2020).
+practices and the parameter calibration. Instead of three (Lindner et al., 2022), BVIAS
+evaluates nine key farming practices affecting biodiversity: nitrogen fertilizer use
+(quantity and quality), hedge density, livestock density, plant protection agents, ground
+cover duration, tillage, field size, and crop diversity (the latter six applying only to
+arable land and livestock density applying only to grassland). Instead of being retrieved
+from a life cycle inventory (Lindner et al., 2022), each practice intensity is here
+derived from FADN and LPIS data (Section 3), hence relying on a large farm dataset (e.g.,
+\> 7,500 farms for French FADN in 2020).
 
 Furthermore, in BVIAS, we calibrate each model parameter based on in situ data sourced
 from the literature, proceeding in two steps (Section A.2.2). First, we define the

@@ -112,6 +112,8 @@ f_herd_activities <- function(object,
       #F_LHEIFBRE_2_LCOWDAIR = (LCOWDAIR_Fin - LCOWDAIR_PN) * (LHEIFBRE_Qobs / (LHEIFBRE_Qobs + LBOV1_2F_breeders_Qobs) ),
       #F_LBOV1_2F_breeders_2_LCOWDAIR = (LCOWDAIR_Fin - LCOWDAIR_PN) * (LBOV1_2F_breeders_Qobs / (LHEIFBRE_Qobs + LBOV1_2F_breeders_Qobs) ),
 
+      # average residence time in livestock categories upward dairy cows on the number of renewal dairy cows
+      ## where the number of renewal dairy cows is the number of dairy cows divided by the residence time of dairy cows
       #LCOWDAIR_upward_Qobs_milk = (( rt_LBOV1_2F_breeders*LBOV1_2F_breeders_Qobs + ((1+rt_LHEIFBRE)*LHEIFBRE_Qobs) ) / ( LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs )) * ((LCOWDAIR_Fin - LCOWDAIR_PN)/rt_LCOWDAIR),
       LCOWDAIR_upward_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
                                          (( rt_LBOV1_2F_breeders*LBOV1_2F_breeders_Qobs + ((1+rt_LHEIFBRE)*LHEIFBRE_Qobs) ) / ( LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs )) * (LCOWDAIR_Qobs/rt_LCOWDAIR),
@@ -205,33 +207,60 @@ f_herd_activities <- function(object,
   ## SHEEP ----
 
   # TODO: check activity for sheep
-  # I estimate that a ewe produce 255 l/year in France
+  # On average, a ewe produce 255 l/year in France
   ## see https://idele.fr/?eID=cmis_download&oID=workspace%3A%2F%2FSpacesStore%2F9a5e1b1d-9051-475d-a6cd-7d42a800137b&cHash=0ac69d95716582d2aadf6ebdff0ed412
-  # I estimate the number of ewes (LEWEBRE) involved in the milk activity as Qobs_milk = prod_t / 0.255
-  ## I assign at least one ewe to the milk activity if the farm has any milk production < 255 L
+  # We consider that, if a farm produce more than 10% of the average ewe production, all ewes on farm are involved in the milk activity
+  # Then, we estimate how many sheep are needed to renew the dairy ewes in the farm. These sheep are also assigned to the dairy herd.
   # All other sheep are assigned to the meat activity
 
-  tmp_milk_prod = object@output$other_herd_products |>
-    dplyr::filter(FADN_code_letter_output == "PMLKSHEP")
 
-  herd_sheep <- object@herd |>
-    dplyr::filter(species == "sheep") |>
-    # dplyr::select columns
-    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+
+  tmp_milk_prod = object@output$other_herd_products |>
+    dplyr::filter(FADN_code_letter_output == "PMLKSHEP")  |>
+    dplyr::select(dplyr::all_of(id_cols), prod_t) |>
+    dplyr::rename(prod_milk_t = prod_t)
+
+
+  herd_sheep <- f_herd_rearing_param_sheep(object) |>
     # add milk production
     dplyr::left_join(
-      tmp_milk_prod |>
-        dplyr::select(dplyr::all_of(id_cols), prod_t) |>
-        dplyr::rename(prod_milk_t = prod_t),
+      tmp_milk_prod,
       by = id_cols
     ) |>
-    # restrain to activity
+    # estimate observed quantities and times for each production process step
+    # first estimate how many animals are needed to renew the dairy herd, in farms that have dairy herd
+    ## we define farms with a sheep dairy herd as farm with more than 10% of the average ewe production
+      # We consider that, if a farm produce more than 10% of the average ewe production, all ewes on farm are involved in the milk activity
     dplyr::mutate(
-      Qobs_milk = dplyr::case_when(
-        FADN_code_letter == "LEWEBRE" & prod_milk_t >0 ~ pmax(1, prod_milk_t / 0.255, na.rm = TRUE),
-        .default = 0
-      ),
-      Qobs_meat = Qobs - Qobs_milk
+      dairy_herd = dplyr::coalesce(prod_milk_t/LEWEBRE_Qobs, 0)  >= (0.1*0.255)
+    ) |>
+    dplyr::mutate(
+
+      # breeders
+      LEWEBRE_Qobs_milk = ifelse(LEWEBRE_Qobs >0 & dairy_herd, LEWEBRE_Qobs, 0),
+
+      LSHEPOTH_Qobs_milk = ifelse(LEWEBRE_Qobs_milk >0,
+                                        LEWEBRE_Fin - LEWEBRE_PN,
+                                         0)
+    )  |>
+    # dplyr::select columns
+    dplyr::select(dplyr::all_of(id_cols), dplyr::matches("Qobs"), -dplyr::matches("fattening|breeders")) |>
+    # pivot table
+    tidyr::pivot_longer(
+      cols = -dplyr::all_of(id_cols),
+      names_to = c("FADN_code_letter", "variable"),
+      names_pattern = "(.+)_(Qobs(?:_milk)?)"  # captures 'LHEIFFAT' and 'Qobs' or 'Qobs_milk'
+    ) |>
+    tidyr::pivot_wider(
+      names_from = variable,
+      values_from = value
+    ) |>
+    # estimate Qobs
+    dplyr::mutate(
+      ## for milk: check that estimated Qobs are <= Qobs
+      Qobs_milk = pmin(Qobs,Qobs_milk),
+      ## for meat: animals not involved in the milk process are considered part of the meat activity
+      Qobs_meat = Qobs - dplyr::coalesce(Qobs_milk,0)
     )
 
   ## GOATS ----

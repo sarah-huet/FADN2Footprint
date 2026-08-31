@@ -28,6 +28,7 @@ infer_practices <- function(object,
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
+  id_cols = object@traceability$id_cols
   # 1. Compute each practice ----
   # 2. Define validation rule for each practice
   ## Farms with non valid practice will be discarded from the analysed data set
@@ -119,9 +120,9 @@ infer_practices <- function(object,
       LU = Qobs * livestock_unit_coef
     ) |>
     # filter max LU
-    dplyr::slice_max(order_by = LU, with_ties = FALSE, by = object@traceability$id_cols) |>
+    dplyr::slice_max(order_by = LU, with_ties = FALSE, by = id_cols) |>
     # select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),FADN_code_letter) |>
+    dplyr::select(dplyr::all_of(id_cols),FADN_code_letter) |>
     # add thresholds
     dplyr::left_join(
       tmp_mean_GE,
@@ -135,7 +136,7 @@ infer_practices <- function(object,
     # add thresholds and filter for the main livestock category
     dplyr::inner_join(
       tmp_max_cat,
-      by = c(object@traceability$id_cols,'FADN_code_letter')
+      by = c(id_cols,'FADN_code_letter')
     ) |>
     # filter farms above & below thresholds
     dplyr::mutate(
@@ -149,7 +150,7 @@ infer_practices <- function(object,
     ) |>
     dplyr::filter(valid_practice == FALSE) |>
     # add removing justification
-    dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |>
+    dplyr::select(tidyselect::all_of(id_cols)) |>
     dplyr::mutate(
       problem = "aberrant_feed"
     )
@@ -163,17 +164,17 @@ infer_practices <- function(object,
 
   rear_param_cattle <- f_herd_rearing_param_cattle(object)
   object@practices$herding$rearing_parameters$cattle <- rear_param_cattle |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
+    dplyr::select(dplyr::all_of(id_cols),
                   dplyr::matches("rt_|t_1st|offspring"))
 
   rear_param_swine <- f_herd_rearing_param_swine(object)
   object@practices$herding$rearing_parameters$swine <- rear_param_swine |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
+    dplyr::select(dplyr::all_of(id_cols),
                   dplyr::matches("rt_|t_1st|offspring"))
 
   rear_param_poultry <- f_herd_rearing_param_poultry(object)
   object@practices$herding$rearing_parameters$poultry <- rear_param_poultry |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
+    dplyr::select(dplyr::all_of(id_cols),
                   dplyr::matches("rt_|t_1st|offspring"))
 
   #### Activity ----
@@ -199,7 +200,7 @@ infer_practices <- function(object,
   for (i in names(object@practices$crops)[!sapply(object@practices$crops, is.null)]) {
 
     tmp <- object@practices$crops[[i]] |>
-      dplyr::select(tidyselect::all_of(object@traceability$id_cols),valid_practice) |>
+      dplyr::select(tidyselect::all_of(id_cols),valid_practice) |>
       dplyr::filter(valid_practice == FALSE) |>
       dplyr::distinct() |>
       # add justification
@@ -219,7 +220,7 @@ infer_practices <- function(object,
 
   if (nrow(discarded_farms) >0) {
     discarded_farms_nb <- discarded_farms |>
-      dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |>
+      dplyr::select(tidyselect::all_of(id_cols)) |>
       dplyr::distinct()
 
     message(nrow(discarded_farms_nb),
@@ -228,7 +229,7 @@ infer_practices <- function(object,
             " (",
             round(nrow(discarded_farms_nb)/nrow(object@farm)*100,0),
             "%)",
-            " observations with non valid practices are discarded from the S4 object slots (see method).")
+            " observations with non valid practices are discarded from the S4 object slots (see object@traceability$discarded_farms$problem).")
 
     object <- m_remove_farms(object, farms_to_remove = discarded_farms)
 

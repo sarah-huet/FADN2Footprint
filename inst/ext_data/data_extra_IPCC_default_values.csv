@@ -1,0 +1,315 @@
+"parameter","description","condition_tech","condition_species","condition_reg","value","confidence_l","confidence_h","unit","source","source_details","note"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_anaerobic_lagoon","other_animals",NA,0.35,0.2,0.8,NA,"IPCC-2019-vol.4","Table 10.22","uncovered anaerobic lagoon"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","other_animals",NA,0.09,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – with natural crust cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","other_animals",NA,0.15,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – without natural crust cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","other_animals",NA,0.03,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_animals",NA,0.25,0.15,0.3,NA,"IPCC-2019-vol.4","Table 10.22","pit storage below animal confinement"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_daily_spread","other_animals",NA,0.07,0.05,0.6,NA,"IPCC-2019-vol.4","Table 10.22","Daily spread"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_animals",NA,0.05,0,0.07,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – covered / compacted"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_animals",NA,0.15,0.06,0.18,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – bulking agent addition"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_animals",NA,0.04,0.01,0.05,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – additives"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_animals",NA,0.12,0.05,0.2,NA,"IPCC-2019-vol.4","Table 10.22","solid storage"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_animals",NA,0.3,0.2,0.5,NA,"IPCC-2019-vol.4","Table 10.22","dry lot"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_digesters","other_animals",NA,0.275,0.05,0.5,NA,"IPCC-2019-vol.4","Table 10.22","anaerobic digester – we averaged the confidence interval limits to obtain a value"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","other_animals",NA,0.18,0.04,0.21,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – in-vessel"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","other_animals",NA,0.2,0.05,0.24,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – static pile (forced aeration)"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","other_animals",NA,0.2,0.05,0.24,NA,"IPCC-2019-vol.4","Table 10.22","composting – intensive windrow"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","other_animals",NA,0.18,0.04,0.21,NA,"IPCC-2019-vol.4","Table 10.22","composting – passive windrow"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_other","other_animals",NA,0.27,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – forced aeration system"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_anaerobic_lagoon","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","uncovered anaerobic lagoon"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – with natural crust cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – without natural crust cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","pit storage below animal confinement"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_daily_spread","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Daily spread"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – covered / compacted"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_animals",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – bulking agent addition"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_animals",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – additives"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_animals",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_animals",NA,0.035,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","dry lot"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_digesters","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","anaerobic digester – we averaged the confidence interval limits to obtain a value"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – in-vessel"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","other_animals",NA,0.06,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – static pile (forced aeration)"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","other_animals",NA,0.06,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","composting – intensive windrow"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","other_animals",NA,0.04,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","composting – passive windrow"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_other","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – natural aeration system"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_other","other_animals",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – forced aeration system"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_anaerobic_lagoon","other_cattle",NA,0.35,0.2,0.8,NA,"IPCC-2019-vol.4","Table 10.22","uncovered anaerobic lagoon"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","other_cattle",NA,0.3,0.09,0.36,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – with natural crust cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","other_cattle",NA,0.48,0.15,0.6,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – without natural crust cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","other_cattle",NA,0.1,0.03,0.12,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_cattle",NA,0.25,0.15,0.3,NA,"IPCC-2019-vol.4","Table 10.22","pit storage below animal confinement"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_daily_spread","other_cattle",NA,0.07,0.05,0.6,NA,"IPCC-2019-vol.4","Table 10.22","Daily spread"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_cattle",NA,0.22,0.03,0.26,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – covered / compacted"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_cattle",NA,0.58,0.08,0.7,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – bulking agent addition"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_cattle",NA,0.17,0.02,0.21,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – additives"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_cattle",NA,0.45,0.1,0.65,NA,"IPCC-2019-vol.4","Table 10.22","solid storage"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_cattle",NA,0.3,0.2,0.5,NA,"IPCC-2019-vol.4","Table 10.22","dry lot"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_digesters","other_cattle",NA,0.275,0.05,0.5,NA,"IPCC-2019-vol.4","Table 10.22","anaerobic digester – we averaged the confidence interval limits to obtain a value"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","other_cattle",NA,0.25,0.1,0.3,NA,"IPCC-2019-vol.4","Table 10.22","cattle and swine deep bedding"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","other_cattle",NA,0.6,0.12,0.65,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – in-vessel"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","other_cattle",NA,0.5,0.07,0.6,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – static pile (forced aeration)"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","other_cattle",NA,0.5,0.07,0.6,NA,"IPCC-2019-vol.4","Table 10.22","composting – intensive windrow"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","other_cattle",NA,0.45,0.07,0.54,NA,"IPCC-2019-vol.4","Table 10.22","composting – passive windrow"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_other","other_cattle",NA,0.85,0.27,1,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – forced aeration system"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_anaerobic_lagoon","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","uncovered anaerobic lagoon"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – with natural crust cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – without natural crust cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","pit storage below animal confinement"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_daily_spread","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Daily spread"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – covered / compacted"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_cattle",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – bulking agent addition"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_cattle",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – additives"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_cattle",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_cattle",NA,0.035,0,0.07,NA,"IPCC-2019-vol.4","Table 10.22","dry lot"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_digesters","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","anaerobic digester – we averaged the confidence interval limits to obtain a value"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","other_cattle",NA,0.035,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","cattle and swine deep bedding"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – in-vessel"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","other_cattle",NA,0.06,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – static pile (forced aeration)"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","other_cattle",NA,0.06,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","composting – intensive windrow"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","other_cattle",NA,0.04,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","composting – passive windrow"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_other","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – natural aeration system"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_other","other_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – forced aeration system"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_anaerobic_lagoon","poultry",NA,0.4,0.25,0.75,NA,"IPCC-2019-vol.4","Table 10.22","uncovered anaerobic lagoon"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","poultry",NA,0.4,0.25,0.75,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – without natural crust cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","poultry",NA,0.08,0.05,0.15,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","poultry",NA,0.28,0.1,0.4,NA,"IPCC-2019-vol.4","Table 10.22","pit storage below animal confinement"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_daily_spread","poultry",NA,0.07,0.05,0.6,NA,"IPCC-2019-vol.4","Table 10.22","Daily spread"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","poultry",NA,0.2,0.04,0.24,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – covered / compacted"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","poultry",NA,0.54,0.1,0.65,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – bulking agent addition"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","poultry",NA,0.16,0.03,0.2,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – additives"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","poultry",NA,0.4,0.12,0.6,NA,"IPCC-2019-vol.4","Table 10.22","solid storage"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_digesters","poultry",NA,0.275,0.05,0.5,NA,"IPCC-2019-vol.4","Table 10.22","anaerobic digester – we averaged the confidence interval limits to obtain a value"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","poultry",NA,0.6,0.12,0.65,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – in-vessel"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","poultry",NA,0.65,0.14,0.7,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – static pile (forced aeration)"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","poultry",NA,0.65,0.14,0.7,NA,"IPCC-2019-vol.4","Table 10.22","composting – intensive windrow"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","poultry",NA,0.6,0.12,0.65,NA,"IPCC-2019-vol.4","Table 10.22","composting – passive windrow"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","poultry",NA,0.4,0.1,0.6,NA,"IPCC-2019-vol.4","Table 10.22","poultry manure with litter"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","poultry",NA,0.48,0.15,0.6,NA,"IPCC-2019-vol.4","Table 10.22","poultry manure without litter"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_anaerobic_lagoon","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","uncovered anaerobic lagoon"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – with natural crust cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – without natural crust cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","pit storage below animal confinement"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_daily_spread","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Daily spread"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – covered / compacted"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","poultry",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – bulking agent addition"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","poultry",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – additives"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","poultry",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_digesters","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","anaerobic digester – we averaged the confidence interval limits to obtain a value"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – in-vessel"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","poultry",NA,0.06,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – static pile (forced aeration)"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","poultry",NA,0.06,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","composting – intensive windrow"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","poultry",NA,0.04,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","composting – passive windrow"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","poultry manure with litter"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","poultry manure without litter"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_other","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – natural aeration system"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_other","poultry",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – forced aeration system"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_anaerobic_lagoon","dairy_cattle",NA,0.35,0.2,0.8,NA,"IPCC-2019-vol.4","Table 10.22","uncovered anaerobic lagoon"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","dairy_cattle",NA,0.3,0.09,0.36,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – with natural crust cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","dairy_cattle",NA,0.48,0.15,0.6,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – without natural crust cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","dairy_cattle",NA,0.1,0.03,0.12,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.28,0.1,0.4,NA,"IPCC-2019-vol.4","Table 10.22","pit storage below animal confinement"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_daily_spread","dairy_cattle",NA,0.07,0.05,0.6,NA,"IPCC-2019-vol.4","Table 10.22","Daily spread"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.14,0.02,0.17,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – covered / compacted"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.38,0.06,0.46,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – bulking agent addition"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.11,0.01,0.14,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – additives"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.3,0.1,0.4,NA,"IPCC-2019-vol.4","Table 10.22","solid storage"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.3,0.2,0.5,NA,"IPCC-2019-vol.4","Table 10.22","dry lot"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_digesters","dairy_cattle",NA,0.275,0.05,0.5,NA,"IPCC-2019-vol.4","Table 10.22","anaerobic digester – we averaged the confidence interval limits to obtain a value"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.25,0.1,0.3,NA,"IPCC-2019-vol.4","Table 10.22","cattle and swine deep bedding"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","dairy_cattle",NA,0.45,0.07,0.54,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – in-vessel"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","dairy_cattle",NA,0.5,0.07,0.6,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – static pile (forced aeration)"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","dairy_cattle",NA,0.5,0.07,0.6,NA,"IPCC-2019-vol.4","Table 10.22","composting – intensive windrow"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","dairy_cattle",NA,0.45,0.07,0.54,NA,"IPCC-2019-vol.4","Table 10.22","composting – passive windrow"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_other","dairy_cattle",NA,0.85,0.27,1,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – forced aeration system"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_anaerobic_lagoon","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","uncovered anaerobic lagoon"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – with natural crust cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – without natural crust cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","pit storage below animal confinement"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_daily_spread","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Daily spread"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – covered / compacted"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – bulking agent addition"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – additives"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.035,0,0.07,NA,"IPCC-2019-vol.4","Table 10.22","dry lot"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_digesters","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","anaerobic digester – we averaged the confidence interval limits to obtain a value"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","dairy_cattle",NA,0.035,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","cattle and swine deep bedding"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – in-vessel"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","dairy_cattle",NA,0.06,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – static pile (forced aeration)"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","dairy_cattle",NA,0.06,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","composting – intensive windrow"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","dairy_cattle",NA,0.04,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","composting – passive windrow"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_other","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – natural aeration system"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_other","dairy_cattle",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – forced aeration system"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_anaerobic_lagoon","swine",NA,0.4,0.25,0.75,NA,"IPCC-2019-vol.4","Table 10.22","uncovered anaerobic lagoon"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","swine",NA,0.3,0.09,0.36,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – with natural crust cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","swine",NA,0.48,0.15,0.6,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – without natural crust cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_liquid_system","swine",NA,0.1,0.03,0.12,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – cover"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","swine",NA,0.25,0.15,0.3,NA,"IPCC-2019-vol.4","Table 10.22","pit storage below animal confinement"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_daily_spread","swine",NA,0.07,0.05,0.6,NA,"IPCC-2019-vol.4","Table 10.22","Daily spread"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","swine",NA,0.22,0.04,0.26,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – covered / compacted"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","swine",NA,0.58,0.11,0.7,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – bulking agent addition"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","swine",NA,0.17,0.03,0.21,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – additives"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","swine",NA,0.45,0.1,0.65,NA,"IPCC-2019-vol.4","Table 10.22","solid storage"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","swine",NA,0.45,0.1,0.65,NA,"IPCC-2019-vol.4","Table 10.22","dry lot"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_digesters","swine",NA,0.275,0.05,0.5,NA,"IPCC-2019-vol.4","Table 10.22","anaerobic digester – we averaged the confidence interval limits to obtain a value"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_solid_storage_and_dry_lot","swine",NA,0.4,0.1,0.6,NA,"IPCC-2019-vol.4","Table 10.22","cattle and swine deep bedding"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","swine",NA,0.6,0.12,0.65,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – in-vessel"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","swine",NA,0.65,0.14,0.7,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – static pile (forced aeration)"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","swine",NA,0.65,0.14,0.7,NA,"IPCC-2019-vol.4","Table 10.22","composting – intensive windrow"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_composting","swine",NA,0.6,0.12,0.65,NA,"IPCC-2019-vol.4","Table 10.22","composting – passive windrow"
+"frac_Gas_MS","Fraction of nitrogen loss due to volatilization of NH3 and NOx","mms_other","swine",NA,0.85,0.27,1,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – forced aeration system"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_anaerobic_lagoon","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","uncovered anaerobic lagoon"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – with natural crust cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – without natural crust cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_liquid_system","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Liquid / slurry – cover"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","pit storage below animal confinement"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_daily_spread","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","Daily spread"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – covered / compacted"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","swine",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – bulking agent addition"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","swine",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage – additives"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","swine",NA,0.02,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","solid storage"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","swine",NA,0.035,0,0.07,NA,"IPCC-2019-vol.4","Table 10.22","dry lot"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_digesters","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","anaerobic digester – we averaged the confidence interval limits to obtain a value"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_solid_storage_and_dry_lot","swine",NA,0.035,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","cattle and swine deep bedding"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – in-vessel"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","swine",NA,0.06,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","mms_composting – static pile (forced aeration)"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","swine",NA,0.06,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","composting – intensive windrow"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_composting","swine",NA,0.04,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","composting – passive windrow"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_other","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – natural aeration system"
+"frac_leach_MS","Fraction of nitrogen loss due to leaching","mms_other","swine",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 10.22","aerobic treatment – forced aeration system"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_pasture_range_and_paddock",NA,NA,0,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","see Chapter 11"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_daily_spread",NA,NA,0,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","Daily spread"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_solid_storage_and_dry_lot",NA,NA,0.01,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","solid storage"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_solid_storage_and_dry_lot",NA,NA,0.01,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","solid storage – covered / compacted"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_solid_storage_and_dry_lot",NA,NA,0.005,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","solid storage – bulking agent addition"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_solid_storage_and_dry_lot",NA,NA,0.005,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","solid storage – additives"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_solid_storage_and_dry_lot",NA,NA,0.02,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","dry lot"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_liquid_system",NA,NA,0.005,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","Liquid / slurry – with natural crust cover"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_liquid_system",NA,NA,0,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","Liquid / slurry – without natural crust cover"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_liquid_system",NA,NA,0.005,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","Liquid / slurry – cover"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_anaerobic_lagoon",NA,NA,0,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","uncovered anaerobic lagoon"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_solid_storage_and_dry_lot",NA,NA,0.002,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","pit storage below animal confinement"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_digesters",NA,NA,6e-04,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","anaerobic digester"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_pasture_range_and_paddock",NA,NA,0,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","burned for fuel or as waste – sun dried dung cake burned for fuel – The emissions associated with the burning of the dung are to be reported under the IPCC category 'Fuel Combustion' if the dung is used as fuel and under the IPCC category 'Waste Incineration' if the dung is burned without energy recovery,"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_pasture_range_and_paddock",NA,NA,0,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","burned for fuel or as waste – Urine N deposited on pasture and paddock – see Chapter 11"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_solid_storage_and_dry_lot","cattle;swine",NA,0.01,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","cattle and swine deep bedding – no mixing"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_solid_storage_and_dry_lot","cattle;swine",NA,0.07,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","cattle and swine deep bedding – active mixing"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_composting",NA,NA,0.006,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","mms_composting – in-vessel"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_composting",NA,NA,0.01,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","mms_composting – static pile (forced aeration)"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_composting",NA,NA,0.005,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","composting – intensive windrow (frequent turning)"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_composting",NA,NA,0.005,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","composting – intensive windrow (infrequent turning)"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_solid_storage_and_dry_lot","poultry",NA,0.001,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","poultry manure with litter"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_solid_storage_and_dry_lot","poultry",NA,0.001,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","poultry manure without litter"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_other",NA,NA,0.01,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","aerobic treatment – natural aeration system"
+"EF3","DEFAULT EMISSION FACTORS FOR DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT","mms_other",NA,NA,0.005,NA,NA,"[kg N2O-N (kg nitrogen excreted)-1]","IPCC-2019-vol.4","Table 10.21","aerobic treatment – forced aeration system"
+"EF4","DEFAULT EMISSION FACTORS FOR INDIRECT N2O EMISSIONS from atmospheric deposition of nitrogen on soils and water surfaces",NA,NA,NA,0.01,0.002,0.018,"kg N2O–N (kg NH3–N + NOx–N volatilised)-1","IPCC-2019-vol.4","Table11.3",NA
+"EF5","DEFAULT EMISSION FACTORS FOR INDIRECT N2O EMISSIONS from nitrogen leaching and runoff",NA,NA,NA,0.011,0,0.02,"kg N2O–N (kg N leaching/runoff)-1","IPCC-2019-vol.4","Table11.3",NA
+"N_AG_T","N content of above-ground residues",NA,"Generic value for crops not indicated below",NA,0.008,0.002,0.014,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Generic Grains",NA,0.006,0.0015,0.0105,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Winter Wheat",NA,0.006,0.0015,0.0105,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Spring Wheat",NA,0.006,0.0015,0.0105,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Barley",NA,0.007,0.00175,0.01225,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Oats",NA,0.007,0.00175,0.01225,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Maize",NA,0.006,0.0015,0.0105,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Rye",NA,0.005,0.00125,0.00875,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Rice",NA,0.007,0.00175,0.01225,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Millet",NA,0.007,0.00175,0.01225,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Sorghum",NA,0.007,0.00175,0.01225,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Beans and Pulses",NA,0.008,0.002,0.014,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Soybeans",NA,0.008,0.002,0.014,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Potatoes and Tubers",NA,0.019,0.00475,0.03325,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Peanuts",NA,0.016,0.004,0.028,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Alfalfa",NA,0.027,0.00675,0.04725,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Non-legume hay",NA,0.015,0.00375,0.02625,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"N-fixing forages",NA,0.027,0.00675,0.04725,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Non-N-fixing forages",NA,0.015,0.00375,0.02625,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Perennial Grasses",NA,0.015,0.00375,0.02625,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_AG_T","N content of above-ground residues",NA,"Grass-Clover Mixtures",NA,0.025,0.00625,0.04375,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Generic value for crops not indicated below",NA,0.009,0.00225,0.01575,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Generic Grains",NA,0.009,0.00225,0.01575,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Winter Wheat",NA,0.009,0.00225,0.01575,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Spring Wheat",NA,0.009,0.00225,0.01575,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Barley",NA,0.014,0.0035,0.0245,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Oats",NA,0.008,0.002,0.014,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Maize",NA,0.007,0.00175,0.01225,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Rye",NA,0.011,0.00275,0.01925,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Sorghum",NA,0.006,0.0015,0.0105,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Beans and Pulses",NA,0.008,0.002,0.014,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Soybeans",NA,0.008,0.002,0.014,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Potatoes and Tubers",NA,0.014,0.0035,0.0245,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Alfalfa",NA,0.019,0.00475,0.03325,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Non-legume hay",NA,0.012,0.003,0.021,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"N-fixing forages",NA,0.022,0.0055,0.0385,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Non-N-fixing forages",NA,0.012,0.003,0.021,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Perennial Grasses",NA,0.012,0.003,0.021,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"N_BG_T","N content of below-ground residues",NA,"Grass-Clover Mixtures",NA,0.016,0.004,0.028,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Grains",NA,1.09,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Beans & pulses",NA,1.13,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Tubers",NA,0.1,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Root crops, other",NA,1.07,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"N-fixing forages",NA,0.3,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Non-N-fixing forages",NA,0.3,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Perennial grasses",NA,0.3,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Grass-clover mixtures",NA,0.3,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Maize",NA,1.03,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Wheat",NA,1.51,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Winter wheat",NA,1.61,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Spring wheat",NA,1.29,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Rice",NA,0.95,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Barley",NA,0.98,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Oats",NA,0.91,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Millet",NA,1.43,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Sorghum",NA,0.88,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Rye",NA,1.09,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Soybean",NA,0.93,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Dry bean",NA,0.36,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Potato",NA,0.1,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Peanut (w/pod)",NA,1.07,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Alfalfa",NA,0.29,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Slope_T","Slope to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Non-legume hay",NA,0.18,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Grains",NA,0.88,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Beans & pulses",NA,0.85,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Tubers",NA,1.06,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Root crops, other",NA,1.54,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"N-fixing forages",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Non-N-fixing forages",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Perennial grasses",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Grass-clover mixtures",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Maize",NA,0.61,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Wheat",NA,0.52,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Winter wheat",NA,0.4,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Spring wheat",NA,0.75,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Rice",NA,2.46,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Barley",NA,0.59,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Oats",NA,0.89,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Millet",NA,0.14,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Sorghum",NA,1.33,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Rye",NA,0.88,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Soybean",NA,1.35,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Dry bean",NA,0.68,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Potato",NA,1.06,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Peanut (w/pod)",NA,1.54,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Alfalfa",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"Intercept_T","Intercept to estimate Above-ground residue dry matter AG_DM_T (kg d.m. ha-1):",NA,"Non-legume hay",NA,0,NA,NA,NA,"IPCC-2019-vol.4","Table 11.2",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Generic value for crops not indicated below",NA,0.22,NA,NA,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Generic Grains",NA,0.22,0.1848,0.2552,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Winter Wheat",NA,0.23,0.1357,0.3243,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Spring Wheat",NA,0.28,0.2072,0.3528,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Barley",NA,0.22,0.1474,0.2926,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Oats",NA,0.25,-0.05,0.55,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Maize",NA,0.22,0.1628,0.2772,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Rice",NA,0.16,0.104,0.216,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Beans and Pulses",NA,0.19,0.1045,0.2755,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Soybeans",NA,0.19,0.1045,0.2755,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Potatoes and Tubers",NA,0.2,0.1,0.3,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Alfalfa",NA,0.4,0.2,0.6,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Non-legume hay",NA,0.54,0.27,0.81,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"N-fixing forages",NA,0.4,0.2,0.6,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Non-N-fixing forages",NA,0.54,0.27,0.81,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Perennial Grasses",NA,0.8,0.4,1.2,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"RS_T","Ratio of below-ground biomass to above-ground biomass",NA,"Grass-clover mixtures",NA,0.8,0.4,1.2,NA,"IPCC-2019-vol.4","Table 11.1",NA
+"Frac_renew_T","fraction of total area under crop T that is renewed annually",NA,"arable",NA,1,NA,NA,NA,"IPCC-2019-vol.4","Notes for EQUATION 11.6","For annual crops Frac_Renew = 1"
+"Frac_renew_T","fraction of total area under crop T that is renewed annually",NA,"grassland",NA,0.166666666666667,NA,NA,NA,"IPCC-2019-vol.4","Notes for EQUATION 11.6","For countries where pastures are renewed on average every X years, Frac_Renew = 1/X."

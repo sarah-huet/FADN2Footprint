@@ -207,7 +207,7 @@ f_GHGE_feed <- function(object,
   ## (e.g., if a farmer sells his maize as livestock feed, he will sell it for less than he would have for human consumption
   ## and will therefore likely have used as many inputs as a farmer who produces his own maize for his livestock)
 
-  tmp_target_vars = c("yield",grep("kgCO2e", names(feed_produced_impact), value = TRUE))
+  tmp_target_vars = c(grep("kgCO2e", names(feed_produced_impact), value = TRUE))
 
   tmp_avrg_crop_impact0 <- onfarm_crops_ghge  |>
     # add farm characteristics
@@ -215,11 +215,6 @@ f_GHGE_feed <- function(object,
                        dplyr::select(dplyr::all_of(id_cols),
                                      ORGANIC, SYS02),
                      by = id_cols)  |>
-    # add yields
-    dplyr::left_join(object@crop |>
-                       dplyr::select(dplyr::all_of(id_cols),
-                                     FADN_code_letter, yield),
-                     by = c(id_cols, 'FADN_code_letter')) |>
     # add all Sailley feed names
     dplyr::rename(FADN_code_feed = FADN_code_letter) |>
     dplyr::left_join(
@@ -255,7 +250,7 @@ f_GHGE_feed <- function(object,
                   FADN_code_letter, FADN_code_feed, Sailley_feed,
                   feed_type, feed_origin,
                   dplyr::matches("Qobs"),
-                  DM_t_livcat) |>
+                  DM_t_livcat, yield) |>
     # add average impact
     dplyr::left_join(tmp_avrg_crop_impact,
                      by = c('Sailley_feed', 'YEAR', 'COUNTRY', 'ORGANIC')) |>

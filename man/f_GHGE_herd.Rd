@@ -33,22 +33,20 @@ implementation.}
 A tibble with one row per farm × livestock category combination
 (identified by \code{object@traceability$id_cols} and \code{FADN_code_letter}) and
 columns including:
-\itemize{
-\item{species}{Livestock species label.}
-\item{Qobs}{Observed animal count.}
-\item{feed_farm_\emph{}{On-farm feed dry matter, area, and emission
-components (kg CO2e per livestock category).}
-\item{feed_pseudofarm_}}{Pseudo-farm (on-farm + purchased) feed dry
-matter, area, and emission components.}
-\item{CH4_enteric_kgCO2e_livcat}{Enteric fermentation CH4 emissions.}
-\item{CH4_MM_kgCO2e_livcat}{Manure management CH4 emissions.}
-\item{N2O_D_MM_kgCO2e_livcat}{Direct manure management N2O.}
-\item{N2O_G_mm_kgCO2e_livcat}{Indirect N2O from grazing.}
-\item{N2O_L_mm_kgCO2e_livcat}{Indirect N2O from leaching/runoff.}
-\item{farm_ghge_herd_kgCO2e_livcat}{Total scope 1 & 2 herd GHGE.}
-\item{pseudofarm_ghge_herd_kgCO2e_livcat}{Total scope 1, 2 & 3 GHGE.}
-\item{farm_ghge_herd_kgCO2e_per_anim}{Scope 1 & 2 GHGE per animal.}
-\item{pseudofarm_ghge_herd_kgCO2e_per_anim}{Scope 3 GHGE per animal.}
+\describe{
+\item{\code{species}}{Livestock species label.}
+\item{\code{Qobs}}{Observed animal count.}
+\item{\verb{feed_farm_*}}{On-farm feed dry matter, area, and emission components (kg CO2e per livestock category).}
+\item{\verb{feed_pseudofarm_*}}{Pseudo-farm (on-farm + purchased) feed dry matter, area, and emission components.}
+\item{\code{CH4_enteric_kgCO2e_livcat}}{Enteric fermentation CH4 emissions.}
+\item{\code{CH4_MM_kgCO2e_livcat}}{Manure management CH4 emissions.}
+\item{\code{N2O_D_MM_kgCO2e_livcat}}{Direct manure management N2O.}
+\item{\code{N2O_G_mm_kgCO2e_livcat}}{Indirect N2O from grazing.}
+\item{\code{N2O_L_mm_kgCO2e_livcat}}{Indirect N2O from leaching/runoff.}
+\item{\code{farm_ghge_herd_kgCO2e_livcat}}{Total scope 1 & 2 herd GHGE.}
+\item{\code{pseudofarm_ghge_herd_kgCO2e_livcat}}{Total scope 1, 2 & 3 GHGE.}
+\item{\code{farm_ghge_herd_kgCO2e_per_anim}}{Scope 1 & 2 GHGE per animal.}
+\item{\code{pseudofarm_ghge_herd_kgCO2e_per_anim}}{Scope 3 GHGE per animal.}
 }
 }
 \description{

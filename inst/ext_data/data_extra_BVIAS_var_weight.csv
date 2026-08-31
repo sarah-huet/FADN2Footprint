@@ -1,0 +1,13 @@
+"land_use_type","metric_code","weight"
+"arable","N_ferti",0.35
+"grassland","N_ferti",0.5625
+"arable","crop_diversity",0.2784375
+"arable","ground_cover",0.05
+"arable","hedge_density",0.3859375
+"grassland","hedge_density",0.342561340332031
+"grassland","livestock_density",0.05
+"arable","mean_field_size",0.12109375
+"arable","pesticides",0.35
+"arable","share_Nmin_ferti",0.178515625
+"grassland","share_Nmin_ferti",0.243511962890625
+"arable","tillage",0.05

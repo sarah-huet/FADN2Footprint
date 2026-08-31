@@ -765,9 +765,11 @@
     # Mean of Average Number, Computed ALU, Opening, and Closing Numbers
     dplyr::mutate(
       Qobs = rowMeans(
-        cbind(AN,temp_alu_calc, ON, CN),
+        #cbind(AN,temp_alu_calc, ON, CN),
+        cbind(AN,temp_alu_calc),
         na.rm = TRUE
-      )) |>
+      )
+      ) |>
     dplyr::select(-temp_alu_calc) |>
     # Filter out empty records (Qobs > 0)
     dplyr::filter(Qobs > 0)

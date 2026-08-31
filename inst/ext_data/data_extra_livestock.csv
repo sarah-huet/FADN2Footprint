@@ -1,0 +1,40 @@
+"FADN_code_letter","FADN_code_number","FADN_code_description","RICA_code_number","LIBELLE","livestock_unit_coef","species","IPCC_main_cat","IPCC_sub_cat","IPCC_mix_cat","Sailley_livestock","AROPAJ","Notes","UNFCCC_cat","rearing_stage","live_weight_kg","farm_workshop"
+"LANIMOTH","900","Other animals (chicks, deer, bison, fish and animals used for farm tourism)",NA,NA,NA,"others",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"LANIMOTH868","OTH","Other animals",NA,NA,NA,"others",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"LBEERABB","OTH","Rabbits, breeding females and other rabbits",NA,NA,NA,"others",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"LBEES","700","Bees",NA,NA,NA,"others",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"LBOV","BOV","Cattle",NA,NA,NA,"cattle",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"LBOV0_X",NA,"Other cattle",NA,NA,NA,"cattle",NA,NA,NA,"Bovins_à_viande",NA,NA,NA,NA,NA,"meat"
+"LBOV1","210","Bovine animals, < 1 y.o., male and female","921;922;931;933","Veaux de batterie;Autres veaux de boucherie;Veaux de 8 jours à remettre;Autres bovins de moins de 1 an",0.4,"cattle","growing_cattle","calves_preweaning;growing_cattle_postweaning","calves_preweaning;growing_cattle_postweaning","Bovins_laitiers_et_mixtes","calves_reported_on-farm_young_bulls;calves_reported_on-farm_more_2-yr_bulls;8-days_slaughtered_calves",NA,"growing_cattle","juveniles",397,"meat"
+"LBOV1_2F","230","Bovine animals, >= 1 < 2 y.o., female","925","Génisses de 1 à 2 ans",0.7,"cattle","growing_cattle","cows_multip_prod;cows_to_offspring_for_meat;replace_dairy_heifers","growing_cattle","Bovins_laitiers_et_mixtes","1-yr_female_on-farm_dairy_herd;1-yr_female_on-farm_breeding_herd",NA,"growing_cattle","fattening;breeders",397,"meat"
+"LBOV1_2M","220","Bovine animals, >= 1 < 2 y.o., male","934;935","Bovins mâles de 1 à 2 ans maigres;Bovins mâles de 1 à 2 ans gras",0.7,"cattle","growing_cattle","growing_cattle_postweaning","growing_cattle_postweaning","Bovins_à_viande","calves_reported_on-farm_young_bulls",NA,"growing_cattle","fattening",397,"meat"
+"LBOV2","240","Male bovine animals, >= 2 y.o.","936;937","Taureaux reproducteurs de 2 ans et plus;Autres bovins mâles de 2 ans et plus",0.8,"cattle","other_mature_cattle","bulls_breed","bulls_breed","Bovins_à_viande","calves_reported_on-farm_more_2-yr_bulls;2-yr_males_on-farm_>_beef",NA,"other_mature_cattle","fattening",397,"meat"
+"LBOVFAT_X",NA,"Calves usually slaughtered for veal before five months.",NA,NA,NA,"cattle",NA,NA,NA,"Bovins_à_viande",NA,NA,NA,NA,NA,"meat"
+"LBUFDAIRPRS","262","Buffalo cows",NA,NA,NA,"cattle",NA,NA,NA,"Bovins_laitiers_et_mixtes",NA,NA,NA,NA,NA,"meat;milk"
+"LCALVS_X",NA,"Calves fattening",NA,NA,NA,"cattle",NA,NA,NA,"Bovins_laitiers_et_mixtes",NA,NA,NA,NA,NA,"meat"
+"LCOWBUFDAIR_X",NA,"Dairy cows",NA,NA,NA,"cattle",NA,NA,NA,"Bovins_laitiers_et_mixtes",NA,NA,NA,NA,NA,"meat;milk"
+"LCOWCUL_X",NA,"Cull dairy cows",NA,NA,NA,"cattle",NA,NA,NA,"Bovins_laitiers_et_mixtes",NA,NA,NA,NA,NA,"milk"
+"LCOWDAIR","261","Dairy cows","929","Vaches laitières",1,"cattle","mature_dairy_cattle","cows_milk_prod","cows_milk_prod","Bovins_laitiers_et_mixtes","dairy_cows",NA,"dairy_cattle","breeders",575,"meat;milk"
+"LCOWOTH","269","Other cows","930","Vaches allaitantes",0.8,"cattle","other_mature_cattle","cows_multip_prod;cows_to_offspring_for_meat","other_mature_cattle","Bovins_à_viande","suckler_cows",NA,"other_mature_cattle","breeders",397,"meat"
+"LEQD","100","Equidae","912;913","Chevaux;Ânes mulets bardots",0.8,"horse",NA,NA,NA,"Equins","horse",NA,"horse","fattening",NA,NA
+"LEWEBRE","311","Breeding ewes","941;942","Brebis laitières;Brebis allaitantes",0.1,"sheep","sheep",NA,NA,"Ovins_laitiers","sheep",NA,"breeding_sheep","breeders",40,"meat;milk"
+"LGOATBRE","321","Breeding Goats","951","Chèvres",0.1,"goats","goats",NA,NA,"Caprins","goats",NA,"goats","breeders",38,"milk"
+"LGOATBREED","CAP","Goats",NA,NA,NA,"goats",NA,NA,NA,"Caprins","goats",NA,"goats","breeders",38,"milk"
+"LGOATOTH","329","Other goats","952;953","Autres caprins;Chevrettes",0.1,"goats","goats",NA,NA,"Caprins","goats",NA,"goats","fattening",38,NA
+"LGRPANIM","GRP","Total livestock",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"LHEIFBRE","251","Breeding heifers","927","Génisses d’élevage de 2 ans et plus",0.8,"cattle","growing_cattle","cows_multip_prod;cows_to_offspring_for_meat;replace_dairy_heifers","growing_cattle","Bovins_laitiers_et_mixtes","bred_heifers",NA,"growing_cattle","breeders",397,"meat;milk"
+"LHEIFFAT","252","Heifers for fattening","928","Génisses de boucherie de 2 ans et plus",0.8,"cattle","growing_cattle","growing_cattle_postweaning","growing_cattle_postweaning","Bovins_à_viande","bred_heifers",NA,"growing_cattle","fattening",397,"meat"
+"LHENSLAY","520","Laying hens","972;973","Poules pondeuses;Poulettes démarrées",0.014,"poultry","poultry",NA,NA,"Volaille_de_ponte","poultry",NA,"poultry","breeders",1.65,"eggs"
+"LPIG","PIG","Pigs",NA,NA,NA,"swine",NA,NA,NA,"Porcs",NA,NA,NA,NA,NA,"meat"
+"LPIGFAT","491","Pigs for fattening","963","Porcs à l'engrais",0.3,"swine","growing_swine","growing_finishing","growing_swine","Porcs","pigs",NA,"fattening_swine","fattening",60,"meat"
+"LPIGLET","410","Piglets, live weight < 20 kg","961","Porcelets",0.027,"swine","growing_swine","nursery","piglets","Porcs","pigs",NA,"piglets","juveniles",20,"meat"
+"LPIGOTH","499","Other pigs","964;965","Autres porcs;Cochettes",0.3,"swine","mature_swine;growing_swine","boars_used_for_breeding;gilts_for_breeding","growing_swine","Porcs","pigs",NA,"fattening_swine","fattening",60,"meat"
+"LPLTR","PLTR","Poultry",NA,NA,NA,"poultry",NA,NA,NA,"Volailles_de_chair",NA,NA,NA,NA,NA,NA
+"LPLTRBROYL","510","Poultry - broilers","971","Poulets de chair",0.007,"poultry","poultry",NA,NA,"Volailles_de_chair","poultry",NA,"poultry","fattening",1.15,"meat"
+"LPLTROTH","530","Other poultry","976;977;981;982;985;986;987;988;989","Dindes;Pintades;Autres volailles;Autres volailles démarrées;Oies à rôtir;Oies grasses;Canards à rôtir;Canards prêts à gaver (PAG);Canards gras",0.03,"poultry","poultry",NA,NA,"Volailles_de_chair","poultry",NA,"poultry","fattening",NA,"meat"
+"LRABBRE","610","Breeding rabbits","991","Lapines mères",0.02,"others",NA,NA,NA,"Lapins","poultry",NA,NA,"breeders",NA,"meat"
+"LRABOTH","699","Other rabbits","992","Autres lapins",0.02,"others",NA,NA,NA,"Lapins","poultry",NA,NA,"fattening",NA,"meat"
+"LSHEEPEWE","OVI","Sheep",NA,NA,NA,"sheep",NA,NA,NA,"Ovins_laitiers",NA,NA,"breeding_sheep",NA,NA,"meat;milk"
+"LSHEPOTH","319","Other sheep","944;945;949","Agnelles;Béliers reproducteurs;Autres ovins",0.1,"sheep","sheep",NA,NA,"Ovins_à_viande","sheep",NA,"fattening_sheep","fattening",40,"meat"
+"LSOWBRE","420","Breeding sows >= 50 kg","962","Truies mères",0.5,"swine","mature_swine","sows_in_gestation;sows_after_farrowed_nursing_young","breeding_sows","Porcs","pigs",NA,"breeding_swine","breeders",197,"meat"
+"LTOTANIM",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA

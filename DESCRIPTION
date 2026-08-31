@@ -92,6 +92,7 @@ Collate:
     'herd_n_excretion.R'
     'herd_rearing_param_cattle.R'
     'herd_rearing_param_poultry.R'
+    'herd_rearing_param_sheep.R'
     'herd_rearing_param_swine.R'
     'infer_practices.R'
     'output_econ_alloc.R'

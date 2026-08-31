@@ -24,17 +24,9 @@ f_feed_value <- function(object){
 
   # EUROSTAT feed stuff prices ------------------------------------------------------
 
-  EUROSTAT_ref_value <- data_extra$crops |>
-    dplyr::select(FADN_code_letter,EUROSTAT_feedstuff) |>
+  EUROSTAT_ref_value <- data_extra$Sailley_2021_feed_flows |>
+    dplyr::select(Sailley_feed, feed_type, EUROSTAT_feedstuff) |>
     tidyr::separate_longer_delim(EUROSTAT_feedstuff,";") |>
-    dplyr::rename(FADN_code_feed = FADN_code_letter) |>
-    dplyr::left_join(
-      data_extra$Sailley_2021_feed_flows |>
-        dplyr::select(Sailley_feed,EUROSTAT_feedstuff) |>
-        tidyr::separate_longer_delim(EUROSTAT_feedstuff,";"),
-      by = c('EUROSTAT_feedstuff'),
-      relationship = "many-to-many"
-    ) |>
     # add feed value
     dplyr::left_join(EUROSTAT_input_price,
                      by = c('EUROSTAT_feedstuff'),
@@ -62,16 +54,28 @@ f_feed_value <- function(object){
         EUROSTAT_ref_value |>
           dplyr::select(!Country_ISO_3166_1_A3 ) |>
           dplyr::summarise(euros_t = mean(euros_t,na.rm = T),
-                    .by = c(YEAR,FADN_code_feed,Sailley_feed,EUROSTAT_feedstuff))
+                           .by = c(YEAR, Sailley_feed, EUROSTAT_feedstuff))
       )))
-    )
+    )# |>
+    #dplyr::summarise(euros_t = mean(euros_t, na.rm = T),
+                     #.by = c(YEAR, Country_ISO_3166_1_A3, feed_type))
 
   # Missing feed stuff
   # compute average price per crop & year across countries to handle missing crop-country reference prices by falling back to a cross-country average for that crop.
   feed_price_year <- EUROSTAT_ref_value |>
-    dplyr::summarise(euros_t = mean(euros_t,na.rm = T),
-              .by = c(YEAR,FADN_code_feed,Sailley_feed,EUROSTAT_feedstuff))
+    dplyr::summarise(euros_t = mean(euros_t, na.rm = T),
+                     .by = c(YEAR, Sailley_feed, EUROSTAT_feedstuff))
+                     #.by = c(YEAR, feed_type))
 
+  # change cake price ----
+  #feed_price_country_year <- feed_price_country_year |>
+  #  #dplyr::mutate(euros_t = ifelse(Sailley_feed == "Tourteaux", euros_t*0.01, euros_t))
+  #  dplyr::mutate(euros_t = euros_t*0.5)
+  ##
+  ##
+  #feed_price_year <- feed_price_year |>
+  #  #dplyr::mutate(euros_t = ifelse(Sailley_feed == "Tourteaux", euros_t*0.1, euros_t))
+  #  dplyr::mutate(euros_t = euros_t*0.5)
 
 
   return(list(

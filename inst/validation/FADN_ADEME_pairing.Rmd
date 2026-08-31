@@ -1,0 +1,277 @@
+---
+title: "Pairing FADN with ADEME"
+author: "Sarah HUET"
+date: "2026-07-06"
+output: html_document
+---
+
+This script aim at pairing FADN farms to those in the ADEME data base, withou using the SIRET as we don't have it locally.
+
+
+# Setup
+
+```{r setup}
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(gt)
+library(ggplot2)
+
+library(purrr)
+
+# For distance-based matching
+library(cluster)      # daisy() for Gower distance (mixed scales)
+# library(clue)       # solve_LSAP() for optimal 1:1 assignment (optional)
+
+
+devtools::load_all()
+#library(FADN2Footprint)
+
+```
+
+#TODO: check cattle_meat VS meat
+
+# Load data
+
+```{r load_data, echo=FALSE, message=TRUE, warning=FALSE}
+
+## Load raw data and run model
+#source("validation_FADN_data.R")
+#source("validation_FADN_data_offline.R")
+## 
+#load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
+load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+
+cat("FADN dataset loaded:", nrow(my_object_GHGE@farm), "farm-year observations\n")
+cat("Countries covered:", paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "), "\n")
+cat("Years covered:", paste(sort(unique(my_object_GHGE@farm$YEAR)), collapse = ", "), "\n")
+
+```
+
+```{r ADEME_data}
+
+library(readr)
+Df_Specific_ademe <- read_csv("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint_validation/data/raw/Df_Specific_ademe.csv")
+
+
+
+```
+
+# Harmonize the ADEME database
+The ADEME crops are very granular; we aggregate them into the broad land-use categories that FADN can reproduce, and we build a NUTS2 code from the French département.
+
+
+```{r harmonize_data}
+
+
+# --- 2.1 Map French département -> NUTS2 -------------------------------------
+
+# NUTS2 and NUTS3 codes
+library(readxl)
+fr_nuts3 <- read_excel("C:/Users/srhuet/OneDrive/Research/Data/EUROSTAT/NUTS2024-NUTS2027.xlsx", 
+                       sheet = "France")
+
+ademe <- Df_Specific_ademe |>
+     dplyr::mutate(dep_code = substr(exploitation_code_postal, start = 1, stop = 2),
+          YEAR = as.character(year)
+     ) |>
+     dplyr::left_join(fr_nuts3, by = "dep_code")
+
+# --- 2.2 Map type of farming -------------------------------------------------
+
+
+
+# --- 2.2 Aggregate crop areas into FADN-comparable land-use groups -----------
+ademe <- ademe %>%
+     mutate(
+          area_cereals = rowSums(across(c(assolement_ble_tendre, assolement_ble_dur,
+                                          assolement_mais_grain, assolement_orge,
+                                          assolement_autres_cereales)), na.rm = TRUE),
+          area_oilseed = rowSums(across(c(assolement_colza_et_navette, assolement_tournesol,
+                                          assolement_soja, assolement_autres_oleagineux)), na.rm = TRUE),
+          area_protein = rowSums(across(c(assolement_pois_proteagineux,
+                                          assolement_autres_proteagineux,
+                                          assolement_legumes_secs_ou_a_grains)), na.rm = TRUE),
+          area_forage  = rowSums(across(c(assolement_luzerne, assolement_mais_fourrage_et_ensilage,
+                                          assolement_autres_fourrage_annuels,
+                                          assolement_prairies_temporaires_legumineuses,
+                                          assolement_prairies_temporaires_graminees,
+                                          assolement_prairies_temporaires_melange_graminees_et_legumineuse)),
+                                 na.rm = TRUE),
+          area_permgrass = assolement_prairies_permanentes,
+          area_permcrop  = rowSums(across(c(assolement_vignes, assolement_vergers,
+                                            assolement_autres_cultures_permanentes)), na.rm = TRUE),
+          area_veg       = rowSums(across(c(assolement_legumes_fleurs_fruit_hors_arboriculture_plein_air,
+                                            assolement_legumes_fleurs_fruit_hors_arboriculture_sous_serres)),
+                                   na.rm = TRUE),
+          SAU = assolement_sau_totale,
+          
+          # Animal numbers (heads)
+          n_dairy_cattle = cheptel_bovins_lait,
+          n_beef_cattle  = cheptel_bovins_viande,
+          n_sheep        = rowSums(across(c(cheptel_ovins_lait, cheptel_ovins_viande)), na.rm = TRUE),
+          n_goats        = cheptel_caprins,
+          n_pigs         = rowSums(across(c(cheptel_porcs_engraissement, cheptel_truies,
+                                            cheptel_porcelets)), na.rm = TRUE),
+          n_poultry      = rowSums(across(c(cheptel_poules_pondeuses, cheptel_volailles_de_chair,
+                                            cheptel_palmipedes_gras)), na.rm = TRUE),
+          
+          # Type of farming: OTEX. Reduce to a coarse grouping comparable to FADN TF8/TF14.
+          TF = otex_to_tf(exploitation_otex)   # <- define your own recode function
+     ) %>%
+     mutate(ademe_row = row_number())        # keep a stable id
+
+```
+
+
+Note: otex_to_tf() is a helper you must define mapping the ADEME OTEX code to the same
+classification you use on the FADN side (TF8 or TF14). Matching quality depends heavily on
+this being consistent between the two sources.
+
+
+3. Harmonize the FADN side (your package output)
+FADN crops/herds are in long format (one row per crop/species). We pivot them to the same wide, aggregated schema.
+# --- 3.1 Farm-level table ----------------------------------------------------
+fadn_farm <- my_object_GHGE@farm %>%
+transmute(
+ID, year = as.integer(YEAR), NUTS2,
+TF = as.character(TF8),          # use same classification as ademe TF
+SAU = SE025                      # total UAA (ha) -- adjust to the right variable
+)
+
+# --- 3.2 Aggregate crop areas into the same land-use groups ------------------
+# 'land_use_type' / 'species' from the crop table drives the grouping.
+fadn_crop_wide <- my_object_GHGE@crop %>%
+mutate(group = recode_land_use(land_use_type, species)) %>%   # your helper
+group_by(ID, YEAR) %>%
+summarise(
+area_cereals   = sum(area_ha[group == "cereals"],   na.rm = TRUE),
+area_oilseed   = sum(area_ha[group == "oilseed"],   na.rm = TRUE),
+area_protein   = sum(area_ha[group == "protein"],   na.rm = TRUE),
+area_forage    = sum(area_ha[group == "forage"],    na.rm = TRUE),
+area_permgrass = sum(area_ha[group == "permgrass"], na.rm = TRUE),
+area_permcrop  = sum(area_ha[group == "permcrop"],  na.rm = TRUE),
+area_veg       = sum(area_ha[group == "veg"],       na.rm = TRUE),
+.groups = "drop"
+) %>%
+rename(year = YEAR)
+
+# --- 3.3 Aggregate herd numbers into the same species groups -----------------
+fadn_herd_wide <- my_object_GHGE@herd %>%
+mutate(group = recode_species(species)) %>%                   # your helper
+group_by(ID, YEAR) %>%
+summarise(
+n_dairy_cattle = sum(AN[group == "dairy_cattle"], na.rm = TRUE),
+n_beef_cattle  = sum(AN[group == "beef_cattle"],  na.rm = TRUE),
+n_sheep        = sum(AN[group == "sheep"],        na.rm = TRUE),
+n_goats        = sum(AN[group == "goats"],        na.rm = TRUE),
+n_pigs         = sum(AN[group == "pigs"],         na.rm = TRUE),
+n_poultry      = sum(AN[group == "poultry"],      na.rm = TRUE),
+.groups = "drop"
+) %>%
+rename(year = YEAR)
+
+# --- 3.4 Combine into one wide FADN profile ---------------------------------
+fadn <- fadn_farm %>%
+left_join(fadn_crop_wide, by = c("ID", "year")) %>%
+left_join(fadn_herd_wide, by = c("ID", "year")) %>%
+mutate(across(starts_with("area_"), ~replace_na(., 0)),
+across(starts_with("n_"),    ~replace_na(., 0))) %>%
+mutate(fadn_row = row_number())
+
+4. Define the matching variables and a scaling function
+match_vars <- c("area_cereals","area_oilseed","area_protein","area_forage",
+"area_permgrass","area_permcrop","area_veg","SAU",
+"n_dairy_cattle","n_beef_cattle","n_sheep","n_goats",
+"n_pigs","n_poultry")
+
+block_vars <- c("NUTS2", "TF", "year")   # exact-match blocking keys
+
+5. The matching engine (blocking + Gower nearest neighbour)
+#' Match one ADEME record to the nearest FADN record within its block.
+#'
+#' @param ademe_df harmonised ADEME data
+#' @param fadn_df  harmonised FADN data
+#' @param match_vars numeric variables used for the distance
+#' @param block_vars exact-match keys
+#' @param max_dist   maximum acceptable Gower distance (0-1); NA above threshold
+match_ademe_fadn <- function(ademe_df, fadn_df,
+match_vars, block_vars,
+max_dist = 0.15) {
+
+# build a block key
+ademe_df$.block <- do.call(paste, c(ademe_df[block_vars], sep = "|"))
+fadn_df$.block  <- do.call(paste, c(fadn_df[block_vars],  sep = "|"))
+
+common_blocks <- intersect(unique(ademe_df$.block), unique(fadn_df$.block))
+
+# scaling ranges computed globally so distances are comparable across blocks
+ranges <- sapply(match_vars, function(v) {
+diff(range(c(ademe_df[[v]], fadn_df[[v]]), na.rm = TRUE))
+})
+ranges[ranges == 0] <- 1
+
+results <- map_dfr(common_blocks, function(bk) {
+a <- ademe_df[ademe_df$.block == bk, ]
+f <- fadn_df[fadn_df$.block == bk, ]
+
+# matrix of scaled values
+A <- scale(as.matrix(a[match_vars]), center = FALSE, scale = ranges)
+F <- scale(as.matrix(f[match_vars]), center = FALSE, scale = ranges)
+
+# pairwise Manhattan distance / n vars  -> Gower-like distance in [0,1]
+# (fast, no need for daisy on the full set)
+d <- outer(seq_len(nrow(A)), seq_len(nrow(F)), Vectorize(function(i, j) {
+mean(abs(A[i, ] - F[j, ]))
+}))
+
+nn_idx  <- apply(d, 1, which.min)
+nn_dist <- apply(d, 1, min)
+
+tibble(
+ademe_row = a$ademe_row,
+fadn_row  = f$fadn_row[nn_idx],
+fadn_ID   = f$ID[nn_idx],
+block     = bk,
+dist      = nn_dist
+) %>%
+mutate(fadn_row = ifelse(dist <= max_dist, fadn_row, NA),
+fadn_ID  = ifelse(dist <= max_dist, fadn_ID,  NA))
+})
+
+results
+}
+
+matches <- match_ademe_fadn(ademe, fadn, match_vars, block_vars, max_dist = 0.15)
+
+6. Assemble the paired dataset
+paired <- matches %>%
+filter(!is.na(fadn_row)) %>%
+left_join(ademe, by = "ademe_row",
+suffix = c("", "")) %>%
+left_join(fadn %>% rename_with(~paste0("fadn_", .x), -fadn_row),
+by = "fadn_row")
+
+# Quick diagnostic: how many ADEME records were matched?
+cat(sprintf("Matched %d of %d ADEME records (%.1f%%)\n",
+sum(!is.na(matches$fadn_row)), nrow(ademe),
+100 * mean(!is.na(matches$fadn_row))))
+
+# Distribution of matching distances
+summary(matches$dist)
+
+7. Compare the GHG estimates
+comparison <- paired %>%
+transmute(
+fadn_ID, NUTS2, TF, year, dist,
+ademe_ghg = emissions_ges_totales_exploitation,
+# your package GHG total: join it from the relevant slot of my_object_GHGE
+)
+
+# e.g. plot
+library(ggplot2)
+ggplot(comparison, aes(ademe_ghg, my_ghg)) +
+geom_point(aes(colour = dist), alpha = .5) +
+geom_abline(slope = 1, intercept = 0, linetype = 2) +
+labs(x = "ADEME diagnosis (t CO2e)", y = "FADN2Footprint (t CO2e)")

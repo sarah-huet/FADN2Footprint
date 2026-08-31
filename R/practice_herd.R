@@ -45,7 +45,7 @@
 #'
 #' - feed_autonomy: produced feed / total feed (t DM)
 #'
-#' - t_DM_panim_fod_maize: t DM of forage maize per cow
+#' - t_DM_fod_maize: t DM of forage maize per cow
 #'
 #' - share_soybean: share of purchased soybean meal (t / total feed t)
 #'
@@ -86,7 +86,8 @@
 #' @aliases f_herding_practices
 
 f_herding_practices <- function(object,
-                                overwrite = FALSE){
+                                overwrite = FALSE
+                                ){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -95,14 +96,11 @@ f_herding_practices <- function(object,
     return(object@practices$herding$general)  # use cached value
   }
 
-
+  id_cols = object@traceability$id_cols
 
   # Feed ----
 
   herd_feed <- f_herd_feed(object, overwrite = overwrite)
-
-  herd_feed_detail_dairy <- herd_feed$feed_intake$detail |>
-    dplyr::filter(FADN_code_letter == "LCOWDAIR")
 
   # Yield (L of milk / ha pseudofarm)
   # yield_l_pha_ps
@@ -145,7 +143,7 @@ f_herding_practices <- function(object,
   # feed_autonomy
 
   # Forage maize (t of forage maize produced / dairy cow)
-  # t_DM_panim_fod_maize
+  # t_DM_fod_maize
   # Share of purchased soybean meal (t soybean meal / t total feed)
   # share_soybean
   # Share of concentrate (t concentrate / t total feed)
@@ -153,83 +151,105 @@ f_herding_practices <- function(object,
 
 
 
-  # areas to feed dairy cows ----
-
-  tmp_areas <- herd_feed_detail_dairy |>
+  # areas for feed ----
+  tmp_areas <- herd_feed$feed_intake$detail |>
     # sum up areas
     dplyr::summarise(
       area_ha = sum(DM_t_livcat / yield,na.rm = T),
-      .by = c(object@traceability$id_cols,feed_origin)
+      .by = c(dplyr::all_of(id_cols), feed_origin, FADN_code_letter)
+      #.by = c(dplyr::all_of(id_cols), feed_origin, species)
+      #.by = c(dplyr::all_of(id_cols), feed_origin)
     ) |>
-    tidyr::pivot_wider(id_cols = object@traceability$id_cols,
+    tidyr::pivot_wider(id_cols = c(dplyr::all_of(id_cols), FADN_code_letter),
+    #tidyr::pivot_wider(id_cols = c(dplyr::all_of(id_cols), species),
+    #tidyr::pivot_wider(id_cols = c(dplyr::all_of(id_cols)),
                        values_from = area_ha,
                        names_from = feed_origin,
-                       names_prefix = "area_",
-                       values_fill = 0)
+                       names_prefix = "area_")
 
   # Permanent grassland ----
-  tmp_perm_grass <- herd_feed_detail_dairy |>
+  tmp_perm_grass <- herd_feed$feed_intake$detail |>
     # filter permanent grasslands
-    dplyr::filter(FADN_code_feed %in% c("CGRSXRG","CRG")) |>
+    dplyr::filter(FADN_code_feed %in% c("CGRSXRG", "CRG")) |>
     # sum up areas
     dplyr::summarise(
       area_ha_perm_grass =  sum(DM_t_livcat / yield, na.rm = T),
-      .by = object@traceability$id_cols) |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),area_ha_perm_grass)
+      .by = c(dplyr::all_of(id_cols), FADN_code_letter))
+      #.by = c(dplyr::all_of(id_cols), species))
+      #.by = c(dplyr::all_of(id_cols)))
 
   # temporary grassland ----
-  tmp_temp_grass <- herd_feed_detail_dairy |>
+  tmp_temp_grass <- herd_feed$feed_intake$detail |>
     # filter temporary grasslands
     dplyr::filter(FADN_code_feed == "CGRSTMP") |>
     # sum up areas
     dplyr::summarise(
       area_ha_temp_grass =  sum(DM_t_livcat / yield, na.rm = T),
-      .by = object@traceability$id_cols) |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),area_ha_temp_grass)
+      .by = c(dplyr::all_of(id_cols), FADN_code_letter))
+      #.by = c(dplyr::all_of(id_cols), species))
+      #.by = c(dplyr::all_of(id_cols))
 
   # dairy cow population ----
-  tmp_cow_pop <- object@herd |>
+  tmp_dairy_cow_pop <- object@herd |>
     # filter dairy cows
     dplyr::filter(FADN_code_letter == "LCOWDAIR" & Qobs >0) |>
     # sum up livestock units
     dplyr::summarise(
       cow_pop = sum(Qobs*livestock_unit_coef,na.rm = T),
-      .by = object@traceability$id_cols)
+      .by = c(dplyr::all_of(id_cols), FADN_code_letter))
+      #.by = c(dplyr::all_of(id_cols), species))
+      #.by = c(dplyr::all_of(id_cols)))
+
+  # population ----
+  tmp_pop <- object@herd |>
+    # sum up livestock units
+    dplyr::summarise(
+      Qobs_LU = sum(Qobs*livestock_unit_coef,na.rm = T),
+      .by = c(dplyr::all_of(id_cols), FADN_code_letter))
+      #.by = c(dplyr::all_of(id_cols), species))
+  #.by = c(dplyr::all_of(id_cols)))
 
   # main forage area ----
   # surface fourragère see instruction de collecte de 311 - 371
-  tmp_MFA <- herd_feed_detail_dairy |>
+  tmp_MFA <- herd_feed$feed_intake$detail |>
     # filter forage
     dplyr::filter(feed_type == "feed_rough" & feed_origin != "feed_purchased") |>
     # estimate main forage area for dairy cows
     dplyr::summarise(
-      MFA_dairy_cow = sum(DM_t_livcat / yield,na.rm = T),
-      .by = object@traceability$id_cols
+      MFA_ha = sum(DM_t_livcat / yield,na.rm = T),
+      #.by = c(dplyr::all_of(id_cols))
+      .by = c(dplyr::all_of(id_cols), FADN_code_letter)
     )
 
   # share of protein crops ----
 
   tmp_protein_crops_code <- data_extra$crops |>
-    dplyr::filter(species == "legumes" | FADN_code_letter == "CFODOTH") |>
+    dplyr::filter(species == "legumes") |>
     dplyr::pull(FADN_code_letter)
 
-  tmp_protein_crops <- herd_feed_detail_dairy |>
+  tmp_protein_crops <- herd_feed$feed_intake$detail |>
     # filter protein crops
     dplyr::filter(FADN_code_feed %in% tmp_protein_crops_code & feed_origin != "feed_purchased") |>
     # estimate main forage area for dairy cows
     dplyr::summarise(
-      protein_crops_ha = sum(DM_t_livcat / yield,na.rm = T),
-      .by = object@traceability$id_cols)
+      protein_crops_ha = sum(DM_t_livcat / yield, na.rm = T),
+      .by = c(dplyr::all_of(id_cols),  FADN_code_letter))
+      #.by = c(dplyr::all_of(id_cols),  species))
+      #.by = c(dplyr::all_of(id_cols)))
 
-  # t of DM to feed dairy cows ----
+  # t of DM ----
 
-  tmp_feed_t <- herd_feed_detail_dairy |>
+  tmp_sum_t_DM_feed_origin <- herd_feed$feed_intake$detail |>
     # sum up t of feed
     dplyr::summarise(
-      feed_t = sum(DM_t_anim,na.rm = T),
-      .by = c(object@traceability$id_cols,feed_origin)) |>
+      feed_t = sum(DM_t_livcat, na.rm = T),
+      .by = c(dplyr::all_of(id_cols), feed_origin, FADN_code_letter)) |>
+      #.by = c(dplyr::all_of(id_cols), feed_origin, species)) |>
+      #.by = c(dplyr::all_of(id_cols), feed_origin)) |>
     tidyr::pivot_wider(
-      id_cols = all_of(object@traceability$id_cols),
+      id_cols = c(dplyr::all_of(id_cols), FADN_code_letter),
+      #id_cols = c(dplyr::all_of(id_cols), species),
+      #id_cols = c(dplyr::all_of(id_cols)),
       values_from = feed_t,
       names_from = feed_origin,
       names_prefix = "t_DM_",values_fill = 0) |>
@@ -237,96 +257,110 @@ f_herding_practices <- function(object,
       total_t_DM = t_DM_feed_produced + t_DM_feed_purchased
     )
 
-  # t of maize per cow ----
+  # sum t of maize ----
 
-  tmp_t_maize <- herd_feed_detail_dairy |>
+  tmp_t_maize <- herd_feed$feed_intake$detail |>
     # filter maize produced
     dplyr::filter(FADN_code_feed == "CFODMZ" & feed_origin == "feed_produced") |>
-    # sum up t of maize per cow
-    dplyr::mutate(
-      t_DM_panim_fod_maize = DM_t_anim) |>
-    dplyr::select(all_of(object@traceability$id_cols),t_DM_panim_fod_maize)
+    # sum up t of maize
+    dplyr::summarise(t_DM_fod_maize = sum(DM_t_livcat, na.rm = T),
+                     .by = c(dplyr::all_of(id_cols), FADN_code_letter))
+                     #.by = c(dplyr::all_of(id_cols)))
 
+  # sum t of soybean meal ----
 
-  # t of soybean meal per cow ----
-
-  tmp_t_soy <- herd_feed_detail_dairy |>
+  tmp_t_soy <- herd_feed$feed_intake$detail |>
     # filter soybean meal purchased
     dplyr::filter(Sailley_feed == "Dont_tourteau_de_soja" & feed_origin == "feed_purchased") |>
-    # sum up t of soybean meal per cow
-    dplyr::mutate(t_DM_panim_soy = sum(DM_t_anim,na.rm = T),
-                  .by = object@traceability$id_cols) |>
-    dplyr::select(all_of(object@traceability$id_cols),t_DM_panim_soy)
+    # sum up t of soybean meal
+    dplyr::summarise(t_DM_soy = sum(DM_t_livcat, na.rm = T),
+                     .by = c(dplyr::all_of(id_cols), FADN_code_letter))
+                     #.by = c(dplyr::all_of(id_cols), species))
+                     #.by = c(dplyr::all_of(id_cols)))
 
   # share of purchased concentrates t ----
 
-  tmp_share_concent_purchased <- herd_feed_detail_dairy |>
+  tmp_sum_t_DM_feed_type_purchased <- herd_feed$feed_intake$detail |>
     # filter purchased feed
     dplyr::filter(feed_origin == "feed_purchased") |>
     # sum up t of feed
     dplyr::summarise(
-      feed_t = sum(DM_t_anim,na.rm = T),
-      .by = c(object@traceability$id_cols,feed_type)) |>
+      feed_t = sum(DM_t_livcat, na.rm = T),
+      .by = c(dplyr::all_of(id_cols), feed_type, FADN_code_letter)) |>
+      #.by = c(dplyr::all_of(id_cols), feed_type, species)) |>
+      #.by = c(dplyr::all_of(id_cols), feed_type)) |>
     tidyr::pivot_wider(
-      id_cols = all_of(object@traceability$id_cols),
+      id_cols = c(dplyr::all_of(id_cols), FADN_code_letter),
+      #id_cols = c(dplyr::all_of(id_cols), species),
+      #id_cols = c(dplyr::all_of(id_cols)),
       values_from = feed_t,
       names_from = feed_type,
-      names_prefix = "t_DM_purchased_",values_fill = 0)
+      names_prefix = "t_DM_purchased_", values_fill = 0)
 
   # share of all concentrates t ----
 
-  tmp_share_concent <- herd_feed_detail_dairy |>
+  tmp_sum_t_DM_feed_type <- herd_feed$feed_intake$detail |>
     # sum up t of feed
     dplyr::summarise(
-      feed_t = sum(DM_t_anim,na.rm = T),
-      .by = c(object@traceability$id_cols,feed_type)) |>
+      feed_t = sum(DM_t_livcat, na.rm = T),
+      .by = c(dplyr::all_of(id_cols), feed_type, FADN_code_letter)) |>
+      #.by = c(dplyr::all_of(id_cols), feed_type, species)) |>
+      #.by = c(dplyr::all_of(id_cols), feed_type)) |>
     tidyr::pivot_wider(
-      id_cols = all_of(object@traceability$id_cols),
+      id_cols = c(dplyr::all_of(id_cols), FADN_code_letter),
+      #id_cols = c(dplyr::all_of(id_cols), species),
+      #id_cols = c(dplyr::all_of(id_cols)),
       values_from = feed_t,
       names_from = feed_type,
-      names_prefix = "t_DM_",values_fill = 0)
+      names_prefix = "t_DM_", values_fill = 0)
 
   # Compile herding practices ----
   # Base "besides_feed" rows: distinct id rows from feed_det
-  base_rows <- herd_feed_detail_dairy |>
-    dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |>
+  base_rows <- herd_feed$feed_intake$detail |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter) |>
+    #dplyr::select(dplyr::all_of(id_cols), species) |>
+    #dplyr::select(dplyr::all_of(id_cols)) |>
     dplyr::distinct() |>
     # add milk production data
-    dplyr::inner_join(
+    dplyr::left_join(
       object@output$other_herd_products |>
         dplyr::filter(output == "milk" & species == "cattle") |>
-        dplyr::select(tidyselect::all_of(object@traceability$id_cols),FADN_code_letter,output, species, Qobs, prod_t, yield) |>
+        dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, prod_t) |>
+        #dplyr::select(dplyr::all_of(id_cols), prod_t) |>
         dplyr::rename(prod_t_milk = prod_t),
-      by = object@traceability$id_cols) |>
+      by = c(id_cols, 'FADN_code_letter')) |>
+      #by = c(id_cols)) |>
     # add farm characteristic data
     dplyr::left_join(
       object@farm |>
-        dplyr::select(all_of(object@traceability$id_cols),TF14,SYS02),
-      by = object@traceability$id_cols)
+        dplyr::select(dplyr::all_of(id_cols), TF14, SYS02),
+      by = id_cols)
 
   # collect intermediate tables and left_join them in one go
   join_list <- list(
     tmp_areas,
     tmp_perm_grass,
     tmp_temp_grass,
-    tmp_cow_pop,
+    tmp_dairy_cow_pop,
+    tmp_pop,
     tmp_MFA,
     tmp_protein_crops,
-    tmp_feed_t,
+    tmp_sum_t_DM_feed_origin,
     tmp_t_maize,
     tmp_t_soy,
-    tmp_share_concent_purchased,
-    tmp_share_concent
+    tmp_sum_t_DM_feed_type_purchased,
+    tmp_sum_t_DM_feed_type
   )
 
   # Use reduce to left_join all pieces (if purrr not available, use a loop - see alternative below)
-  combined <- reduce(join_list, ~ dplyr::left_join(.x, .y, by = object@traceability$id_cols))
+  #combined <- reduce(join_list, ~ dplyr::left_join(.x, .y, by = id_cols))
 
   combined <- base_rows
   for (i in seq_along(join_list)) {
     combined <- dplyr::left_join(combined,
                           join_list[[i]],
-                          by = object@traceability$id_cols)
+                          by = c(id_cols, 'FADN_code_letter'))
+                          #by = (id_cols))
   }
 
 
@@ -337,11 +371,12 @@ f_herding_practices <- function(object,
       area_ha_perm_grass = 0,
       area_ha_temp_grass = 0,
       cow_pop = 0,
-      MFA_dairy_cow = 0,
+      Qobs_LU = 0,
+      MFA_ha = 0,
       protein_crops_ha = 0,
       t_DM_feed_produced = 0, t_DM_feed_purchased = 0,
-      t_DM_panim_fod_maize = 0,
-      t_DM_panim_soy = 0,
+      t_DM_fod_maize = 0,
+      t_DM_soy = 0,
       t_DM_purchased_feed_rough = 0, t_DM_purchased_feed_concent = 0,
       t_DM_feed_rough = 0, t_DM_feed_concent = 0,
       total_t_DM = 0
@@ -360,27 +395,27 @@ f_herding_practices <- function(object,
       yield_l_pha = ifelse(area_feed_produced == 0, NA_real_, prod_t_milk / area_feed_produced),
       # Yield (L of milk / dairy cow)
       # yield_l_panim
-      yield_l_panim = ifelse(cow_pop == 0, NA_real_, prod_t_milk / cow_pop),
+      yield_l_milk_panim = ifelse(FADN_code_letter == "LCOWDAIR" & Qobs_LU >0, prod_t_milk / Qobs_LU, NA_real_),
 
       # Livestock density (dairy cow / ha pseudofarm)
       # nb_cow_pha_ps
-      nb_cow_pha_ps = ifelse(pseudofarm_area == 0, NA_real_, cow_pop / pseudofarm_area),
+      nb_LU_pha_ps = ifelse(pseudofarm_area == 0, NA_real_, Qobs_LU / pseudofarm_area),
       # Livestock density (dairy cow / ha farm)
       # nb_cow_pha
-      nb_cow_pha = ifelse(area_feed_produced == 0, NA_real_, cow_pop / area_feed_produced),
+      nb_LU_pha = ifelse(area_feed_produced == 0, NA_real_, Qobs_LU / area_feed_produced),
       # Livestock density (dairy cow / ha MFA)
       # nb_cow_pMFA
-      nb_cow_pMFA = ifelse(MFA_dairy_cow == 0, NA_real_, cow_pop / MFA_dairy_cow),
+      nb_LU_pMFA = ifelse(MFA_ha == 0, NA_real_, Qobs_LU / MFA_ha),
 
       # Main Forage Area (MFA / dairy cow)
-      # MFA_pcow
-      MFA_pcow = ifelse(cow_pop == 0, NA_real_, MFA_dairy_cow / cow_pop),
+      # MFA_pLU
+      MFA_pLU = ifelse(Qobs_LU == 0, NA_real_, MFA_ha / Qobs_LU),
       # Share of Main Forage Area (ha MFA / ha pseudofarm)
       # MFA_pha_ps
-      MFA_pha_ps = ifelse(pseudofarm_area == 0, NA_real_, MFA_dairy_cow / pseudofarm_area),
+      MFA_pha_ps = ifelse(pseudofarm_area == 0, NA_real_, MFA_ha / pseudofarm_area),
       # Share of Main Forage Area (ha MFA / ha farm)
       # MFA_pha
-      MFA_pha = ifelse(area_feed_produced == 0, NA_real_, MFA_dairy_cow / area_feed_produced),
+      MFA_pha = ifelse(area_feed_produced == 0, NA_real_, MFA_ha / area_feed_produced),
 
       # Share of permanent grassland (ha permanent grassland / ha pseudofarm)
       # ha_perm_grassland_pha_ps
@@ -408,10 +443,10 @@ f_herding_practices <- function(object,
       feed_autonomy = ifelse(total_t_DM == 0, NA_real_, t_DM_feed_produced / total_t_DM),
 
       # Forage maize (t of forage maize produced / dairy cow)
-      # t_DM_panim_fod_maize
+      # t_DM_fod_maize
       # Share of purchased soybean meal (t soybean meal / t total feed)
       # share_soybean
-      share_soybean = ifelse(total_t_DM == 0, NA_real_, t_DM_panim_soy / total_t_DM),
+      share_soybean = ifelse(total_t_DM == 0, NA_real_, t_DM_soy / total_t_DM),
       # Share of concentrate (t concentrate / t total feed)
       # share_concent
       share_concent = ifelse(total_t_DM == 0, NA_real_, t_DM_feed_concent / total_t_DM)

@@ -1,7 +1,7 @@
 ---
 title: "FADN2Footprint — Validation Report"
 subtitle: "Comparison of package estimates with literature values"
-author: "Sarah HUET"
+author: "Sarah HUET & Valentin BELLASSEN"
 date: today
 format:
   html:
@@ -53,10 +53,12 @@ devtools::load_all()
 
 ## Load raw data and run model
 #source("validation_FADN_data.R")
-source("validation_FADN_data_offline.R")
+#source("validation_FADN_data_offline.R")
 ## 
 #load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
-#load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+my_object_GHGE <- m_prune_farms(my_object_GHGE,
+                                YEAR %in% c("2018", "2019", "2020"))
 
 cat("FADN dataset loaded:", nrow(my_object_GHGE@farm), "farm-year observations\n")
 cat("Countries covered:", paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "), "\n")
@@ -84,7 +86,7 @@ summary(object@crop)
 summary(object@footprints$GHGE$GHGE_crops)
 #
 object@footprints$GHGE$GHGE_crops |> 
-       dplyr::filter(!is.finite(N2O_d_kgCO2e_per_t)) #|> View()
+  dplyr::filter(!is.finite(N2O_d_kgCO2e_per_t)) #|> View()
 #sort(table(object@footprints$GHGE$GHGE_crops |> filter(is.na(prod_t)) |> pull(FADN_code_letter)), decreasing = TRUE)
 
 ```
@@ -104,8 +106,8 @@ lit_GHGE_total <- readxl::read_excel(
   # filter for references with both per ha and per t
   dplyr::filter(GHGE_kgCO2e_kg >0 
                 | GHGE_kgCO2e_ha >0) |>
-  # filter for wheat, meat, milk, and eggs 
-  dplyr::filter(grepl("wheat|milk|meat|eggs", product)) |>
+  # filter for crops, meat, milk, and eggs 
+  dplyr::filter(grepl("wheat|maize_grain|rapeseed|milk|meat|eggs", product)) |>
   # filter values for France if present or EU otherwise for each product
   dplyr::group_by(product) |>
   dplyr::filter(
@@ -121,8 +123,8 @@ lit_GHGE_components <- readxl::read_excel(
   "../../inst/validation/validation_references.xlsx",
   sheet = "summary_share_components"
 ) |>
-  # filter for wheat, meat and milk 
-  dplyr::filter(grepl("wheat|milk|meat", product)) |>
+  # filter for crops, meat and milk 
+  dplyr::filter(grepl("wheat|maize_grain|rapeseed|milk|meat|eggs", product)) |>
   # filter values for France if present or EU otherwise for each product and component
   dplyr::group_by(product, Harmonized_Category) |>
   dplyr::filter(
@@ -409,11 +411,12 @@ mean(tmp_object_milk@output$other_herd_products |>
 
 ```{r GHGE_output_wheat}
 
-(tmp_object_crop@footprints$GHGE$GHGE_crops)
 
 # Retrieve GHGE estimates for crops, filtering to common wheat only
 tmp_ghge_wheat <- tmp_object_crop@footprints$GHGE$GHGE_crops |>
   dplyr::filter(FADN_code_letter == "CWHTC")
+
+(tmp_ghge_wheat)
 
 # Reshape to long format, keeping per-ha and per-t columns, dropping totals
 tmp_ghge_wheat_compo_long <- tmp_ghge_wheat |>
@@ -454,6 +457,107 @@ tmp_ghge_wheat_compo <- tmp_ghge_wheat_compo_long |>
     .by = c(tmp_object_crop@traceability$id_cols, "product", "Harmonized_Category", "indicator", "unit")
   )
 
+
+```
+
+```{r GHGE_output_maize}
+
+
+# Retrieve GHGE estimates for crops, filtering to common maize only
+tmp_ghge_maize <- tmp_object_crop@footprints$GHGE$GHGE_crops |>
+  dplyr::filter(FADN_code_letter == "CMZ")
+
+tmp_ghge_maize
+
+# Reshape to long format, keeping per-ha and per-t columns, dropping totals
+tmp_ghge_maize_compo_long <- tmp_ghge_maize |>
+  dplyr::select(
+    dplyr::all_of(tmp_object_crop@traceability$id_cols),
+    dplyr::matches("per_ha$|per_t$"),      # keep intensity estimates only
+    -dplyr::matches("total_ghg")           # drop aggregated totals
+  ) |>
+  tidyr::pivot_longer(
+    cols = dplyr::matches("per_ha$|per_t$"),
+    names_to = "component"
+  ) |>
+  dplyr::mutate(
+    # Map component names to standardised GHGE categories
+    Harmonized_Category = case_when(
+      str_detect(component, "N2O")        ~ "Field N2O Emissions",
+      str_detect(component, "ferti_prod") ~ "Fertilizer Production",
+      str_detect(component, "diesel|fuel|elec")~ "Energy Use (Diesel/Elec)",
+      TRUE                                ~ "Other Inputs & Processes" # pesticides, seeds, etc.
+    ),
+    product = "maize_grain",
+    # Build composite indicator label encoding unit type and GHGE category
+    indicator = dplyr::case_when(
+      grepl("per_ha$", component) ~ paste("GHGE_kgCO2e_ha", Harmonized_Category, sep = "__"),
+      grepl("per_t$",  component) ~ paste("GHGE_kgCO2e_t",  Harmonized_Category, sep = "__")
+    ),
+    # Assign unit label based on denominator (area vs. product mass)
+    unit = dplyr::case_when(
+      grepl("per_ha$", component) ~ "kgCO2e_per_ha",
+      grepl("per_t$",  component) ~ "kgCO2e_per_t"
+    )
+  )
+
+# Aggregate: sum GHGE components within each farm × category × unit combination
+tmp_ghge_maize_compo <- tmp_ghge_maize_compo_long |>
+  dplyr::summarise(
+    value = sum(value, na.rm = TRUE),
+    .by = c(tmp_object_crop@traceability$id_cols, "product", "Harmonized_Category", "indicator", "unit")
+  )
+
+
+```
+
+```{r GHGE_output_rapeseed}
+
+
+# Retrieve GHGE estimates for crops, filtering to common rapeseed only
+tmp_ghge_rapeseed <- tmp_object_crop@footprints$GHGE$GHGE_crops |>
+  dplyr::filter(FADN_code_letter == "CRAPE")
+
+tmp_ghge_rapeseed
+
+# Reshape to long format, keeping per-ha and per-t columns, dropping totals
+tmp_ghge_rapeseed_compo_long <- tmp_ghge_rapeseed |>
+  dplyr::select(
+    dplyr::all_of(tmp_object_crop@traceability$id_cols),
+    dplyr::matches("per_ha$|per_t$"),      # keep intensity estimates only
+    -dplyr::matches("total_ghg")           # drop aggregated totals
+  ) |>
+  tidyr::pivot_longer(
+    cols = dplyr::matches("per_ha$|per_t$"),
+    names_to = "component"
+  ) |>
+  dplyr::mutate(
+    # Map component names to standardised GHGE categories
+    Harmonized_Category = case_when(
+      str_detect(component, "N2O")        ~ "Field N2O Emissions",
+      str_detect(component, "ferti_prod") ~ "Fertilizer Production",
+      str_detect(component, "diesel|fuel|elec")~ "Energy Use (Diesel/Elec)",
+      TRUE                                ~ "Other Inputs & Processes" # pesticides, seeds, etc.
+    ),
+    product = "rapeseed",
+    # Build composite indicator label encoding unit type and GHGE category
+    indicator = dplyr::case_when(
+      grepl("per_ha$", component) ~ paste("GHGE_kgCO2e_ha", Harmonized_Category, sep = "__"),
+      grepl("per_t$",  component) ~ paste("GHGE_kgCO2e_t",  Harmonized_Category, sep = "__")
+    ),
+    # Assign unit label based on denominator (area vs. product mass)
+    unit = dplyr::case_when(
+      grepl("per_ha$", component) ~ "kgCO2e_per_ha",
+      grepl("per_t$",  component) ~ "kgCO2e_per_t"
+    )
+  )
+
+# Aggregate: sum GHGE components within each farm × category × unit combination
+tmp_ghge_rapeseed_compo <- tmp_ghge_rapeseed_compo_long |>
+  dplyr::summarise(
+    value = sum(value, na.rm = TRUE),
+    .by = c(tmp_object_crop@traceability$id_cols, "product", "Harmonized_Category", "indicator", "unit")
+  )
 
 ```
 
@@ -971,13 +1075,23 @@ F2F_output_agri_pract <- tibble::tribble(
   )
 
 
-# Build total GHGE summary (per ha and per tonne) for wheat and milk
+# Build total GHGE summary (per ha and per tonne)
 F2F_output_ghge0 <- dplyr::bind_rows(
   tmp_ghge_wheat |>
     dplyr::select(ID, YEAR, COUNTRY, total_ghg_crop_kgCO2e_per_ha, total_ghg_crop_kgCO2e_per_t) |>
     dplyr::rename(GHGE_kgCO2e_ha = total_ghg_crop_kgCO2e_per_ha,
                   GHGE_kgCO2e_t = total_ghg_crop_kgCO2e_per_t) |>
     dplyr::mutate(product = "wheat"),
+  tmp_ghge_maize |>
+    dplyr::select(ID, YEAR, COUNTRY, total_ghg_crop_kgCO2e_per_ha, total_ghg_crop_kgCO2e_per_t) |>
+    dplyr::rename(GHGE_kgCO2e_ha = total_ghg_crop_kgCO2e_per_ha,
+                  GHGE_kgCO2e_t = total_ghg_crop_kgCO2e_per_t) |>
+    dplyr::mutate(product = "maize_grain"),
+  tmp_ghge_rapeseed |>
+    dplyr::select(ID, YEAR, COUNTRY, total_ghg_crop_kgCO2e_per_ha, total_ghg_crop_kgCO2e_per_t) |>
+    dplyr::rename(GHGE_kgCO2e_ha = total_ghg_crop_kgCO2e_per_ha,
+                  GHGE_kgCO2e_t = total_ghg_crop_kgCO2e_per_t) |>
+    dplyr::mutate(product = "rapeseed"),
   tmp_ghge_milk |>
     dplyr::select(ID, YEAR, COUNTRY, pseudofarm_ghge_herd_kgCO2e_per_ha_pseudofarm, pseudofarm_ghge_herd_kgCO2e_per_t) |>
     dplyr::rename(GHGE_kgCO2e_ha = pseudofarm_ghge_herd_kgCO2e_per_ha_pseudofarm,
@@ -1023,9 +1137,11 @@ F2F_output_ghge <- F2F_output_ghge0 |>
   dplyr::bind_rows(tmp_ghge_dairy_farm) |>
   dplyr::bind_rows(tmp_ghge_beef_farm)
 
-# Compute mean GHGE by harmonized category (component breakdown) for wheat and milk
+# Compute mean GHGE by harmonized category (component breakdown)
 F2F_output_ghge_compo0 <- dplyr::bind_rows(
   tmp_ghge_wheat_compo,
+  tmp_ghge_maize_compo,
+  tmp_ghge_rapeseed_compo,
   tmp_ghge_milk_compo,
   tmp_ghge_beef_compo,
   tmp_ghge_pork_compo,
@@ -1056,76 +1172,88 @@ F2F_output |> arrange(product, indicator) |> gt()
 
 # Comparison
 
-```{r plot_impact}
+## Total GHGE
 
-# 0. Summary table
-F2F_output_ghge0 |>
-  summarise(
-    n        = n(),
-    mean     = mean(estimate, na.rm = TRUE),
-    sd       = sd(estimate, na.rm = TRUE),
-    min      = min(estimate, na.rm = TRUE),
-    q25      = quantile(estimate, 0.25, na.rm = TRUE),
-    median   = median(estimate, na.rm = TRUE),
-    q75      = quantile(estimate, 0.75, na.rm = TRUE),
-    max      = max(estimate, na.rm = TRUE),
-    n_NA     = sum(is.na(estimate)),
-    .by = c(product, unit)
-  )
+```{r plot_data}
+
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(forcats)
 
 # 1. Prepare data for plotting
-plot_data <- F2F_output_ghge0 %>%
+tmp_F2F_values0 <- F2F_output_ghge0 %>%
   # Extract the clean category name from the indicator string
   mutate(
     Category = str_extract(indicator, "(?<=__).*"),
     # Make unit names prettier for the plot labels
-    unit_label = gsub("_per_"," / ", unit)
+    unit_label = gsub("_per_"," / ", unit),
+    # Facet by product_type
+    product_type = as.factor(ifelse(grepl("wheat|maize|rapeseed", product), "Crops", "Animal products")),
+    product_source = paste(product, "FADN France", sep = " - ")
+  ) |>
+# Compute 99th percentile for visual winsorisation by unit
+  mutate(
+    p99 = quantile(estimate, 0.99, na.rm = TRUE),
+    .by = c(Category, unit_label, product_type, product_source)
+  )
+
+tmp_lit_values0 <- lit_table |>
+  dplyr::semi_join(
+    tmp_F2F_values0 |>
+      dplyr::select(product, indicator, unit) |>
+      dplyr::distinct(),
+    by = c('indicator', 'unit', 'product')
+  ) |>
+  # Extract the clean category name from the indicator string
+  mutate(
+    Category = str_extract(indicator, "(?<=__).*"),
+    # Make unit names prettier for the plot labels
+    unit_label = gsub("_per_"," / ", unit),
+    # Facet by product_type
+    product_type = as.factor(ifelse(grepl("wheat|maize|rapeseed", product), "Crops", "Animal products")),
+     product_source = paste(product, "Literature", sep = " - ")
   ) 
 
-tmp_lit <- lit_table |>
-  dplyr::semi_join(
-    plot_data |>
-      dplyr::select(product, indicator, unit) |>
-      dplyr::distinct()
-  ) %>%
-  # Extract the clean category name from the indicator string
-  mutate(
-    Category = str_extract(indicator, "(?<=__).*"),
-    # Make unit names prettier for the plot labels
-    unit_label = gsub("_per_"," / ", unit)
-  ) 
+```
+
+```{r plot_crops}
+
+# 3. Filter product and Winsorisation
+tmp_plot_data <- dplyr::bind_rows(
+  tmp_F2F_values0 |>
+    dplyr::filter(estimate <= p99),
+  tmp_lit_values0
+) |>
+  dplyr::filter(product_type == "Crops")
 
 
 # 2. Create the plot
-ggplot() +
+ggplot(tmp_plot_data) +
   # accepted range
-  geom_errorbar(data = tmp_lit,
-                aes(x = product,
+  geom_errorbar(aes(x = product_source,
                     ymin = pmin(lit_midpoint, lit_min, na.rm = T) / 2, 
                     ymax = pmax(lit_midpoint, lit_max, na.rm = T) * 2
-                ), colour = "lightpink",
+                ), colour = "#d8b365",
                 linewidth=1,width = 1,position = position_dodge(width = 0.75)) +
   # literature values
-  geom_point(data = tmp_lit,
-             aes(x = product, y = lit_midpoint), colour = "plum4", 
+  geom_point(aes(x = product_source, y = lit_midpoint), colour = "#5ab4ac", 
              shape = 1, size=3, stroke = 1, position = position_dodge(width = 0.75)) +
   # min and max
-  geom_errorbar(data = tmp_lit,
-                aes(x = product, ymin = lit_min, ymax = lit_max), colour = "plum4",
+  geom_errorbar(aes(x = product_source, ymin = lit_min, ymax = lit_max), colour = "#5ab4ac",
                 linewidth=1,width = 1,position = position_dodge(width = 0.75)) +
   # estimates
-  geom_violin(data = plot_data,
-              aes(x = product, y = estimate, alpha = 0),
+  geom_violin(aes(x = product_source, y = estimate, alpha = 0),
               colour = "#999999"
   ) +
-  geom_boxplot(data = plot_data,
-               aes(x = product, y = estimate, alpha = 0),
+  geom_boxplot(aes(x = product_source, y = estimate, alpha = 0),
                colour = "#333333", width = 0.5
   ) +
   # theme
   coord_flip() +
   facet_wrap(vars(unit_label), scales = "free",ncol = 1) +
-  labs(y = "Total GHGE",x= "Products") +
+  labs(y = "GHGE per crop",x= "Products",
+       caption = "For visual readability, FADN France estimates are capped at the 99th percentile.") +
   scale_fill_viridis_d() +
   #  scale_fill_manual(values = tmp_FQS_names$colors,labels = tmp_FQS_names$labels,) +
   #  scale_colour_manual(values = tmp_FQS_names$colors,labels = tmp_FQS_names$labels) +
@@ -1134,13 +1262,58 @@ ggplot() +
     legend.position = c(0,-1),legend.direction = "horizontal",legend.title = element_blank(),
     strip.background = element_rect(fill = NA, colour = "#999999"),strip.text = element_text(color = "#333333"))
 
+```
 
+```{r plot_anim_prod}
+
+# 3. Filter product and Winsorisation
+tmp_plot_data <- dplyr::bind_rows(
+  tmp_F2F_values0 |>
+    dplyr::filter(estimate <= p99),
+  tmp_lit_values0
+) |>
+  dplyr::filter(product_type != "Crops")
+
+
+# 2. Create the plot
+ggplot(tmp_plot_data) +
+  # accepted range
+  geom_errorbar(aes(x = product_source,
+                    ymin = pmin(lit_midpoint, lit_min, na.rm = T) / 2, 
+                    ymax = pmax(lit_midpoint, lit_max, na.rm = T) * 2
+                ), colour = "#d8b365",
+                linewidth=1,width = 1,position = position_dodge(width = 0.75)) +
+  # literature values
+  geom_point(aes(x = product_source, y = lit_midpoint), colour = "#5ab4ac", 
+             shape = 1, size=3, stroke = 1, position = position_dodge(width = 0.75)) +
+  # min and max
+  geom_errorbar(aes(x = product_source, ymin = lit_min, ymax = lit_max), colour = "#5ab4ac",
+                linewidth=1,width = 1,position = position_dodge(width = 0.75)) +
+  # estimates
+  geom_violin(aes(x = product_source, y = estimate, alpha = 0),
+              colour = "#999999"
+  ) +
+  geom_boxplot(aes(x = product_source, y = estimate, alpha = 0),
+               colour = "#333333", width = 0.5
+  ) +
+  # theme
+  coord_flip() +
+  facet_wrap(vars(unit_label), scales = "free",ncol = 1) +
+  labs(y = "GHGE per animal product",x= "Products",
+       caption = "For visual readability, FADN France estimates are capped at the 99th percentile.") +
+  scale_fill_viridis_d() +
+  #  scale_fill_manual(values = tmp_FQS_names$colors,labels = tmp_FQS_names$labels,) +
+  #  scale_colour_manual(values = tmp_FQS_names$colors,labels = tmp_FQS_names$labels) +
+  theme_light() +
+  theme(
+    legend.position = c(0,-1),legend.direction = "horizontal",legend.title = element_blank(),
+    strip.background = element_rect(fill = NA, colour = "#999999"),strip.text = element_text(color = "#333333"))
 
 ```
 
 ```{r outliers_per_t}
 
-tmp_outliers = head(plot_data |>
+tmp_outliers = head(tmp_F2F_values0 |>
                       dplyr::filter(grepl("per_t", unit)) |>
                       dplyr::arrange(-estimate),
                     n = 15)
@@ -1203,6 +1376,32 @@ dplyr::left_join(
 
 ```
 
+```{r cattle_meat_with_low_GHGE}
+
+tmp_data = tmp_F2F_values0 |>
+                      dplyr::filter(grepl("per_ha", unit),
+                                    grepl("cattle_meat", product)) 
+
+tmp_quantile = quantile(tmp_data$estimate)
+
+tmp_outliers_obj = m_keep_farms(
+  my_object_GHGE,
+  tmp_data |>
+  dplyr::filter(estimate < tmp_quantile['25%'])
+)
+
+tmp_OK_farms <- m_keep_farms(
+  my_object_GHGE,
+  tmp_data |>
+  dplyr::filter(estimate > tmp_quantile['75%'])
+)
+
+
+```
+
+
+## Source of GHGE
+
 ```{r plot_impact_compo}
 
 # 0. Summary table
@@ -1221,7 +1420,7 @@ F2F_output_ghge_compo0 |>
   )
 
 # 1. Prepare data for plotting
-plot_data <- F2F_output_ghge_compo0 %>%
+tmp_F2F_values <- F2F_output_ghge_compo0 %>%
   # Extract the clean category name from the indicator string
   mutate(
     Category = str_extract(indicator, "(?<=__).*"),
@@ -1229,9 +1428,9 @@ plot_data <- F2F_output_ghge_compo0 %>%
     unit_label = gsub("_per_"," / ", unit)
   ) 
 
-tmp_lit <- lit_table |>
+tmp_lit_values <- lit_table |>
   dplyr::semi_join(
-    plot_data |>
+    tmp_F2F_values |>
       dplyr::select(product, unit, indicator) |>
       dplyr::distinct(),
     by = c('product', 'unit', 'indicator')
@@ -1247,26 +1446,26 @@ tmp_lit <- lit_table |>
 # 2. Create the plot
 ggplot() +
   # accepted range
-  geom_errorbar(data = tmp_lit,
+  geom_errorbar(data = tmp_lit_values,
                 aes(x = product,
                     ymin = pmin(lit_midpoint, lit_min, na.rm = T) / 2, 
                     ymax = pmax(lit_midpoint, lit_max, na.rm = T) * 2
                 ), colour = "lightpink",
                 linewidth=1,width = 1,position = position_dodge(width = 0.75)) +
   # literature values
-  geom_point(data = tmp_lit,
+  geom_point(data = tmp_lit_values,
              aes(x = product, y = lit_midpoint), colour = "plum4", 
              shape = 1, size=3, stroke = 1, position = position_dodge(width = 0.75)) +
   # min and max
-  geom_errorbar(data = tmp_lit,
+  geom_errorbar(data = tmp_lit_values,
                 aes(x = product, ymin = lit_min, ymax = lit_max), colour = "plum4",
                 linewidth=1,width = 1,position = position_dodge(width = 0.75)) +
   # estimates
-  geom_violin(data = plot_data,
+  geom_violin(data = tmp_F2F_values,
               aes(x = product, y = value, alpha = 0),
               colour = "#999999"
   ) +
-  geom_boxplot(data = plot_data,
+  geom_boxplot(data = tmp_F2F_values,
                aes(x = product, y = value, alpha = 0),
                colour = "#333333", width = 0.25
   ) +
@@ -1290,47 +1489,11 @@ ggplot() +
 
 ```{r plot_share}
 
-# F2F
 
 # 1. Prepare data for plotting
-plot_data <- F2F_output_ghge_compo %>%
-  # Extract the clean category name from the indicator string
-  mutate(
-    Category = str_extract(indicator, "(?<=__).*"),
-    # Make unit names prettier for the plot labels
-    unit_label = gsub("_per_"," / ", unit)
-  )
 
-# 2. Create the plot
-ggplot(plot_data, aes(x = product, y = estimate, fill = Category)) +
-  # Use stat = "identity" to plot the literal values in the table
-  geom_bar(stat = "identity", position = "fill", color = "white", linewidth = 0.1) +
-  # Facet by Product (rows) and Unit (columns)
-  # scales = "free_y" is crucial because ha and t values are not comparable
-  facet_grid(~ unit_label) +
-  # Styling
-  scale_fill_brewer(palette = "Paired") + # Or use scale_fill_viridis_d()
-  theme_minimal() +
-  labs(
-    title = "GHG Emission Sources",
-    subtitle = "Source: Estimation from FADN via FADN2Footprint",
-    x = "Product",
-    y = "Share of GHG Emissions (% of total kg CO2e / ha or t of product)",
-    fill = "Emission Component"
-  ) +
-  theme(
-    strip.text = element_text(face = "bold", size = 10),
-    legend.position = "bottom",
-    #axis.text.x = element_blank(), # Remove x axis text because it's redundant with facets
-    axis.ticks.x = element_blank()
-  ) +
-  guides(fill = guide_legend(ncol = 2, title.position = "top")) +
-  coord_flip()
-
-# LITERATURE
-
-# 1. Prepare data for plotting
-plot_data <- lit_table %>%
+tmp_plot_share <- dplyr::bind_rows(
+  lit_table %>%
   # Filter only for the rows that contain the component breakdown (identified by __)
   filter(str_detect(indicator, "__")
          & unit == "kgCO2e_per_t") %>%
@@ -1340,33 +1503,55 @@ plot_data <- lit_table %>%
     # Make unit names prettier for the plot labels
     unit_label = "kg CO2e / tonne"
   ) |>
-  dplyr::filter(indicator %in% F2F_output_ghge_compo$indicator)
+    dplyr::filter(indicator %in% F2F_output_ghge_compo$indicator) |>
+    dplyr::mutate(
+      source = "Literature values",
+      value = lit_midpoint
+    ),
+  F2F_output_ghge_compo %>%
+  # Extract the clean category name from the indicator string
+  mutate(
+    Category = str_extract(indicator, "(?<=__).*"),
+    # Make unit names prettier for the plot labels
+    unit_label = gsub("_per_"," / ", unit),
+          source = "F2F estimates",
+      value = estimate
+    )
+) |>
+  dplyr::filter(
+    unit == "kgCO2e_per_t",
+    grepl("wheat|milk|cattle_meat|meat_pork", product)
+  )
+
+cat(paste("Literature sources: ",paste0(unique(unlist(str_split(tmp_plot_share$lit_source, "; "))), collapse = "; ")))
 
 # 2. Create the plot
-ggplot(plot_data, aes(x = product, y = lit_midpoint, fill = Category)) +
+ggplot(tmp_plot_share, aes(x = product, y = value, fill = Category)) +
   # Use stat = "identity" to plot the literal values in the table
   geom_bar(stat = "identity", position = "fill", color = "white", linewidth = 0.1) +
   # Facet by Product (rows) and Unit (columns)
   # scales = "free_y" is crucial because ha and t values are not comparable
-  facet_grid(~ unit_label) +
+  facet_grid(~ source) +
   # Styling
   scale_fill_brewer(palette = "Paired") + # Or use scale_fill_viridis_d()
   theme_minimal() +
   labs(
-    title = "Literature GHG Emission Sources",
-    subtitle = paste("Sources: ",paste0(unique(unlist(str_split(plot_data$lit_source, "; "))), collapse = "; ")),
+    title = "GHG Emission Components",
+    #subtitle = paste("Literature sources: ",paste0(unique(unlist(str_split(tmp_plot_share$lit_source, "; "))), collapse = "; ")),
     x = "Product",
-    y = "GHG Emissions (kg CO2e)",
+    y = "Shares of GHGE components (% of kg CO2e / t)",
     fill = "Emission Component"
   ) +
   theme(
     strip.text = element_text(face = "bold", size = 10),
-    legend.position = "bottom",
+    legend.position = "right",
     #axis.text.x = element_blank(), # Remove x axis text because it's redundant with facets
     axis.ticks.x = element_blank()
   ) +
-  guides(fill = guide_legend(ncol = 2, title.position = "top")) +
+  guides(fill = guide_legend(ncol = 1, title.position = "top")) +
   coord_flip()
+
+
 
 
 ```
@@ -1428,6 +1613,7 @@ comp_table = comparison |>
 comp_table
 
 gtsave(comp_table, filename = paste0("F2F_comp_lit_summary_",Sys.Date(),".html"))
+gtsave(comp_table, filename = paste0("F2F_comp_lit_summary_",Sys.Date(),".docx"))
 
 ```
 
@@ -1481,6 +1667,8 @@ abline(0,1)
 ```
 
 ```{r under_glass}
+
+load("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/data_raw/raw_FADN_FRA_18_21.RData")
 
 object = my_object_GHGE
 
@@ -1623,8 +1811,28 @@ my_FADN_data |> filter(ID == "52100000050798") |> dplyr::select(dplyr::all_of(id
 
 ```{r}
 
-object = tmp_object_eggs
+# LHENSLAY
 
+tmp_LU <- tmp_object_eggs@herd |>
+  dplyr::filter(FADN_code_letter == "LHENSLAY")
+
+
+tmp_prod <- tmp_object_eggs@output$other_herd_products |>
+  dplyr::filter(grepl("PEGG", FADN_code_letter_output)) |>
+  dplyr::summarise(
+    prod_t = sum(prod_t, na.rm = T),
+    .by = c(dplyr::all_of(id_cols), output)
+  )
+
+tmp_yield <- dplyr::left_join(
+  tmp_LU, tmp_prod,
+  by = id_cols
+) |>
+  dplyr::mutate(
+    yield = prod_t / Qobs
+  )
+
+quantile(tmp_yield$yield)
 
 ```
 
@@ -1703,17 +1911,17 @@ tmp_comp |>
   dplyr::filter(diff) |>
   dplyr::left_join(
     object@herd |> 
-    #dplyr::mutate(
-    #    species = case_when(
-    #        species %in% c("cattle","sheep","goats","horse") ~ "grazing",
-    #        .default = species
-    #    )
-    #) |>
-    dplyr::summarise(
+      #dplyr::mutate(
+      #    species = case_when(
+      #        species %in% c("cattle","sheep","goats","horse") ~ "grazing",
+      #        .default = species
+      #    )
+      #) |>
+      dplyr::summarise(
         Qobs = sum(Qobs),
         .by = c(dplyr::all_of(id_cols), species)
-    ) |>
-    tidyr::pivot_wider(names_from = species, values_from = Qobs),
+      ) |>
+      tidyr::pivot_wider(names_from = species, values_from = Qobs),
     #by = c(id_cols, 'species')
     by = c(id_cols)
   ) #|> View()
@@ -1730,22 +1938,22 @@ Some farms purchase poultry feed but do not have poultry (some do not have lives
 ```{r}
 
 semi_join(
-    my_object_GHGE@footprints$GHGE$GHGE_herd |>
+  my_object_GHGE@footprints$GHGE$GHGE_herd |>
     dplyr::summarise(ghg_heat_fuel_kgCO2e_livcat = sum(ghg_heat_fuel_kgCO2e_livcat, na.rm = T),
                      .by = dplyr::all_of(id_cols)) |>
     dplyr::filter(ghg_heat_fuel_kgCO2e_livcat == 0),
-    my_object_GHGE@input |> dplyr::filter(heating_fuels_l >0)
+  my_object_GHGE@input |> dplyr::filter(heating_fuels_l >0)
 ) #|> View()
 
 tmp_farms = semi_join(
-    my_object_GHGE@footprints$GHGE$GHGE_herd |>
+  my_object_GHGE@footprints$GHGE$GHGE_herd |>
     dplyr::summarise(ghg_heat_fuel_kgCO2e_livcat = sum(ghg_heat_fuel_kgCO2e_livcat, na.rm = T),
                      .by = dplyr::all_of(id_cols)) |>
     dplyr::filter(ghg_heat_fuel_kgCO2e_livcat == 0),
-    my_object_GHGE@input |> dplyr::filter(heating_fuels_l >0)
+  my_object_GHGE@input |> dplyr::filter(heating_fuels_l >0)
 ) |>
   dplyr::select(dplyr::all_of(my_object_GHGE@traceability$id_cols))
-  
+
 tmp_obbj = m_keep_farms(my_object_GHGE, tmp_farms)
 
 tmp_econ_alloc = f_output_econ_alloc(tmp_obbj)
@@ -1753,6 +1961,57 @@ tmp_econ_alloc = f_output_econ_alloc(tmp_obbj)
 summary(tmp_econ_alloc$all_outputs)
 
 tmp_econ_alloc$all_outputs #|> View()
+
+```
+
+## Farms with zero GHGE
+
+```{r check_GHGE_farms}
+
+object = my_object_GHGE
+id_cols = object@traceability$id_cols
+
+tmp_obj_farms_zero <- m_keep_farms(
+  object,
+  object@footprints$GHGE$GHGE_farm |>
+    dplyr::filter(is.na(farm_total_ghge_kgCO2e ) | farm_total_ghge_kgCO2e  == 0)
+)
+
+table(tmp_obj_farms_zero@farm$TF14)
+
+tmp_obj_farms_zero@herd |>
+  ggplot() +
+  aes(x = FADN_code_letter,
+      y = SN) +
+  geom_boxplot()
+
+my_FADN_data |>
+  dplyr::select(dplyr::all_of(id_cols),
+                dplyr::matches("PCNT")) |>
+  dplyr::mutate(ID = as.character(ID),
+                YEAR = as.character(YEAR)) |>
+  dplyr::semi_join(tmp_obj_farms_zero@farm,
+                   by = id_cols) |>
+  tidyr::pivot_longer(cols = -dplyr::all_of(id_cols)) |>
+  dplyr::filter(grepl("_SV$", name))|>
+  ggplot() +
+  aes(x = name,
+      y = value) +
+  geom_boxplot()
+
+tmp_obj_farms_zero@herd |>
+  ggplot() +
+  aes(x = FADN_code_letter,
+      y = Qobs) +
+  geom_boxplot()
+
+```
+
+## Regressions
+
+```{r}
+
+
 
 ```
 

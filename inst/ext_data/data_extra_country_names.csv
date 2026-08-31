@@ -1,0 +1,31 @@
+"country_name","country_FADN","country_eu","Country_ISO_3166_1_A3","country_other_code"
+"Austria","OST","AT","AUT",NA
+"Belgium","BEL","BE","BEL",NA
+"Bulgaria","BGR","BG","BGR",NA
+"Croatia","HRV","HR","HRV",NA
+"Cyprus","CYP","CY","CYP",NA
+"Czech Republic;Czechia","CZE","CZ","CZE",NA
+"Denmark","DAN","DK","DNK","DNM"
+"Estonia","EST","EE","EST",NA
+"Finland","SUO","FI","FIN",NA
+"France","FRA","FR","FRA","FRK"
+"Germany","DEU","DE","DEU",NA
+"Greece","ELL","GR","GRC",NA
+"Hungary","HUN","HU","HUN",NA
+"Ireland","IRE","IE","IRL",NA
+"Italy","ITA","IT","ITA",NA
+"Latvia","LVA","LV","LVA",NA
+"Lithuania","LTU","LT","LTU",NA
+"Luxembourg","LUX","LU","LUX",NA
+"Malta","MLT","MT","MLT",NA
+"Netherlands","NED","NL","NLD",NA
+"Poland","POL","PL","POL",NA
+"Portugal","POR","PT","PRT",NA
+"Romania","ROU","RO","ROU",NA
+"Slovakia","SVK","SK","SVK",NA
+"Slovenia","SVN","SI","SVN",NA
+"Spain","ESP","ES","ESP",NA
+"Sweden","SVE","SE","SWE",NA
+"United Kingdom","UKI","UK","GBR",NA
+"Iceland",NA,"IS","ISL",NA
+"Norway",NA,"NO","NOR",NA

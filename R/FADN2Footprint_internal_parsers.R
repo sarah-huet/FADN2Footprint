@@ -1276,6 +1276,14 @@
       Qobs, yield
     )
 
+  # Convert eggs from thousands to tonne
+  ## we consider that an egg weight 60g
+  output_herd_products <- output_herd_products |>
+    dplyr::mutate(
+      prod_t = ifelse(output == "eggs", prod_t * 1000 * 6*10^-5, prod_t)
+      )
+
+
 
   # 4. Meat Output ----------------------------------------------------------
 

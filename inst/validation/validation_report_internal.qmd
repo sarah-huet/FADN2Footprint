@@ -57,8 +57,8 @@ devtools::load_all()
 ## 
 #load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
 load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
-my_object_GHGE <- m_prune_farms(my_object_GHGE,
-                                YEAR %in% c("2018", "2019", "2020"))
+#my_object_GHGE <- m_prune_farms(my_object_GHGE,
+#                                YEAR %in% c("2018", "2019", "2020"))
 
 cat("FADN dataset loaded:", nrow(my_object_GHGE@farm), "farm-year observations\n")
 cat("Countries covered:", paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "), "\n")

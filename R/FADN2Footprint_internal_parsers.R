@@ -1278,6 +1278,8 @@
 
   # Convert eggs from thousands to tonne
   ## we consider that an egg weight 60g
+  ## https://oeuf-info.fr/les-chiffres-cles/
+  ## "Elle s’établit à 957 000 téoc (tonnes équivalent oeuf coquille), soit environ 15,9 milliards d’oeufs." ⇒ 6*10^-5 t / oeuf
   output_herd_products <- output_herd_products |>
     dplyr::mutate(
       prod_t = ifelse(output == "eggs", prod_t * 1000 * 6*10^-5, prod_t)

@@ -68,9 +68,7 @@ test it.
 
 ## Peer-reviewed articles about FADN2Footprint {#peer-reviewed-articles-about-fadn2footprint}
 
-Huet, Ayouba & Bellassen (in prep.) *FADN2Footprint: an R package to
-infer agricultural practices and compute farms environmental footprints
-from FADN data*
+Huet S., Thomas L., Braquaval X., Rincon-Ariza F., Ayouba K., Bellassen V. (in prep.) *FADN2Footprint: European Farm Accountancy Data Can Approximate On-Farm Carbon Diagnostics*, **Targeted journal: Journal of Cleaner Production**
 
 ## Other resources {#other-resources}
 

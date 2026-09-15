@@ -108,37 +108,28 @@ f_herd_activities <- function(object,
       # breeders
       LCOWDAIR_Qobs_milk = ifelse(LCOWDAIR_Qobs >0, LCOWDAIR_Qobs, 0),
 
-      #F_LHEIFBRE_2_LCOWDAIR = (LCOWDAIR_Fin - LCOWDAIR_PN) * (LHEIFBRE_Qobs / (LHEIFBRE_Qobs + LBOV1_2F_breeders_Qobs) ),
-      #F_LBOV1_2F_breeders_2_LCOWDAIR = (LCOWDAIR_Fin - LCOWDAIR_PN) * (LBOV1_2F_breeders_Qobs / (LHEIFBRE_Qobs + LBOV1_2F_breeders_Qobs) ),
+      LHEIFBRE_Qobs_milk = ifelse(LHEIFBRE_Qobs > 0,
+                                 rt_LHEIFBRE * (LCOWDAIR_Qobs_milk/rt_LCOWDAIR),
+                                 0),
+      LBOV1_2F_Qobs_milk = ifelse(LHEIFBRE_Qobs > 0,
+                                 (rt_LBOV1_2F_breeders * (LHEIFBRE_Qobs_milk/rt_LHEIFBRE)),
+                                 (rt_LBOV1_2F_breeders * (LCOWDAIR_Qobs_milk/rt_LCOWDAIR))
+      ),
+      # as some farms do not have LHEIFBRE, we estimate LBOV1_2F based on the LCOWDAIR rearing parameter
 
-      #LCOWDAIR_upward_Qobs_milk = (( rt_LBOV1_2F_breeders*LBOV1_2F_breeders_Qobs + ((1+rt_LHEIFBRE)*LHEIFBRE_Qobs) ) / ( LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs )) * ((LCOWDAIR_Fin - LCOWDAIR_PN)/rt_LCOWDAIR),
-      LCOWDAIR_upward_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
-                                         (( rt_LBOV1_2F_breeders*LBOV1_2F_breeders_Qobs + ((1+rt_LHEIFBRE)*LHEIFBRE_Qobs) ) / ( LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs )) * (LCOWDAIR_Qobs/rt_LCOWDAIR),
-                                         0),
-      LHEIFBRE_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
-                                  LCOWDAIR_upward_Qobs_milk * (LHEIFBRE_Qobs / (LHEIFBRE_Qobs + LBOV1_2F_breeders_Qobs) ),
-                                  0),
+      #breeders_milk_Qobs = (rt_LHEIFBRE * (LCOWDAIR_Qobs/rt_LCOWDAIR)) + (rt_LBOV1_2F_breeders * (LCOWDAIR_Qobs/rt_LCOWDAIR)),
+      #LHEIFBRE_milk_Qobs = breeders_milk_Qobs * (LHEIFBRE_Qobs / (LHEIFBRE_Qobs + LBOV1_2F_breeders_Qobs)),
+      #LBOV1_2F_milk_Qobs = breeders_milk_Qobs * (LBOV1_2F_breeders_Qobs / (LHEIFBRE_Qobs + LBOV1_2F_breeders_Qobs)),
 
-      LBOV1_2F_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
-                                  LCOWDAIR_upward_Qobs_milk * (LBOV1_2F_breeders_Qobs / (LHEIFBRE_Qobs + LBOV1_2F_breeders_Qobs) ),
-                                  0),
+      #breeders_milk_Qobs = (((rt_LBOV1_2F_breeders)*LBOV1_2F_breeders_Qobs + (rt_LHEIFBRE)*LHEIFBRE_Qobs)/ (LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs))* (LCOWDAIR_Qobs/rt_LCOWDAIR),
+      #LHEIFBRE_milk_Qobs = breeders_milk_Qobs * (LHEIFBRE_Qobs / (LHEIFBRE_Qobs + LBOV1_2F_breeders_Qobs)),
+      #LBOV1_2F_milk_Qobs = breeders_milk_Qobs * (LBOV1_2F_Qobs / (LHEIFBRE_Qobs + LBOV1_2F_breeders_Qobs)),
 
-      LBOV1_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
-                               rt_LBOV1 * (LBOV1_2F_Qobs_milk/rt_LBOV1_2F_breeders),
-                               0)
-
-
-      #LHEIFBRE_Qobs_milk = rt_LHEIFBRE * (LCOWDAIR_Qobs/rt_LCOWDAIR),
-      #LHEIFBRE_Qobs_milk = pmin(rt_LHEIFBRE * (LCOWDAIR_Qobs/rt_LCOWDAIR),LHEIFBRE_Qobs),
-
-      #LBOV1_2F_Qobs_milk = rt_LBOV1_2F_breeders * (LHEIFBRE_Qobs_milk/rt_LHEIFBRE),
-      #LBOV1_2F_Qobs_milk = pmin(rt_LBOV1_2F_breeders * (LHEIFBRE_Qobs_milk/rt_LHEIFBRE),LBOV1_2F_breeders_Qobs),
+      #LHEIFBRE_milk_Qobs = LHEIFBRE_Qobs * ((LCOWDAIR_Qobs/rt_LCOWDAIR)/ ((LCOWDAIR_Qobs/rt_LCOWDAIR) + (LCOWOTH_Qobs/rt_LCOWOTH))),
+      #LBOV1_2F_milk_Qobs = LBOV1_2F_breeders_Qobs * ((LCOWDAIR_Qobs/rt_LCOWDAIR)/ ((LCOWDAIR_Qobs/rt_LCOWDAIR) + (LCOWOTH_Qobs/rt_LCOWOTH))),
 
       # juveniles
-      #LBOV1_Qobs_milk = rt_LBOV1 * (LBOV1_2F_Qobs_milk/rt_LBOV1_2F_breeders)
-      #LBOV1_Qobs_milk = pmin(rt_LBOV1 * (LBOV1_2F_Qobs_milk/rt_LBOV1_2F_breeders), LBOV1_Qobs)
-
-    )  |>
+      LBOV1_Qobs_milk = pmin(LBOV1_Qobs, rt_LBOV1 * (LBOV1_2F_Qobs_milk/rt_LBOV1_2F_breeders)))  |>
     # dplyr::select columns
     dplyr::select(dplyr::all_of(object@traceability$id_cols), dplyr::matches("Qobs"), -dplyr::matches("fattening|breeders")) |>
     # pivot table
@@ -203,12 +194,14 @@ f_herd_activities <- function(object,
 
   ## SHEEP ----
 
-  # TODO: check activity for sheep
   # I estimate that a ewe produce 255 l/year in France
   ## see https://idele.fr/?eID=cmis_download&oID=workspace%3A%2F%2FSpacesStore%2F9a5e1b1d-9051-475d-a6cd-7d42a800137b&cHash=0ac69d95716582d2aadf6ebdff0ed412
   # I estimate the number of ewes (LEWEBRE) involved in the milk activity as Qobs_milk = prod_t / 0.255
   ## I assign at least one ewe to the milk activity if the farm has any milk production < 255 L
   # All other sheep are assigned to the meat activity
+
+  # data_extra$livestock |> dplyr::filter(species == "sheep") |> dplyr::pull(FADN_code_letter)
+  #[1] "LEWEBRE"   "LSHEEPEWE" "LSHEPOTH"
 
   tmp_milk_prod = object@output$other_herd_products |>
     dplyr::filter(FADN_code_letter_output == "PMLKSHEP")
@@ -234,7 +227,11 @@ f_herd_activities <- function(object,
     )
 
   ## GOATS ----
-  herd_goats <- object@herd |>
+
+  #data_extra$livestock |> dplyr::filter(species == "goats") |> dplyr::pull(FADN_code_letter)
+  #[1] "LGOATBRE"   "LGOATBREED" "LGOATOTH"
+
+    herd_goats <- object@herd |>
     dplyr::filter(species == "goats") |>
     # dplyr::select columns
     dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
@@ -245,6 +242,9 @@ f_herd_activities <- function(object,
     )
 
   ## HORSES ----
+  #data_extra$livestock |> dplyr::filter(species == "horse") |> dplyr::pull(FADN_code_letter)
+  #[1] "LEQD"
+
   herd_horse <- object@herd |>
     dplyr::filter(species == "horse") |>
     # dplyr::select columns
@@ -255,7 +255,10 @@ f_herd_activities <- function(object,
       Qobs_meat = Qobs
     )
 
-  ## RABBITS ----
+  ## OTHERS ----
+  #data_extra$livestock |> dplyr::filter(species == "others") |> dplyr::pull(FADN_code_letter)
+  #[1] "LANIMOTH"    "LANIMOTH868" "LBEERABB"    "LBEES"       "LRABBRE"     "LRABOTH"
+
   herd_others <- object@herd |>
     dplyr::filter(species == "others") |>
     # dplyr::select columns

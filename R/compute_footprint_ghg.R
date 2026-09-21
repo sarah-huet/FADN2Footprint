@@ -74,7 +74,8 @@
 
 
 compute_footprint_ghg <- function(object,
-                                  overwrite = FALSE) {
+                                  overwrite = FALSE,
+                                  account_pseudoherd = TRUE) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -101,9 +102,17 @@ compute_footprint_ghg <- function(object,
   object@footprints$GHGE$GHGE_feed <- feed_impact
 
   ## Herd ----
+
   # Compute GHGE per animal
   herd_impact = f_GHGE_herd(object, overwrite = overwrite)
   object@footprints$GHGE$GHGE_herd <- herd_impact
+
+  if (account_pseudoherd == TRUE) {
+
+    pseudoherd_impact = f_GHGE_pseudoherd(object, overwrite = overwrite)
+    object@footprints$GHGE$GHGE_pseudoherd <- pseudoherd_impact
+
+  }
 
   ## Herd products ----
   # Compute GHGE for milk, meat and eggs

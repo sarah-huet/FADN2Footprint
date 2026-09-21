@@ -136,7 +136,14 @@ f_herd_rearing_param_cattle <- function(object){
 
     t_1st_calve_heiffers = ((2+rt_LHEIFBRE)*LHEIFBRE_Qobs) / LHEIFBRE_Qobs, ## LHEIFBRE have at least 2 y.o.
     offspring_cows = (LBOV1_Fin-LBOV1_PN) / ( LCOWDAIR_Qobs + LCOWOTH_Qobs )
-  ) #|>
+  ) |>
+    # replace Inf per NAs
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::matches("rt_|t_1st|offspring"),
+        ~ ifelse(!is.finite(.x), NA_real_, .x)
+      ))
+
   # remove columns with only zeros or NAs
   #select(where(~ !is.numeric(.) || is.na(sum(., na.rm = TRUE)) || sum(., na.rm = TRUE) != 0))
 
@@ -145,58 +152,84 @@ f_herd_rearing_param_cattle <- function(object){
   # how many NAs per columns => only in residence time columns
   # View(herd_cattle_process_init |> summarise(across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
-  ## Replace outliers with reference values ----
-
+  ## replace outliers per percentiles ----
   herd_cattle_process_clean1 <- herd_cattle_process_init |>
-    # add NUTS2
+    # add NUTS2 and SYS02
     dplyr::left_join(object@farm |>
-                       dplyr::select(dplyr::all_of(object@traceability$id_cols),NUTS2),
+                       dplyr::select(dplyr::all_of(object@traceability$id_cols), NUTS2, SYS02),
                      by = object@traceability$id_cols)
 
-  for (var in colnames(herd_cattle_process_clean1)[grepl("rt_|t_1st|offspring",colnames(herd_cattle_process_clean1))]) {
+    for (var in colnames(herd_cattle_process_clean1)[grepl("rt_|t_1st|offspring",colnames(herd_cattle_process_clean1))]) {
 
-    v <- rlang::sym(var)
+      v <- rlang::sym(var)
 
-    # Join and replace
-    herd_cattle_process_clean1 <- herd_cattle_process_clean1 |>
-      # Join NUTS2 medians
-      dplyr::left_join(
-        reference_rearing_param$ref_per_NUTS2$cattle |>
-          dplyr::filter(rearing_param == var) |>
-          dplyr::select(NUTS2,median) |>
-          dplyr::rename(median_NUTS2 = median),
-        by = "NUTS2") |>
-      # join overall medians and thresholds
-      (function(.) {
-        ovrll_tbl <- reference_rearing_param$ref_overall$cattle |>
-          dplyr::filter(rearing_param == var) |>
-          dplyr::select(median, threshold_down, threshold_up) |>
-          dplyr::rename(median_all = median)
+      # Join and replace
+      herd_cattle_process_clean1 <- herd_cattle_process_clean1 |>
+        # Join NUTS2 medians
+        dplyr::left_join(
+          reference_rearing_param$ref_per_NUTS2$cattle |>
+            dplyr::filter(rearing_param == var) |>
+            dplyr::select(NUTS2,median) |>
+            dplyr::rename(median_NUTS2 = median),
+          by = "NUTS2") |>
+        # join overall medians and thresholds
+        (function(.) {
+          ovrll_tbl <- reference_rearing_param$ref_overall$cattle |>
+            dplyr::filter(rearing_param == var) |>
+            dplyr::select(median, threshold_down, threshold_up) |>
+            dplyr::rename(median_all = median)
 
-        if (nrow(ovrll_tbl) > 0) {
-          cbind(., ovrll_tbl)
-        } else {
-          cbind(., tibble(median_all = NA,
-                          threshold_down = NA,
-                          threshold_up = NA))
-        }
-      })() |>
-      dplyr::mutate(ref_val = dplyr::case_when(
-        !is.finite(median_NUTS2) ~ median_all,
-        .default = median_NUTS2
-      )) |>
-      # replace
-      dplyr::mutate(!!v := case_when(
-        !is.finite(!!v) ~ ref_val,
-        .default = !!v
-      )) |>
-      dplyr::mutate(!!v := case_when(
-        (!!v < threshold_down) ~ threshold_down,
-        (!!v > threshold_up) ~ threshold_up,
-        .default = !!v
-      )) |>
-      dplyr::select(-c(median_NUTS2,median_all,ref_val,threshold_down,threshold_up))
-  }
+          if (nrow(ovrll_tbl) > 0) {
+            cbind(., ovrll_tbl)
+          } else {
+            cbind(., tibble(median_all = NA,
+                            threshold_down = NA,
+                            threshold_up = NA))
+          }
+        })() |>
+        dplyr::mutate(ref_val = dplyr::case_when(
+          !is.finite(median_NUTS2) ~ median_all,
+          .default = median_NUTS2
+        )) |>
+        # replace
+        dplyr::mutate(!!v := case_when(
+          !is.finite(!!v) ~ ref_val,
+          .default = !!v
+        )) |>
+        dplyr::mutate(!!v := case_when(
+          (!!v < threshold_down) ~ threshold_down,
+          (!!v > threshold_up) ~ threshold_up,
+          .default = !!v
+        )) |>
+        dplyr::select(-c(median_NUTS2,median_all,ref_val,threshold_down,threshold_up))
+    }
+
+  ## Replace NAs with fallback averages ----
+
+  # identify target variables dynamically
+  target_vars_cattle1 <- colnames(herd_cattle_process_clean1)[grepl("rt_|t_1st|offspring", colnames(herd_cattle_process_clean1))]
+
+  tmp_avrg_rearing_param <- h_average_practices(data = herd_cattle_process_clean1,
+                                                target_vars = target_vars_cattle1,
+                                                primary_grp = c('YEAR', 'COUNTRY', 'NUTS2'),
+                                                secondary_grp = c('COUNTRY'),
+                                                weight_var = 'SYS02') |>
+    dplyr::rename_with(~ paste0("avrg_", .x),
+                       .cols = dplyr::all_of(target_vars_cattle1))
+
+  ## add fallback averages
+  herd_cattle_process_clean1 <- herd_cattle_process_clean1 |>
+    dplyr::left_join(tmp_avrg_rearing_param,
+                     by = c('YEAR', 'COUNTRY', 'NUTS2')) |>
+    # replace NAs with fallback, for each target variable
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(target_vars_cattle1),
+        ~ ifelse(is.na(.x), get(paste0("avrg_", dplyr::cur_column())), .x)
+      )
+    ) |>
+    # remove fallback variables
+    dplyr::select(-dplyr::matches("^avrg_"))
 
   ## 2.3. MIXED CATEGORIES ----
 
@@ -206,22 +239,22 @@ f_herd_rearing_param_cattle <- function(object){
       # LBOV1_2F
       ## Total number of animals in downward rearing stages
       LBOV1_2F_total_downward =
-        coalesce(LHEIFFAT_Qobs/rt_LHEIFFAT,0)
-      + coalesce(LHEIFBRE_Qobs/rt_LHEIFBRE,0)
-      +  coalesce(LCOWDAIR_Qobs/rt_LCOWDAIR,0)
-      +  coalesce(LCOWOTH_Qobs/rt_LCOWOTH,0),
+        LHEIFFAT_Qobs/rt_LHEIFFAT
+      + LHEIFBRE_Qobs/rt_LHEIFBRE
+      + LCOWDAIR_Qobs/rt_LCOWDAIR
+      + LCOWOTH_Qobs/rt_LCOWOTH,
       ## Total number of animals in downward fattening rearing stages
       LBOV1_2F_total_downward_fattening =
-        coalesce(LHEIFFAT_Qobs/rt_LHEIFFAT,0),
+        LHEIFFAT_Qobs/rt_LHEIFFAT,
       ## Total number of animals in downward breeders rearing stages
       LBOV1_2F_total_downward_breeders =
-        coalesce(LHEIFBRE_Qobs/rt_LHEIFBRE,0)
-      +  coalesce(LCOWDAIR_Qobs/rt_LCOWDAIR,0)
-      +  coalesce(LCOWOTH_Qobs/rt_LCOWOTH,0),
+        LHEIFBRE_Qobs/rt_LHEIFBRE
+      + LCOWDAIR_Qobs/rt_LCOWDAIR
+      + LCOWOTH_Qobs/rt_LCOWOTH,
       ## proportion of fattening
-      LBOV1_2F_fattening_prop = coalesce(LBOV1_2F_total_downward_fattening / LBOV1_2F_total_downward,0),
+      LBOV1_2F_fattening_prop = LBOV1_2F_total_downward_fattening / LBOV1_2F_total_downward,
       ## proportion of breeding
-      LBOV1_2F_breeders_prop = coalesce(LBOV1_2F_total_downward_breeders / LBOV1_2F_total_downward,0),
+      LBOV1_2F_breeders_prop = LBOV1_2F_total_downward_breeders / LBOV1_2F_total_downward,
 
       ## Observed number of animals
       LBOV1_2F_fattening_Qobs = LBOV1_2F_Qobs * LBOV1_2F_fattening_prop,
@@ -242,12 +275,17 @@ f_herd_rearing_param_cattle <- function(object){
       t_1st_calve = ( (1+rt_LBOV1_2F_breeders)*LBOV1_2F_breeders_Qobs + ((2+rt_LHEIFBRE)*LHEIFBRE_Qobs) ) / ( LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs ),
       offspring_b = (LBOV1_Fin-LBOV1_PN) / ( LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs + LCOWDAIR_Qobs + LCOWOTH_Qobs )
     ) |>
-    ungroup()
+    ungroup()  |>
+    # replace Inf per NAs
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::matches("rt_|t_1st|offspring"),
+        ~ ifelse(!is.finite(.x), NA_real_, .x)
+      ))
 
   # View(herd_cattle_process |> summarise(across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
-  ## Replace outliers with reference values for mixed categories ----
-
+  ## replace outliers per percentiles ----
   herd_cattle_process_clean2 <- herd_cattle_process
 
   for (var in setdiff(colnames(herd_cattle_process),
@@ -255,39 +293,67 @@ f_herd_rearing_param_cattle <- function(object){
                                                                                                 colnames(herd_cattle_process_clean1)))]) {
 
     v <- rlang::sym(var)
-
     # Join and replace
     herd_cattle_process_clean2 <- herd_cattle_process_clean2 |>
-      # Join NUTS2 medians
-      dplyr::left_join(
-        reference_rearing_param$ref_per_NUTS2$cattle |>
-          dplyr::filter(rearing_param == var) |>
-          dplyr::select(NUTS2,median) |>
-          dplyr::rename(median_NUTS2 = median),
-        by = "NUTS2") |>
-      # join overall medians and thresholds
-      cbind(
-        reference_rearing_param$ref_overall$cattle |>
-          dplyr::filter(rearing_param == var) |>
-          dplyr::select(median,threshold_down,threshold_up)|>
-          dplyr::rename(median_all = median)
-      ) |>
-      dplyr::mutate(ref_val = dplyr::case_when(
-        !is.finite(median_NUTS2) ~ median_all,
-        .default = median_NUTS2
-      )) |>
-      # replace
-      dplyr::mutate(!!v := dplyr::case_when(
-        !is.finite(!!v) ~ ref_val,
-        .default = !!v
-      )) |>
-      dplyr::mutate(!!v := dplyr::case_when(
-        (!!v < threshold_down) ~ threshold_down,
-        (!!v > threshold_up) ~ threshold_up,
-        .default = !!v
-      )) |>
-      dplyr::select(-c(median_NUTS2,median_all,ref_val,threshold_down,threshold_up))
-  }
+    # Join NUTS2 medians
+    dplyr::left_join(
+      reference_rearing_param$ref_per_NUTS2$cattle |>
+        dplyr::filter(rearing_param == var) |>
+        dplyr::select(NUTS2,median) |>
+        dplyr::rename(median_NUTS2 = median),
+      by = "NUTS2") |>
+    # join overall medians and thresholds
+    cbind(
+      reference_rearing_param$ref_overall$cattle |>
+        dplyr::filter(rearing_param == var) |>
+        dplyr::select(median,threshold_down,threshold_up)|>
+        dplyr::rename(median_all = median)
+    ) |>
+    dplyr::mutate(ref_val = dplyr::case_when(
+      !is.finite(median_NUTS2) ~ median_all,
+      .default = median_NUTS2
+    )) |>
+    # replace
+    dplyr::mutate(!!v := dplyr::case_when(
+      !is.finite(!!v) ~ ref_val,
+      .default = !!v
+    )) |>
+    dplyr::mutate(!!v := dplyr::case_when(
+      (!!v < threshold_down) ~ threshold_down,
+      (!!v > threshold_up) ~ threshold_up,
+      .default = !!v
+    )) |>
+    dplyr::select(-c(median_NUTS2,median_all,ref_val,threshold_down,threshold_up))
+}
+
+  ## Replace NAs with fallback averages for mixed categories ----
+
+  # identify target variables dynamically
+  target_vars_mixed <- setdiff(colnames(herd_cattle_process),
+                               colnames(herd_cattle_process_clean1))
+  target_vars_mixed <- target_vars_mixed[grepl("rt_|t_1st|offspring", target_vars_mixed)]
+
+  tmp_avrg_rearing_param <- h_average_practices(data = herd_cattle_process_clean2,
+                                                target_vars = target_vars_mixed,
+                                                primary_grp = c('YEAR', 'COUNTRY', 'NUTS2'),
+                                                secondary_grp = c('COUNTRY'),
+                                                weight_var = 'SYS02') |>
+    dplyr::rename_with(~ paste0("avrg_", .x),
+                       .cols = dplyr::all_of(target_vars_mixed))
+
+  ## add fallback averages
+  herd_cattle_process_clean2 <- herd_cattle_process_clean2 |>
+    dplyr::left_join(tmp_avrg_rearing_param,
+                     by = c('YEAR', 'COUNTRY', 'NUTS2')) |>
+    # replace NAs with fallback, for each target variable
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(target_vars_mixed),
+        ~ ifelse(is.na(.x), get(paste0("avrg_", dplyr::cur_column())), .x)
+      )
+    ) |>
+    # remove fallback variables
+    dplyr::select(-dplyr::matches("^avrg_|SYS02"))
 
   # View(herd_cattle_process_clean2 |> summarise(across(everything(), ~sum(is.finite(.x)))) |> pivot_longer(cols = everything()))
 

@@ -102,19 +102,19 @@ f_herd_activities <- function(object,
   herd_cattle <- f_herd_rearing_param_cattle(object) |>
     # estimate observed quantities and times for each production process step
     # first estimate how many animals are needed to renew the dairy cows, in farms that have dairy cows
-    # TODO: check formula to estimate Qobs to renew dairy cows, especially when there is no LHEIFBRE in the farm, how to estimate LBOV1_2F?
     dplyr::mutate(
 
       # breeders
       LCOWDAIR_Qobs_milk = ifelse(LCOWDAIR_Qobs >0, LCOWDAIR_Qobs, 0),
 
-      LHEIFBRE_Qobs_milk = ifelse(LHEIFBRE_Qobs > 0,
-                                 rt_LHEIFBRE * (LCOWDAIR_Qobs_milk/rt_LCOWDAIR),
-                                 0),
-      LBOV1_2F_Qobs_milk = ifelse(LHEIFBRE_Qobs > 0,
-                                 (rt_LBOV1_2F_breeders * (LHEIFBRE_Qobs_milk/rt_LHEIFBRE)),
-                                 (rt_LBOV1_2F_breeders * (LCOWDAIR_Qobs_milk/rt_LCOWDAIR))
-      ),
+      LHEIFBRE_Qobs_milk = ifelse(LCOWDAIR_Qobs >0 & LHEIFBRE_Qobs >0,
+                                  rt_LHEIFBRE * (LCOWDAIR_Qobs_milk/rt_LCOWDAIR),
+                                  0),
+      LBOV1_2F_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
+                                  (rt_LBOV1_2F_breeders * (LCOWDAIR_Qobs_milk/rt_LCOWDAIR)),
+                                  0),
+      LBOV1_2F_breeders_Qobs_milk = LBOV1_2F_Qobs_milk,
+      LBOV1_2F_fattening_Qobs_milk = 0,
       # as some farms do not have LHEIFBRE, we estimate LBOV1_2F based on the LCOWDAIR rearing parameter
 
       #breeders_milk_Qobs = (rt_LHEIFBRE * (LCOWDAIR_Qobs/rt_LCOWDAIR)) + (rt_LBOV1_2F_breeders * (LCOWDAIR_Qobs/rt_LCOWDAIR)),
@@ -129,9 +129,11 @@ f_herd_activities <- function(object,
       #LBOV1_2F_milk_Qobs = LBOV1_2F_breeders_Qobs * ((LCOWDAIR_Qobs/rt_LCOWDAIR)/ ((LCOWDAIR_Qobs/rt_LCOWDAIR) + (LCOWOTH_Qobs/rt_LCOWOTH))),
 
       # juveniles
-      LBOV1_Qobs_milk = pmin(LBOV1_Qobs, rt_LBOV1 * (LBOV1_2F_Qobs_milk/rt_LBOV1_2F_breeders)))  |>
+      LBOV1_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
+                               rt_LBOV1 * (LBOV1_2F_breeders_Qobs_milk/rt_LBOV1_2F_breeders),
+                               0))  |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), dplyr::matches("Qobs"), -dplyr::matches("fattening|breeders")) |>
+    dplyr::select(dplyr::all_of(object@traceability$id_cols), dplyr::matches("Qobs")) |>
     # pivot table
     tidyr::pivot_longer(
       cols = -dplyr::all_of(object@traceability$id_cols),
@@ -146,8 +148,18 @@ f_herd_activities <- function(object,
     dplyr::mutate(
       ## for milk: check that estimated Qobs are <= Qobs
       Qobs_milk = pmin(Qobs,Qobs_milk),
+      Qobs_milk = round(Qobs_milk, 2),
       ## for meat: animals not involved in the milk process are considered part of the meat activity
-      Qobs_meat = Qobs - dplyr::coalesce(Qobs_milk,0)
+      Qobs_meat = Qobs - dplyr::coalesce(Qobs_milk,0),
+      Qobs_meat = round(Qobs_meat, 2),
+      species = "cattle"
+    )|>
+    #remove rows with only NAs or zeros
+    dplyr::filter(
+      dplyr::if_any(
+        dplyr::matches("Qobs"),
+        ~ !is.na(.x) & .x != 0
+      )
     )
 
 
@@ -164,7 +176,16 @@ f_herd_activities <- function(object,
     ) |>
     # MEAT
     dplyr::mutate(
-      Qobs_meat = Qobs
+      Qobs_meat = Qobs,
+      Qobs_meat = round(Qobs_meat, 2),
+      species = "swine"
+    )|>
+    #remove rows with only NAs or zeros
+    dplyr::filter(
+      dplyr::if_any(
+        dplyr::matches("Qobs"),
+        ~ !is.na(.x) & .x != 0
+      )
     )
 
   ## POULTRY ----
@@ -189,6 +210,15 @@ f_herd_activities <- function(object,
       Qobs_meat = dplyr::case_when(
         FADN_code_letter != "LHENSLAY" ~ Qobs,
         .default = 0
+      ),
+      Qobs_meat = round(Qobs_meat, 2),
+      species = "poultry"
+    )|>
+    #remove rows with only NAs or zeros
+    dplyr::filter(
+      dplyr::if_any(
+        dplyr::matches("Qobs"),
+        ~ !is.na(.x) & .x != 0
       )
     )
 
@@ -200,8 +230,9 @@ f_herd_activities <- function(object,
   ## I assign at least one ewe to the milk activity if the farm has any milk production < 255 L
   # All other sheep are assigned to the meat activity
 
-  # data_extra$livestock |> dplyr::filter(species == "sheep") |> dplyr::pull(FADN_code_letter)
-  #[1] "LEWEBRE"   "LSHEEPEWE" "LSHEPOTH"
+  # > data_extra$livestock |> dplyr::filter(species == "sheep") |> dplyr::pull(FADN_code_letter, FADN_code_number)
+  #311         OVI         319
+  #"LEWEBRE" "LSHEEPEWE"  "LSHEPOTH"
 
   tmp_milk_prod = object@output$other_herd_products |>
     dplyr::filter(FADN_code_letter_output == "PMLKSHEP")
@@ -223,7 +254,17 @@ f_herd_activities <- function(object,
         FADN_code_letter == "LEWEBRE" & prod_milk_t >0 ~ pmax(1, prod_milk_t / 0.255, na.rm = TRUE),
         .default = 0
       ),
-      Qobs_meat = Qobs - Qobs_milk
+      Qobs_milk = round(Qobs_milk, 2),
+      Qobs_meat = Qobs - Qobs_milk,
+      Qobs_meat = round(Qobs_meat, 2),
+      species = "sheep"
+    )|>
+    #remove rows with only NAs or zeros
+    dplyr::filter(
+      dplyr::if_any(
+        dplyr::matches("Qobs"),
+        ~ !is.na(.x) & .x != 0
+      )
     )
 
   ## GOATS ----
@@ -231,14 +272,21 @@ f_herd_activities <- function(object,
   #data_extra$livestock |> dplyr::filter(species == "goats") |> dplyr::pull(FADN_code_letter)
   #[1] "LGOATBRE"   "LGOATBREED" "LGOATOTH"
 
-    herd_goats <- object@herd |>
+  herd_goats <- object@herd |>
     dplyr::filter(species == "goats") |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, species, dplyr::matches("Qobs")) |>
     # restrain to activity
     dplyr::mutate(
       # TODO: check activity for goats
       Qobs_milk = Qobs
+    )|>
+    #remove rows with only NAs or zeros
+    dplyr::filter(
+      dplyr::if_any(
+        dplyr::matches("Qobs"),
+        ~ !is.na(.x) & .x != 0
+      )
     )
 
   ## HORSES ----
@@ -248,11 +296,18 @@ f_herd_activities <- function(object,
   herd_horse <- object@herd |>
     dplyr::filter(species == "horse") |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, species, dplyr::matches("Qobs")) |>
     # restrain to activity
     dplyr::mutate(
       # TODO: check activity for horse
       Qobs_meat = Qobs
+    )|>
+    #remove rows with only NAs or zeros
+    dplyr::filter(
+      dplyr::if_any(
+        dplyr::matches("Qobs"),
+        ~ !is.na(.x) & .x != 0
+      )
     )
 
   ## OTHERS ----
@@ -262,11 +317,18 @@ f_herd_activities <- function(object,
   herd_others <- object@herd |>
     dplyr::filter(species == "others") |>
     # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
+    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, species, dplyr::matches("Qobs")) |>
     # restrain to activity
     dplyr::mutate(
       # TODO: check activity for horse
       Qobs_meat = Qobs
+    )|>
+    #remove rows with only NAs or zeros
+    dplyr::filter(
+      dplyr::if_any(
+        dplyr::matches("Qobs"),
+        ~ !is.na(.x) & .x != 0
+      )
     )
 
 
@@ -282,13 +344,7 @@ f_herd_activities <- function(object,
       herd_horse,
       herd_others
     ))|>
-    dplyr::filter(Qobs >0) |>
-    # add species
-    dplyr::left_join(
-      data_extra$livestock |>
-        dplyr::select(FADN_code_letter,species),
-      by = c('FADN_code_letter')
-    )
+    dplyr::filter(Qobs >0)
 
 
   return(herd)

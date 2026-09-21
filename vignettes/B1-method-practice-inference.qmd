@@ -25,43 +25,46 @@ SENTINEL-2 data, and parameters from national greenhouse gas inventories
 from UNFCCC (@tbl-practice-list).
 
 ::: {#tbl-practice-list}
-+----------------+----------------+----------------+----------------+
-| Data source /  | FADN (+ Farm   | \+ LPIS & SWF  | Parameters     |
-| Practices      | practices      | & SENTINEL-2   | from national  |
-|                | survey & feed  | (farm level)   | GHGIs (yearly  |
-|                | tables for     |                | national       |
-|                | allocation     |                | averages) and  |
-|                | keys)          |                | other sources  |
-+----------------+----------------+----------------+----------------+
-| Crop practices | N fertilizer   | Hedge density  |                |
-|                | quantity,      |                |                |
-|                | organic and    | Mean Field     |                |
-|                | mineral        | Size           |                |
-|                |                |                |                |
-|                | Pesticides     | Ground Cover   |                |
-|                |                |                |                |
-|                | Tillage        |                |                |
-|                |                |                |                |
-|                | Crop Diversity |                |                |
-|                |                |                |                |
-|                | Yields         |                |                |
-+----------------+----------------+----------------+----------------+
-| Grassland      | N Fertilizer   | Hedge density  | Yield (XX      |
-| practices      | quantity,      |                | source to      |
-|                | organic and    |                | define)        |
-|                | mineral        |                |                |
-|                |                |                |                |
-|                | Livestock      |                |                |
-|                | density        |                |                |
-+----------------+----------------+----------------+----------------+
-| Herding        | Feed intake    |                | Manure         |
-| practices      |                |                | Management     |
-|                | Rearing        |                | System         |
-|                | parameters     |                |                |
-|                |                |                | Animal Weight  |
-|                | Production     |                |                |
-|                | yields         |                |                |
-+----------------+----------------+----------------+----------------+
++---------------+---------------+---------------+---------------+
+|               |               |               |               |
++===============+===============+===============+===============+
+| Data source / | FADN (+ Farm  | \+ LPIS & SWF | Parameters    |
+| Practices     | practices     | & SENTINEL-2  | from national |
+|               | survey & feed | (farm level)  | GHGIs (yearly |
+|               | tables for    |               | national      |
+|               | allocation    |               | averages) and |
+|               | keys)         |               | other sources |
++---------------+---------------+---------------+---------------+
+| Crop          | N fertilizer  | Hedge density |               |
+| practices     | quantity,     |               |               |
+|               | organic and   | Mean Field    |               |
+|               | mineral       | Size          |               |
+|               |               |               |               |
+|               | Pesticides    | Ground Cover  |               |
+|               |               |               |               |
+|               | Tillage       |               |               |
+|               |               |               |               |
+|               | Crop          |               |               |
+|               | Diversity     |               |               |
+|               |               |               |               |
+|               | Yields        |               |               |
++---------------+---------------+---------------+---------------+
+| Grassland     | N Fertilizer  | Hedge density | Yield (XX     |
+| practices     | quantity,     |               | source to     |
+|               | organic and   |               | define)       |
+|               | mineral       |               |               |
+|               |               |               |               |
+|               | Livestock     |               |               |
+|               | density       |               |               |
++---------------+---------------+---------------+---------------+
+| Herding       | Feed intake   |               | Manure        |
+| practices     |               |               | Management    |
+|               | Rearing       |               | System        |
+|               | parameters    |               |               |
+|               |               |               | Animal Weight |
+|               | Production    |               |               |
+|               | yields        |               |               |
++---------------+---------------+---------------+---------------+
 
 List of agricultural practices inferred by the FADN2Footprint package,
 based on FADN data, potentially combined with data from LPIS, SWF,
@@ -71,55 +74,55 @@ SENTINEL-2, and national GHGIs.
 To infer these practices, we used several FADN primary variables:
 
 ::: {#tbl-practice-FADN-variable}
-+----------------------------------+----------------------------------+
-| Agricultural practices           | FADN variable                    |
-+==================================+==================================+
-| Mineral nitrogen quantity        | Crop areas (ha)                  |
-| (kgN/ha)                         |                                  |
-|                                  | Amount of mineral nitrogen       |
-|                                  | fertilizer (kgN)                 |
-+----------------------------------+----------------------------------+
-| Organic nitrogen quantity        | Crop areas (ha)                  |
-| (kgN/ha)                         |                                  |
-|                                  | Feed intake (see below)          |
-|                                  |                                  |
-|                                  | Animal number and category       |
-+----------------------------------+----------------------------------+
-| Pesticides (€/ha)                | Crop areas (ha)                  |
-|                                  |                                  |
-|                                  | Pesticides purchases (€)         |
-+----------------------------------+----------------------------------+
-| Tillage (L/ha)                   | Crop areas (ha)                  |
-|                                  |                                  |
-|                                  | Off-road diesel purchases (L)    |
-+----------------------------------+----------------------------------+
-| Crop diversity (Shannon index,   | Crop areas (ha)                  |
-| no unit)                         |                                  |
-+----------------------------------+----------------------------------+
-| Crop Yield (tDM/ha)              | Crop areas (ha) and production   |
-|                                  | (tDM)                            |
-+----------------------------------+----------------------------------+
-| Livestock density (LU/ha)        | Grassland and feedcrops areas    |
-|                                  | (ha)                             |
-|                                  |                                  |
-|                                  | Animal number and category       |
-+----------------------------------+----------------------------------+
-| Feed intake (tDM/LU/yr)          | Crop production and\             |
-|                                  | sales                            |
-|                                  |                                  |
-|                                  | Animal number and category       |
-|                                  |                                  |
-|                                  | Feed purchases                   |
-+----------------------------------+----------------------------------+
-| Rearing parameters (yr)          | Animal number and category       |
-|                                  |                                  |
-|                                  | Animal sales and purchases       |
-+----------------------------------+----------------------------------+
-| Animal yield                     | Animal number and category       |
-|                                  |                                  |
-|                                  | Animal product production (milk, |
-|                                  | meat, ...)                       |
-+----------------------------------+----------------------------------+
++---------------------------------+---------------------------------+
+| Agricultural practices          | FADN variable                   |
++=================================+=================================+
+| Mineral nitrogen quantity       | Crop areas (ha)                 |
+| (kgN/ha)                        |                                 |
+|                                 | Amount of mineral nitrogen      |
+|                                 | fertilizer (kgN)                |
++---------------------------------+---------------------------------+
+| Organic nitrogen quantity       | Crop areas (ha)                 |
+| (kgN/ha)                        |                                 |
+|                                 | Feed intake (see below)         |
+|                                 |                                 |
+|                                 | Animal number and category      |
++---------------------------------+---------------------------------+
+| Pesticides (€/ha)               | Crop areas (ha)                 |
+|                                 |                                 |
+|                                 | Pesticides purchases (€)        |
++---------------------------------+---------------------------------+
+| Tillage (L/ha)                  | Crop areas (ha)                 |
+|                                 |                                 |
+|                                 | Off-road diesel purchases (L)   |
++---------------------------------+---------------------------------+
+| Crop diversity (Shannon index,  | Crop areas (ha)                 |
+| no unit)                        |                                 |
++---------------------------------+---------------------------------+
+| Crop Yield (tDM/ha)             | Crop areas (ha) and production  |
+|                                 | (tDM)                           |
++---------------------------------+---------------------------------+
+| Livestock density (LU/ha)       | Grassland and feedcrops areas   |
+|                                 | (ha)                            |
+|                                 |                                 |
+|                                 | Animal number and category      |
++---------------------------------+---------------------------------+
+| Feed intake (tDM/LU/yr)         | Crop production and\            |
+|                                 | sales                           |
+|                                 |                                 |
+|                                 | Animal number and category      |
+|                                 |                                 |
+|                                 | Feed purchases                  |
++---------------------------------+---------------------------------+
+| Rearing parameters (yr)         | Animal number and category      |
+|                                 |                                 |
+|                                 | Animal sales and purchases      |
++---------------------------------+---------------------------------+
+| Animal yield                    | Animal number and category      |
+|                                 |                                 |
+|                                 | Animal product production       |
+|                                 | (milk, meat, ...)               |
++---------------------------------+---------------------------------+
 
 FADN variables used to infer agricultural practices
 :::
@@ -241,15 +244,15 @@ To extract these plots, we use the PACAGE plot numbers (identification
 number of the plot in the Common Agricultural Policy registration) as
 primary join key. We face two situations:
 
--   The farm has the same PACAGE number in FADN: then the LPIS plots
-    with this PACAGE number are associated with that FADN-AC-FQS farm;
+- The farm has the same PACAGE number in FADN: then the LPIS plots with
+  this PACAGE number are associated with that FADN-AC-FQS farm;
 
--   No PACAGE number is registered in the FADN , or the PACAGE number in
-    FADN does not correspond to a LPIS PACAGE number: no plot is
-    associated the FADN holding. In 2020, such cases are found for 443
-    and 318 metropolitan farms, respectively. These holdings are mainly
-    concentrated in the OTEX viticulture, market gardening and pig
-    and/or poultry farming.
+- No PACAGE number is registered in the FADN , or the PACAGE number in
+  FADN does not correspond to a LPIS PACAGE number: no plot is
+  associated the FADN holding. In 2020, such cases are found for 443 and
+  318 metropolitan farms, respectively. These holdings are mainly
+  concentrated in the OTEX viticulture, market gardening and pig and/or
+  poultry farming.
 
 This extraction results in a subsample of the LPIS that we intersect
 with the Hedges layer of the BD TOPO® database (IGN and ASP, 2020) to
@@ -300,14 +303,13 @@ from the intersection:
 Then, to calculate the hedge density for each farm, we distinguish four
 plot categories for each variable (hedge length and UAA):
 
--   Total
+- Total
 
--   Permanent grassland (including grasslands, moors and alpine
-    pastures)
+- Permanent grassland (including grasslands, moors and alpine pastures)
 
--   Arboriculture (including vines)
+- Arboriculture (including vines)
 
--   Other crops
+- Other crops
 
 ## Mean field size {#sec-method-practices-mean-field-size}
 
@@ -315,14 +317,13 @@ The mean field size is the ratio of the UAA to the number of plots. We
 distinguish four plot categories for each variable (UAA and number of
 plots):
 
--   Total
+- Total
 
--   Permanent grassland (including grasslands, moors and alpine
-    pastures)
+- Permanent grassland (including grasslands, moors and alpine pastures)
 
--   Arboriculture (including vines)
+- Arboriculture (including vines)
 
--   Other crops
+- Other crops
 
 ## Crop diversity {#sec-method-practices-crop-div}
 
@@ -330,9 +331,7 @@ We calculate the Shannon index (@eq-shannon), using the number of crops
 as the number of species and the surface area as the abundance, only for
 arable land use type at the farm scale:
 
-$$
-H' = - \sum_{i=1}^{R} p_i ln p_i
-$$ {#eq-shannon}
+$$H' = - \sum_{i=1}^{R} p_i ln p_i$$ {#eq-shannon}
 
 where $R$ is the total number of crops, and $p$ is the ratio of the area
 for the crop $i$ on the total arable area.
@@ -360,14 +359,13 @@ we calculated the plot average number of covered days using the area
 statistics algorithm in QGIS (QGIS Development Team, 2022) for four plot
 categories:
 
--   Total
+- Total
 
--   Permanent grassland (including grasslands, moors and alpine
-    pastures)
+- Permanent grassland (including grasslands, moors and alpine pastures)
 
--   Arboriculture (including vines)
+- Arboriculture (including vines)
 
--   Other crops
+- Other crops
 
 The number of uncovered days is then calculated as: Number of uncovered
 day = 366 – number of covered day.
@@ -391,15 +389,15 @@ grasslands are considered as crops as they are part of a crop rotation.
 To estimate practices associated with livestock, we need to estimate
 five main elements:
 
--   herd/flock structure
+- herd/flock structure
 
--   herd feed
+- herd feed
 
--   other inputs
+- other inputs
 
--   manure/waste management
+- manure/waste management
 
--   Animal products
+- Animal products
 
 When these elements are estimated, we can model the pseudo-farm by
 gathering on-farm practices as well as off-farm ones (e.g., purchased
@@ -452,9 +450,8 @@ While stocks are registered in the FADN for each livestock category
 of animals transiting through each livestock category are unknown. We
 considered the observed animal stock as:
 
-$$
-Q_l = \frac{Q_l^{average} + Q_l^{opening} + Q_l^{closing}}{3}
-$$ {#eq-Qobs}
+$$Q_l = \frac{Q_l^{average} + Q_l^{opening} + Q_l^{closing}}{3}$$
+{#eq-Qobs}
 
 #### Estimation of flows
 
@@ -466,17 +463,14 @@ registered in the FADN for each livestock category (i.e., average,
 opening, closing, purchases, and sales numbers), we estimate flows of
 animals transiting through each livestock category as:
 
-$$
-F_{l}^{in} = Q_{l}^{purchases} + \Delta \text{Stock}_{l} + F_{l}^{out}
-$$ {#eq-Fin}
+$$F_{l}^{in} = Q_{l}^{purchases} + \Delta \text{Stock}_{l} + F_{l}^{out}$$
+{#eq-Fin}
 
-$$
-\Delta \text{Stock}_l = Q_{l}^{closing} - Q_{l}^{opening}
-$$ {#eq-delta_stock}
+$$\Delta \text{Stock}_l = Q_{l}^{closing} - Q_{l}^{opening}$$
+{#eq-delta_stock}
 
-$$
-F_{l-1}^{out} = Q_{l-1}^{sales} + \sum_L (F_{l}^{in}  - Q_{l}^{purchases})
-$$ {#eq-Fout}
+$$F_{l-1}^{out} = Q_{l-1}^{sales} + \sum_L (F_{l}^{in}  - Q_{l}^{purchases})$$
+{#eq-Fout}
 
 where $F$ are flows $in$ or $out$ the considered livestock category $l$
 ((encompassing all animals entering or leaving the category; upward
@@ -496,9 +490,8 @@ the time spent in that category) following @eq-rearing_time, similar to
 residence time in fluid mechanics, estimated as the amount of fluid
 stored on the fluid flow rate.
 
-$$
-t_{l} = \frac{\bar{Q}_{l}}{\frac{F_l^{in}+F_l^{out}}{2}}
-$$ {#eq-rearing_time}
+$$t_{l} = \frac{\bar{Q}_{l}}{\frac{F_l^{in}+F_l^{out}}{2}}$$
+{#eq-rearing_time}
 
 where $t$ is the average time an animal spends in the livestock category
 $l$ (in years), $Q_{l}$ is the observed animal stock (see @eq-Qobs) in
@@ -506,9 +499,8 @@ the farm and $F_{l}$ are in- and outflows.
 
 We also estimate the number of offspring per female breeder per year as:
 
-$$
-Offsprings = \frac{F_{j}^{in} - Q_j^{purchases}}{\bar{Q}_{b}}
-$$ {#eq-offspring_nb}
+$$Offsprings = \frac{F_{j}^{in} - Q_j^{purchases}}{\bar{Q}_{b}}$$
+{#eq-offspring_nb}
 
 where $F_{j}$ and $Q_j$ are juvenile flow and number of animals, and
 $Q_b$ are breeder numbers of animals.
@@ -552,9 +544,8 @@ based on their proportion in the downward flow of animals (see Eq.
 @eq-mixed_cat for an example calculation of the observed number of
 animals for fattening).
 
-$$
-\bar{Q}_{l_F} = \bar{Q}_{l} \cdot \frac{\sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}})}{ \sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}}) + \sum (\bar{Q}_{l_B+1} \cdot \frac{1}{t_{l_B+1}}) }
-$$ {#eq-mixed_cat}
+$$\bar{Q}_{l_F} = \bar{Q}_{l} \cdot \frac{\sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}})}{ \sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}}) + \sum (\bar{Q}_{l_B+1} \cdot \frac{1}{t_{l_B+1}}) }$$
+{#eq-mixed_cat}
 
 where $l_F$ are fattening animals and $l_B$ are breeders in category
 $l$.
@@ -583,9 +574,8 @@ Equation @eq-restrain_herd_act. We consider all additional cattle as
 part of the meat activity (e.g. additional calves spawned from dairy
 cows).
 
-$$
-\sum \bar{Q}_{l-1, \; \text{milk}} = \sum (\frac{t_{l-1} \cdot \bar{Q}_{l-1}}{\bar{Q}_{l-1}}) \cdot \frac{\bar{Q}_{l, \; \text{milk}} }{t_{l}}
-$$ {#eq-restrain_herd_act}
+$$\sum \bar{Q}_{l-1, \; \text{milk}} = \sum (\frac{t_{l-1} \cdot \bar{Q}_{l-1}}{\bar{Q}_{l-1}}) \cdot \frac{\bar{Q}_{l, \; \text{milk}} }{t_{l}}$$
+{#eq-restrain_herd_act}
 
 For swine, we consider all animals as involved in the meat activity. For
 poultry, we consider that all animals needed in the production of either
@@ -612,10 +602,11 @@ estimation of the equilibrium quantities assumes that all calves reach
 the next rearing stage. However, some calves are sold for slaughter and
 produce veal, hence never reach downward stages. To account for
 slaughtered calves, we remove the number of calves sold for slaughter
-from the equilibrium quantities estimated for fattening animals ( \* in
-Table x). Conversely, we add the number of calves sold for slaughter to
-equilibrium quantities of calves estimated from the observed fattening
-animals ( \*\* in Table x).
+from the equilibrium quantities estimated for fattening animals
+(\@tbl-pseudo#tbl-pseudoherd_eqherd_eq). Conversely, we add the number
+of calves sold for slaughter to equilibrium quantities of calves
+estimated from the observed fattening animals
+(\@tbl-pseudo#tbl-pseudoherd_eqherd_eq).
 
 ::: {#tbl-pseudoherd_eq}
 ```{r tbl-pseudoherd_eq, echo=FALSE, message=FALSE, warning=FALSE}
@@ -756,21 +747,14 @@ y.o. as well as some heifers are for fattening), we estimate observed
 and equilibrium numbers of animals, as well as the average age when
 leaving the category (start age plus residence time) :
 
-$$
-\bar{Q}_{s} = \sum^{L_s}_{l=1} \bar{Q}_{l}
-$$ {#eq-Q_s_avg}
+$$\bar{Q}_{s} = \sum^{L_s}_{l=1} \bar{Q}_{l}$$ {#eq-Q_s_avg}
 
-$$
-t_s = \frac{\sum^{L_s}_{l=1} (age^{start} + t_l) \cdot  \bar{Q}_{l}}{\sum^{L_s}_{l=1} \bar{Q}_{l}}
-$$ {#eq-t_s}
+$$t_s = \frac{\sum^{L_s}_{l=1} (age^{start} + t_l) \cdot  \bar{Q}_{l}}{\sum^{L_s}_{l=1} \bar{Q}_{l}}$$
+{#eq-t_s}
 
-$$
-\widehat{Q}_{l} = \frac{\widehat{Q}_{s} - \bar{Q}_s}{L_s} + \bar{Q}_l
-$$ {#eq-Q_l_eq}
+The equilibrium number of animals in each category $l$ is then obtained by distributing the residual gap between the stage-level equilibrium total $Q_s$ and the sum of observed numbers, weighted by the residence time of each category:
 
-\<--! XXIci attribution du nb de tête à l'équilibre = division simple
-entre catégories =\> à modifier (division pondérée par les tps de
-résidence ?) --\>
+$$Q_l = Q_l^{obs} + \left(Q_s - \sum_{l=1}^{L_s} Q_l^{obs}\right)\cdot \frac{t_l}{\displaystyle\sum_{l=1}^{L_s} t_l}$${#eq-Q_l_eq}
 
 Where $age^{start}$ is the age of entry in the category (e.g., 1 year
 for the female bovine between 1 and 2 y.o. category), $t$ is the

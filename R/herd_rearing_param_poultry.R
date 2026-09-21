@@ -48,9 +48,9 @@ f_herd_rearing_param_poultry <- function(object){
       dplyr::select(all_of(object@traceability$id_cols)) |>
       distinct() |>
       left_join(
-      herd_poultry,
-      by = object@traceability$id_cols
-    )
+        herd_poultry,
+        by = object@traceability$id_cols
+      )
   }
 
   # 2. Modeling farm rearing process ---------------------------------------------------------------------------------
@@ -101,20 +101,27 @@ f_herd_rearing_param_poultry <- function(object){
     rt_LHENSLAY = LHENSLAY_Qobs / ((LHENSLAY_Fin+LHENSLAY_Fout)/2),
     rt_LPLTRBROYL = LPLTRBROYL_Qobs / ((LPLTRBROYL_Fin+LPLTRBROYL_Fout)/2),
     rt_LPLTROTH = LPLTROTH_Qobs / ((LPLTROTH_Fin+LPLTROTH_Fout)/2)
-  ) # |>
-    # remove columns with only zeros or NAs
-    #dplyr::select(where(~ !is.numeric(.) || is.na(sum(., na.rm = TRUE)) || sum(., na.rm = TRUE) != 0))
+  )  |>
+    # replace Inf per NAs
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::matches("rt_|t_1st|offspring"),
+        ~ ifelse(!is.finite(.x), NA_real_, .x)
+      ))# |>
+  # remove columns with only zeros or NAs
+  #dplyr::select(where(~ !is.numeric(.) || is.na(sum(., na.rm = TRUE)) || sum(., na.rm = TRUE) != 0))
 
   # how many NAs per columns => only in residence time columns
   #View(tmp_df |> summarise(across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
-  # Replace outliers with reference values
-
+  ## replace outliers per percentiles ----
+  #reference_rearing_param$ref_overall$poultry
   herd_poultry_process_clean <- herd_poultry_process_init |>
-    # add NUTS2
-    left_join(object@farm |>
-                dplyr::select(all_of(object@traceability$id_cols),NUTS2),
-              by = object@traceability$id_cols)
+    # add NUTS2 and SYS02
+    dplyr::left_join(object@farm |>
+                       dplyr::select(dplyr::all_of(object@traceability$id_cols), NUTS2, SYS02),
+                     by = object@traceability$id_cols)
+
   for (var in colnames(herd_poultry_process_clean)[grepl("rt_",colnames(herd_poultry_process_clean))]) {
 
     v <- rlang::sym(var)
@@ -159,6 +166,34 @@ f_herd_rearing_param_poultry <- function(object){
       )) |>
       dplyr::select(-c(median_NUTS2,median_all,ref_val,threshold_down,threshold_up))
   }
+
+
+  ## Replace NAs with fallback averages ----
+
+  # identify target variables dynamically
+  target_vars_poultry <- colnames(herd_poultry_process_clean)[grepl("rt_", colnames(herd_poultry_process_clean))]
+
+  tmp_avrg_rearing_param <- h_average_practices(data = herd_poultry_process_clean,
+                                                target_vars = target_vars_poultry,
+                                                primary_grp = c('YEAR', 'COUNTRY', 'NUTS2'),
+                                                secondary_grp = c('COUNTRY'),
+                                                weight_var = 'SYS02') |>
+    dplyr::rename_with(~ paste0("avrg_", .x),
+                       .cols = dplyr::all_of(target_vars_poultry))
+
+  ## add fallback averages
+  herd_poultry_process_clean <- herd_poultry_process_clean |>
+    dplyr::left_join(tmp_avrg_rearing_param,
+                     by = c('YEAR', 'COUNTRY', 'NUTS2')) |>
+    # replace NAs with fallback, for each target variable
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(target_vars_poultry),
+        ~ ifelse(is.na(.x), get(paste0("avrg_", dplyr::cur_column())), .x)
+      )
+    ) |>
+    # remove fallback variables
+    dplyr::select(-dplyr::matches("^avrg_"))
 
   # View(herd_poultry_process_clean |> summarise(across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 

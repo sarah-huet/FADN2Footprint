@@ -5,10 +5,23 @@
 \title{Function to estimate off-farm animals of the cattle herd based on FADN data
 \code{f_pseudoherd_cattle} Estimate off-farm animals of the cattle herd}
 \usage{
-f_pseudoherd_cattle(object)
+f_pseudoherd_cattle(object, overwrite = FALSE)
 }
 \arguments{
-\item{object}{a FADN2Footprint object}
+\item{object}{An S4 object of class "FADN2Footprint" prepared by the package
+workflow. The function expects the object to provide:
+\itemize{
+\item object@traceability$id_cols (vector of id column names used for joins),
+\item object@herd (for sheep, goats, horses),
+\item helper functions f_herd_rearing_param_cattle, f_herd_rearing_param_swine,
+f_herd_rearing_param_poultry to supply rearing parameter tables,
+\item package data table data_extra$livestock for species lookup.
+}}
+
+\item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
+the function returns
+the cached object and no recomputation is performed. If TRUE, existing
+cached GHGE results are ignored and computations are re-run.}
 }
 \value{
 A list with, for each livestock category:

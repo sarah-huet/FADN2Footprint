@@ -268,6 +268,7 @@ f_GHGE_herd <- function(object,
         dplyr::select(FADN_code_letter, livestock_unit_coef),
       by = 'FADN_code_letter'
     ) |>
+    dplyr::filter(!is.na(livestock_unit_coef)) |> # remove created categories: LBOV1_2F_breeders and LBOV1_2F_fattening
     # pivot longer to have one row per activity
     tidyr::pivot_longer(
       cols = dplyr::matches("Qobs_"),

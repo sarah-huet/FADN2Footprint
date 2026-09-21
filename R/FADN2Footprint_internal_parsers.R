@@ -799,28 +799,28 @@
       by = c('FADN_code_letter', 'NUTS2')
     ) |>
     # check if SN = SRN + SSN
-    #dplyr::mutate(
-    #  complete_sales = dplyr::coalesce(SN == (SRN + SSN), FALSE),
-    #  SSN = ifelse(complete_sales,
-    #               dplyr::coalesce(SSN, 0),
-    #               SN * share_SSN),
-    #  SRN = ifelse(complete_sales,
-    #               dplyr::coalesce(SRN, 0),
-    #               SN * share_SRN),
-    #  SSV = ifelse(complete_sales,
-    #               dplyr::coalesce(SSV, 0),
-    #               SV * share_SSN),
-    #  SRV = ifelse(complete_sales,
-    #               dplyr::coalesce(SRV, 0),
-    #               SV * share_SRN)
-    #) |>
-    # old version
     dplyr::mutate(
-      SSN = dplyr::coalesce(SSN, SN), # If SSN missing, take SN
-      SSV = dplyr::coalesce(SSV, SV), # If SSV missing, take SV
-      SRN = dplyr::coalesce(SRN, 0),  # If SRN missing, assume 0
-      SRV = dplyr::coalesce(SRV, 0)   # If SRV missing, assume 0
-    )
+      complete_sales = dplyr::coalesce(SN == (SRN + SSN), FALSE),
+      SSN = ifelse(complete_sales,
+                   dplyr::coalesce(SSN, 0),
+                   SN * share_SSN),
+      SRN = ifelse(complete_sales,
+                   dplyr::coalesce(SRN, 0),
+                   SN * share_SRN),
+      SSV = ifelse(complete_sales,
+                   dplyr::coalesce(SSV, 0),
+                   SV * share_SSN),
+      SRV = ifelse(complete_sales,
+                   dplyr::coalesce(SRV, 0),
+                   SV * share_SRN)
+    ) #|>
+    # old version
+    #dplyr::mutate(
+    #  SSN = dplyr::coalesce(SSN, SN), # If SSN missing, take SN
+    #  SSV = dplyr::coalesce(SSV, SV), # If SSV missing, take SV
+    #  SRN = dplyr::coalesce(SRN, 0),  # If SRN missing, assume 0
+    #  SRV = dplyr::coalesce(SRV, 0)   # If SRV missing, assume 0
+    #)
 
 
   return(final_data)

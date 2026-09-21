@@ -2,8 +2,8 @@
 % Please edit documentation in R/herd_rearing_param_sheep.R
 \name{f_herd_rearing_param_sheep}
 \alias{f_herd_rearing_param_sheep}
-\title{Function to estimate off-farm animals of the sheep herd based on FADN data
-\code{f_herd_rearing_param_sheep} Estimate off-farm animals of the sheep herd}
+\title{Function to estimate rearing parameters of the sheep herd based on FADN data
+\code{f_herd_rearing_param_sheep} Estimate rearing parameters of the sheep herd}
 \usage{
 f_herd_rearing_param_sheep(object)
 }
@@ -11,15 +11,16 @@ f_herd_rearing_param_sheep(object)
 \item{object}{a FADN2Footprint object}
 }
 \value{
-A list with, for each livestock category:
+A tibble with, for each farm, the observed quantities, flows, and rearing
+parameters for the two sheep livestock categories:
 \itemize{
-\item Q_obs: the number of animals observed in the farm (in number of heads)
-\item Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+\item LEWEBRE: breeding ewes
+\item LSHEPOTH: other sheep (juveniles / fattening)
 }
 }
 \description{
-Function to estimate off-farm animals of the sheep herd based on FADN data
-\code{f_herd_rearing_param_sheep} Estimate off-farm animals of the sheep herd
+Function to estimate rearing parameters of the sheep herd based on FADN data
+\code{f_herd_rearing_param_sheep} Estimate rearing parameters of the sheep herd
 }
 \examples{
 data(fadn_fict)

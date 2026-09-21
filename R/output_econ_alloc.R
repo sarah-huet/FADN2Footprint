@@ -144,8 +144,6 @@ f_output_econ_alloc <- function(object,
   ##    b. Across CROP outputs only
   ##    c. Across HERD outputs only
 
-  # TODO: account for pseudoherd output
-
   id_cols <- object@traceability$id_cols
 
   # 1. Aggregate outputs -------------------------------------------------------------------

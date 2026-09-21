@@ -5,11 +5,19 @@
 #' If data is missing (NA) or insufficient at that level, it imputes values from a secondary,
 #' coarser grouping level (e.g., Country & Organic).
 #'
+#' At the primary level, an average is only computed if the number of valid (non-NA)
+#' observations exceeds \code{min_obs}; otherwise it is set to \code{NA} and, if possible,
+#' replaced by the corresponding secondary-level (fallback) average, which is not subject
+#' to this minimum observation filter.
+#'
 #' @param data A data.frame or tibble containing the FADN/Practice data.
 #' @param target_vars A character vector of column names to calculate averages for (e.g., c("fertilizer_n", "yield")).
 #' @param primary_grp A character vector of column names for the fine-scale grouping (e.g., c("NUTS2", "ORGANIC")).
 #' @param secondary_grp A character vector of column names for the coarse-scale grouping (e.g., c("COUNTRY", "ORGANIC")).
 #' @param weight_var (Optional) Character string of the weighting variable (e.g., "SYS02"). If NULL, simple mean is used.
+#' @param min_obs (Optional) Minimum number of valid (non-NA) observations required within a primary group
+#' for the average to be computed. If the count is not strictly greater than \code{min_obs}, the primary
+#' average is set to \code{NA} (and later imputed from the secondary level, if available). Default is 15.
 #'
 #' @return A data frame containing the primary grouping columns and the imputed average practices.
 #' @import dplyr
@@ -21,24 +29,69 @@ h_average_practices <- function(data,
                                 target_vars,
                                 primary_grp,
                                 secondary_grp,
-                                weight_var = NULL) {
+                                weight_var = NULL,
+                                min_obs = 15) {
 
   require(dplyr)
 
   # Check that target variables are in the data set
-  target_vars_checked = intersect(target_vars,names(data))
 
-  if (length(target_vars) != length(target_vars_checked)) {
-    print(paste0(setdiff(target_vars,target_vars_checked), collapse = ", "),
-          " variables are not present in the data set and will not be used.")
+  # Capture target_vars as a quosure BEFORE any other operation touches it
+  target_vars_quo <- rlang::enquo(target_vars)
+  # Resolve target_vars using tidyselect (works whether target_vars is a
+  # character vector, a tidyselect helper like dplyr::matches(), or
+  # a bare/quoted selection expression)
+  target_vars_checked <- names(
+    tidyselect::eval_select(target_vars_quo, data = data)
+  )
+
+  if (length(target_vars_checked) == 0) {
+    stop("No variables matched 'target_vars' in the data set.")
   }
 
-  # Keep only variable of interest
-  data <- data |>
-    dplyr::select(dplyr::all_of(c(target_vars_checked,
-                                  primary_grp,
-                                  secondary_grp,
-                                  weight_var)))
+  # Check grouping variables
+  grouping_vars <- unique(c(primary_grp, secondary_grp))
+  missing_grouping_vars <- setdiff(grouping_vars, names(data))
+
+  if (length(missing_grouping_vars) > 0L) {
+    stop(
+      "Missing grouping variables: ",
+      paste(missing_grouping_vars, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  # Check weight variable
+  if (!is.null(weight_var) && !weight_var %in% names(data)) {
+    stop(
+      "Weight variable `", weight_var, "` is missing from `data`.",
+      call. = FALSE
+    )
+  }
+
+  # Secondary grouping variables must be available at primary level
+  missing_secondary_keys <- setdiff(secondary_grp, primary_grp)
+
+  if (length(missing_secondary_keys) > 0L) {
+    stop(
+      "`secondary_grp` must be a subset of `primary_grp`. Missing from ",
+      "`primary_grp`: ",
+      paste(missing_secondary_keys, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  # Keep only required variables
+  vars_to_keep <- unique(c(
+    primary_grp,
+    secondary_grp,
+    target_vars_checked,
+    weight_var
+  ))
+
+  data_selected <- data |>
+    dplyr::select(dplyr::all_of(vars_to_keep))
+
 
   # 1. Helper function for Weighted Mean
   calc_mean <- function(x, w) {
@@ -51,6 +104,18 @@ h_average_practices <- function(data,
       }
       weighted.mean(x, w, na.rm = TRUE)
     }
+  }
+
+  # 1bis. Helper function for Weighted Mean at Primary level,
+  # with a minimum number of valid (non-NA) observations required
+  calc_mean_primary <- function(x, w, min_n = min_obs) {
+    n_valid <- sum(!is.na(x))
+
+    if (n_valid <= min_n) {
+      return(NA_real_)
+    }
+
+    calc_mean(x, w)
   }
 
   # 2. Create the Hierarchy Map
@@ -66,7 +131,7 @@ h_average_practices <- function(data,
     dplyr::group_by(dplyr::across(dplyr::all_of(primary_grp))) %>%
     dplyr::summarise(dplyr::across(
       dplyr::all_of(target_vars_checked),
-      ~ calc_mean(., if(!is.null(weight_var)) .data[[weight_var]] else NULL)
+      ~ calc_mean_primary(., if(!is.null(weight_var)) .data[[weight_var]] else NULL)
     ), .groups = "drop")
 
   # 4. Calculate Secondary Level Averages
@@ -93,13 +158,15 @@ h_average_practices <- function(data,
     fallback_col <- paste0(var, "_fallback")
 
     # Overwrite the original column: if NA, take the fallback
-    result[[var]] <- coalesce(result[[var]], result[[fallback_col]])
+    result[[var]] <- dplyr::coalesce(result[[var]], result[[fallback_col]])
   }
 
   # 6. Cleanup
   # Remove the fallback columns and return just the Primary keys + Calculated vars
-  final_output <- result %>%
-    select(all_of(primary_grp), all_of(target_vars_checked))
+  final_output <- result |>
+    dplyr::select(dplyr::all_of(primary_grp),
+                  dplyr::all_of(target_vars_checked)) |>
+    dplyr::select(-dplyr::matches("SYS02"))
 
   return(final_output)
 }

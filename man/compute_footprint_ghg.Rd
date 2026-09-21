@@ -4,7 +4,7 @@
 \alias{compute_footprint_ghg}
 \title{Compute greenhouse gas emissions (GHGE) footprints for crops and herd outputs}
 \usage{
-compute_footprint_ghg(object, overwrite = FALSE)
+compute_footprint_ghg(object, overwrite = FALSE, account_pseudoherd = TRUE)
 }
 \arguments{
 \item{object}{An S4 object of class "FADN2Footprint" prepared by the package

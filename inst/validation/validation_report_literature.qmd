@@ -639,7 +639,7 @@ tmp_object_beef = m_prune_farms(my_object_GHGE, TF14 == "49", COUNTRY == "FRA")
 
 # Retrieve GHGE estimates for meat, filtering to cow meat output only
 tmp_ghge_beef <- tmp_object_beef@footprints$GHGE$GHGE_meat |>
-  dplyr::filter(output == "meat_beef")
+  dplyr::filter(output == "meat_beef" | output == "meat_cull_cow")
 
 # Reshape GHGE meat data to long format, keeping only per-ha (farm) and per-t columns
 tmp_ghge_beef_compo_long <- tmp_ghge_beef |>
@@ -879,7 +879,7 @@ summary(tmp_ghge_eggs)
 tmp_ghge_eggs_compo_long <- tmp_ghge_eggs |>
   dplyr::select(
     dplyr::all_of(tmp_object_eggs@traceability$id_cols),
-    output, species,
+    output, 
     #dplyr::matches("per_ha_farm$|per_t$"),   # keep farm and per-tonne estimates
     #-dplyr::matches("total_ghg|ghge_herd|^feed_pseudofarm") # drop aggregated/herd-level columns
     dplyr::matches("per_ha_pseudofarm|per_t$"),   # keep pseudofarm and per-tonne estimates

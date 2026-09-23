@@ -59,9 +59,8 @@
 #'   f_GHGE_herd_output_poultry
 #'
 #' @export
-#' @importFrom dplyr filter mutate select summarise inner_join left_join
-#'   bind_rows across all_of matches
-#' @importFrom stringr str_replace
+#' @import dplyr
+#' @import stringr
 
 f_GHGE_herd_output_swine <- function(object,
                                             overwrite = FALSE,
@@ -104,6 +103,7 @@ f_GHGE_herd_output_swine <- function(object,
         # impact of animals involved in the meat activity
         GHGE_meat_activity <- GHGE_herd |>
                 dplyr::filter(species == "swine") |>
+                dplyr::filter(Qobs >0) |>
                 # sum activity impact
                 dplyr::summarise(
                         dplyr::across(.cols = dplyr::matches("kgCO2e|area_ha"),

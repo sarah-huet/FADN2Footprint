@@ -2,147 +2,83 @@
 % Please edit documentation in R/GHGE_herd_products.R
 \name{f_GHGE_herd_output}
 \alias{f_GHGE_herd_output}
-\title{Estimate Greenhouse Gas Emissions for Herd Outputs}
+\title{Compute GHG emission intensity of livestock outputs (milk, meat, eggs)}
 \usage{
-f_GHGE_herd_output(object, overwrite = FALSE, account_pseudoherd = FALSE, ...)
+f_GHGE_herd_output(object, overwrite = FALSE, ...)
 }
 \arguments{
-\item{object}{A valid \code{FADN2Footprint} S4 object, as created by
-\code{\link{new_FADN2Footprint}}. Must contain populated \code{@herd},
-\code{@output}, and \code{@traceability} slots.}
+\item{object}{An S4 object of class "FADN2Footprint" prepared by the
+package workflow, providing \code{object@traceability$id_cols},
+\code{object@footprints$GHGE} (for cached results), and all data required by
+f_GHGE_herd_output_cattle, f_GHGE_herd_output_swine and
+f_GHGE_herd_output_poultry.}
 
-\item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
-the function returns
-the cached object and no recomputation is performed. If TRUE, existing
-cached GHGE results are ignored and computations are re-run.}
+\item{overwrite}{Logical. If TRUE, forces recomputation of results
+instead of reusing previously cached values stored in
+\code{object@footprints$GHGE}. Default is FALSE.}
 
-\item{account_pseudoherd}{\code{logical}. If \code{TRUE}, off-farm
-pseudo-herd outputs estimated from purchased feed are included
-alongside on-farm herd outputs in the economic allocation step.
-Defaults to \code{FALSE}.}
-
-\item{...}{Additional arguments passed to internal helper functions.}
+\item{...}{Additional arguments passed to the species-specific
+GHG output functions.}
 }
 \value{
-A named \code{list} with three elements:
+A list with three elements:
 \describe{
-\item{\code{GHGE_milk}}{A \code{\link[tibble]{tibble}} with one row
-per farm × year × dairy livestock category × milk output, containing:
-\itemize{
-\item \code{id_cols}: farm × year identifiers.
-\item \code{FADN_code_letter}: livestock category code.
-\item \code{FADN_code_letter_output}: output product code (milk).
-\item \code{output}: \code{"milk"}.
-\item \code{prod_t}: milk production (t yr\eqn{^{-1}}).
-\item \code{sum_feed_area_ha}: total feed area (ha).
-\item \code{econ_alloc_ratio_herd}: economic allocation ratio for milk.
-\item GHG components in kg CO\eqn{_2}e (total, per ha, per t):
-feed-related, CH\eqn{_4} enteric, CH\eqn{_4} MM,
-N\eqn{_2}O direct/grazing/leaching MM, and total.
+\item{GHGE_milk}{A tibble with GHG emission intensities for milk
+production (cattle only).}
+\item{GHGE_meat}{A tibble with GHG emission intensities for meat
+production, combining cattle (cull cow, veal, beef), swine and
+poultry outputs.}
+\item{GHGE_eggs}{A tibble with GHG emission intensities for egg
+production (poultry only).}
 }
-}
-\item{\code{GHGE_meat}}{\code{NULL} — reserved for future
-implementation.}
-\item{\code{GHGE_eggs}}{\code{NULL} — reserved for future
-implementation.}
-}
-
-The result is also cached in \code{object@footprints$BVIAS$BVI_milk}
-on first computation.
 }
 \description{
-Computes greenhouse gas emissions (GHG, kg CO\eqn{_2}e) allocated to
-livestock outputs (milk, meat, eggs) for each farm × year × livestock
-category combination. The function combines emissions from enteric
-fermentation, manure management, and feed production, then allocates
-the total impact to individual outputs using economic allocation ratios.
-
-Currently implemented for \strong{cow milk}; meat and egg outputs are
-reserved for future implementation.
+f_GHGE_herd_output aggregates the greenhouse gas emission intensities of
+all livestock outputs — milk, meat, and eggs — across cattle, swine and
+poultry species, by combining the results of
+f_GHGE_herd_output_cattle, f_GHGE_herd_output_swine, and
+f_GHGE_herd_output_poultry into three per-product-type tables.
 }
 \details{
-\subsection{Step 1 — Herd Output Economic Allocation Ratios}{
+The function first checks whether cached results are already stored in
+\code{object@footprints$GHGE$GHGE_milk}, \code{object@footprints$GHGE$GHGE_meat}, or
+\code{object@footprints$GHGE$GHGE_eggs}. If any of these are present and
+overwrite is FALSE, the cached value is returned immediately without
+recomputation.
 
-Economic allocation ratios are estimated via
-\code{\link{f_herd_output_econ_alloc}}. If \code{account_pseudoherd =
-TRUE}, a pseudo-herd (representing off-farm animals associated with
-purchased feed) is also considered via
-\code{\link{f_pseudoherd_output_econ_alloc}}, and on-farm and off-farm
-outputs are combined with an \code{animals} flag
-(\code{"on_farm"} vs. pseudo-herd rows).
-}
+Otherwise, the function proceeds in two steps:
 
-\subsection{Step 2 — Herd and Feed Impact Estimation}{
-\subsection{2.1 Direct Herd Emissions}{
-
-Three emission sources are computed:
+\strong{1. Compute species-level GHG emission outputs:}
 \itemize{
-\item \strong{Enteric fermentation} (CH\eqn{_4}): via
-\code{\link{GHGE_ch4_enteric}}.
-\item \strong{Manure management CH\eqn{_4}}: via
-\code{\link{GHGE_ch4_manure}}.
-\item \strong{Manure management N\eqn{_2}O} (direct, grazing, leaching):
-via \code{\link{GHGE_n2o_manure}}.
-}
+\item f_GHGE_herd_output_cattle for cattle (milk, cull cow meat, veal/beef
+meat);
+\item f_GHGE_herd_output_swine for swine (meat);
+\item f_GHGE_herd_output_poultry for poultry (meat and eggs).
 }
 
-\subsection{2.2 Feed-Related Emissions}{
-
-Feed-related GHG impacts (kg CO\eqn{_2}e ha\eqn{^{-1}}) are retrieved
-from \code{\link{f_GHGE_feed}}, then summarised per farm × year ×
-livestock category as:
+\strong{2. Build per-product-type tables:}
 \itemize{
-\item \code{sum_feed_area_ha}: total feed area (ha).
-\item Weighted means of GHG intensity (kg CO\eqn{_2}e ha\eqn{^{-1}})
-across feed crops, weighted by area.
-\item Sums of total GHG from feed (kg CO\eqn{_2}e), obtained by
-multiplying intensity by area and summing.
+\item \strong{Milk}: rows from GHGE_herd_output_cattle where output == "milk".
+\item \strong{Meat}: rows from GHGE_herd_output_cattle where output matches
+"meat" (cull cow, veal, beef), combined with all rows from
+GHGE_herd_output_swine and the meat-related rows of
+GHGE_herd_output_poultry.
+\item \strong{Eggs}: rows from GHGE_herd_output_poultry where output matches
+"eggs".
 }
 }
-
-\subsection{2.3 Aggregation}{
-
-All emission components are joined to the herd table and summed into
-\code{total_ghg_livestock_cat_kgCO2e}:
-\deqn{
-  \text{total} = \text{feed GHG} + \text{CH}_4^\text{enteric} +
-  \text{CH}_4^\text{MM} + \text{N}_2\text{O}^\text{D,MM} +
-  \text{N}_2\text{O}^\text{G,MM} + \text{N}_2\text{O}^\text{L,MM}
-}
-}
-
+\examples{
+\dontrun{
+# f is a prepared FADN2Footprint object
+ghge_output <- f_GHGE_herd_output(f)
+head(ghge_output$GHGE_milk)
+head(ghge_output$GHGE_meat)
+head(ghge_output$GHGE_eggs)
 }
 
-\subsection{Step 3 — Allocation to Outputs}{
-\subsection{Cow Milk}{
-
-Farms with a dairy cattle activity (\code{Qobs_milk > 0}) and
-positive milk production are identified. Total herd impact is allocated
-to milk using the economic allocation ratio (\code{econ_alloc_ratio_herd})
-from Step 1. Per-hectare and per-tonne GHG intensities are computed for
-each emission component:
-\deqn{
-  \text{GHG per ha} = \frac{\text{GHG} \times r_\text{alloc}}{A_\text{feed}}
-  \qquad
-  \text{GHG per t} = \frac{\text{GHG} \times r_\text{alloc}}{Q_\text{milk}}
-}
-}
-
-}
-}
-\references{
-IPCC (2006). \emph{2006 IPCC Guidelines for National Greenhouse Gas
-Inventories}, Volume 4: Agriculture, Forestry and Other Land Use.
-Intergovernmental Panel on Climate Change.
-
-IPCC (2019). \emph{2019 Refinement to the 2006 IPCC Guidelines for
-National Greenhouse Gas Inventories}, Volume 4. IPCC.
 }
 \seealso{
-\code{\link{GHGE_ch4_enteric}}, \code{\link{GHGE_ch4_manure}},
-\code{\link{GHGE_n2o_manure}}, \code{\link{f_GHGE_feed}},
-\code{\link{f_GHGE_crops}}, \code{\link{f_herd_output_econ_alloc}},
-\code{\link{f_pseudoherd_output_econ_alloc}},
-\code{\link{f_herd_activities}}, \code{\link{new_FADN2Footprint}}
+f_GHGE_herd_output_cattle, f_GHGE_herd_output_swine,
+f_GHGE_herd_output_poultry, f_GHGE_herd
 }
 \concept{footprint-ghge}

@@ -72,9 +72,8 @@
 #'   f_GHGE_herd_output_poultry
 #'
 #' @export
-#' @importFrom dplyr filter mutate select summarise inner_join left_join
-#'   bind_rows across all_of matches
-#' @importFrom stringr str_replace
+#' @import dplyr
+#' @import stringr
 
 f_GHGE_herd_output_cattle <- function(object,
                                             overwrite = FALSE,
@@ -101,6 +100,7 @@ f_GHGE_herd_output_cattle <- function(object,
                 dplyr::mutate(
                         share_milk_act = Qobs_milk / Qobs
                 ) |>
+                dplyr::filter(share_milk_act >0) |>
                 dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, share_milk_act)
 
         # economic allocation ratio between cull cow meat and milk
@@ -153,6 +153,7 @@ f_GHGE_herd_output_cattle <- function(object,
                 dplyr::mutate(
                         share_meat_act = Qobs_meat / Qobs
                 ) |>
+                dplyr::filter(share_meat_act >0) |>
                 dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, share_meat_act)
 
 
@@ -162,6 +163,9 @@ f_GHGE_herd_output_cattle <- function(object,
                 object@output$meat
         ) |>
                 dplyr::filter(species == "cattle") |>
+                # remove dairy cows as cull cow meat impact has already been estimated in the milk activity
+                dplyr::filter(FADN_code_letter != "LCOWDAIR") |>
+                # sum sales per output
                 dplyr::summarise(
                         sales_e_output = sum(sales_e, na.rm = TRUE),
                         .by = c(dplyr::all_of(id_cols), output, species)
@@ -216,6 +220,7 @@ f_GHGE_herd_output_cattle <- function(object,
                                   by = c(id_cols, 'output'))
         ## meat
         GHGE_meat = GHGE_meat_activity |>
+                # add cull cow meat
                 dplyr::bind_rows(
                         GHGE_milk_activity |>
                                 dplyr::filter(output == "meat_cull_cow"))|>

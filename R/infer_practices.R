@@ -23,7 +23,9 @@
 #'
 
 infer_practices <- function(object,
-                            overwrite = FALSE){
+                            overwrite = FALSE,
+                            account_pseudoherd = TRUE,
+                            ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -182,6 +184,18 @@ infer_practices <- function(object,
   herd_activity <- f_herd_activities(object, overwrite = overwrite)
   object@practices$herding$activities <- herd_activity
 
+  #### Pseudoherd ----
+
+  if (account_pseudoherd == TRUE) {
+    pseudoherd_animals <- f_pseudoherd_animals(object, overwrite = overwrite)
+    object@practices$herding$pseudoherd$animals <- pseudoherd_animals
+
+    pseudoherd_output <- f_pseudoherd_output_off_farm(object, overwrite = overwrite)
+    object@practices$herding$pseudoherd$output_off_farm <- pseudoherd_output
+
+
+
+  }
 
   # 2. Retrieve farms with non valid practices ----
 

@@ -1320,7 +1320,7 @@
     # add country iso names
     dplyr::left_join(
       data_extra$country_names |>
-        select(COUNTRY = country_FADN,
+        dplyr::select(COUNTRY = country_FADN,
                Country_ISO_3166_1_A3),
       by = 'COUNTRY'
     ) |>

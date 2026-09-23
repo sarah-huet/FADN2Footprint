@@ -112,6 +112,11 @@ compute_footprint_ghg <- function(object,
     pseudoherd_impact = f_GHGE_pseudoherd(object, overwrite = overwrite)
     object@footprints$GHGE$GHGE_pseudoherd <- pseudoherd_impact
 
+    pseudoherd_output_impact = f_GHGE_pseudoherd_output(object)
+    object@footprints$GHGE$GHGE_pseudoherd_milk <- pseudoherd_output_impact$GHGE_milk
+    object@footprints$GHGE$GHGE_pseudoherd_meat <- pseudoherd_output_impact$GHGE_meat
+    object@footprints$GHGE$GHGE_pseudoherd_eggs <- pseudoherd_output_impact$GHGE_eggs
+
   }
 
   ## Herd products ----

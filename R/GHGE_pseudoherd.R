@@ -158,7 +158,7 @@ f_GHGE_pseudoherd <- function(object,
     dplyr::mutate(dplyr::across(
       .cols = dplyr::matches("_livcat$"),
       .fns = ~ .x / Qobs,
-      .names = "{stringr::str_remove(.col, '_livcat')}_anim"
+      .names = "{stringr::str_remove(.col, '_livcat')}_per_anim"
     ))|>
     # add NUTS2 and SYS02
     dplyr::left_join(object@farm |>
@@ -167,7 +167,7 @@ f_GHGE_pseudoherd <- function(object,
 
   ## estimate averages ----
   herd_impact_avrg <- h_average_practices(data = herd_impact_anim,
-                                          target_vars = dplyr::matches("_anim$"),
+                                          target_vars = dplyr::matches("_per_anim$"),
                                           primary_grp = c('FADN_code_letter', 'species', 'COUNTRY', 'NUTS2'),
                                           secondary_grp = c('FADN_code_letter', 'species', 'COUNTRY'),
                                           weight_var = 'SYS02')
@@ -181,9 +181,9 @@ f_GHGE_pseudoherd <- function(object,
                      by = c('COUNTRY', 'NUTS2', 'FADN_code_letter', 'species')) |>
     # sum impact per livestock category for off-farm animals
     dplyr::mutate(dplyr::across(
-      .cols = dplyr::matches("_anim$"),
+      .cols = dplyr::matches("_per_anim$"),
       .fns = ~ .x * Qofffarm,
-      .names = "{stringr::str_remove(.col, '_anim')}_livcat_offfarm"
+      .names = "{stringr::str_remove(.col, '_per_anim')}_livcat_offfarm"
     )) |>
     # select
     dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, species,
@@ -196,7 +196,8 @@ f_GHGE_pseudoherd <- function(object,
     pseudoherd_offfarm_impact,
     by = c(id_cols, 'FADN_code_letter', 'species')
   )
-  livcat_vars <- grep("_livcat$", names(pseudoherd_impact), value = TRUE)
+
+    livcat_vars <- grep("_livcat$", names(pseudoherd_impact), value = TRUE)
   livcat_vars <- livcat_vars[
     paste0(livcat_vars, "_offfarm") %in% names(pseudoherd_impact)
   ]

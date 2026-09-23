@@ -1,0 +1,392 @@
+---
+title: "FADN2Footprint — Validation Report"
+subtitle: "Comparison of package estimates of the pseudoherd with observed herd"
+author: "Sarah HUET & Valentin BELLASSEN"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    embed-resources: true        
+  pdf:
+    toc: true
+execute:
+  echo: true
+  warning: false
+editor: 
+  markdown: 
+    wrap: 150
+bibliography: ../../vignettes/references.bib
+link-citations: true
+---
+
+# Purpose
+
+This report compares the outputs of `FADN2Footprint` (v`r packageVersion("FADN2Footprint")`)
+against the national inventories.
+An estimate is flagged **in range** if it falls within the literature min–max,
+**within tolerance** if the relative deviation from the literature midpoint is
+below a per-indicator threshold, or **out of range** otherwise.
+
+# Setup
+
+```{r setup}
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(gt)
+
+library(readxl)
+library(zip)
+
+library(ggplot2)
+
+devtools::load_all()
+#library(FADN2Footprint)
+
+```
+
+# Run package
+
+```{r load_data, echo=FALSE, message=TRUE, warning=FALSE}
+
+## Load raw data and run model
+#source("validation_FADN_data.R")
+#source("validation_FADN_data_offline.R")
+## 
+#load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
+#load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+#my_object_GHGE <- m_prune_farms(my_object_GHGE,
+#                                YEAR %in% c("2018", "2019", "2020"))
+
+object = my_object_GHGE
+id_cols = my_object_GHGE@traceability$id_cols
+
+cat("FADN dataset loaded:", nrow(my_object_GHGE@farm), "farm-year observations\n")
+cat("Countries covered:", paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "), "\n")
+cat("Years covered:", paste(sort(unique(my_object_GHGE@farm$YEAR)), collapse = ", "), "\n")
+
+```
+
+# Animal numbers
+
+```{r sum_Q}
+
+pseudoherd_animals <- f_pseudoherd_animals(object)
+
+plot(pseudoherd_animals$Qeq, pseudoherd_animals$Qobs + pseudoherd_animals$Qofffarm)
+
+```
+
+
+```{r cat_shares}
+
+# herd
+herd_total = object@herd |>
+  # add SYS02
+  dplyr::left_join(
+    object@farm |>
+      dplyr::select(dplyr::all_of(id_cols), SYS02),
+    by = id_cols
+  ) |>
+  dplyr::summarise(
+    category_count = sum(Qobs * SYS02, na.rm = T),
+    .by = c(FADN_code_letter, species, YEAR, NUTS2)
+  ) |>
+  dplyr::mutate(
+    category_proportion_national = category_count / sum(category_count),
+    .by = c(species, YEAR, NUTS2)
+  )  |>
+  dplyr::summarise(
+    category_proportion_national = mean(category_proportion_national, na.rm = T),
+    .by = c(FADN_code_letter, species, YEAR)
+  )
+
+# pseudoherd
+
+pseudoherd_animals <- f_pseudoherd_animals(object)
+
+# Total number of animals
+pseudoherd_total = pseudoherd_animals |>
+  # add SYS02
+  dplyr::left_join(
+    object@farm |>
+      dplyr::select(dplyr::all_of(id_cols), SYS02),
+    by = id_cols
+  ) |>
+  dplyr::summarise(
+    category_count = sum(Qeq * SYS02, na.rm = T),
+    .by = c(FADN_code_letter, species, YEAR)
+  ) |>
+  dplyr::mutate(
+    category_proportion_pseudoherd = category_count / sum(category_count),
+    .by = c(species, YEAR)
+  )
+
+
+
+pseudoherd_total = pseudoherd_animals |>
+  dplyr::summarise(
+    category_count = sum(Qeq, na.rm = T),
+    .by = c(dplyr::all_of(id_cols), FADN_code_letter, species, YEAR)
+  ) |>
+  dplyr::mutate(
+    category_proportion_pseudoherd = category_count / sum(category_count),
+    .by = c(dplyr::all_of(id_cols), species, YEAR)
+  ) |>
+  dplyr::summarise(
+    category_proportion_pseudoherd = mean(category_proportion_pseudoherd, na.rm = T),
+    .by = c(FADN_code_letter, species, YEAR)
+  )
+
+# comp
+
+comp <- dplyr::left_join(
+  pseudoherd_total,
+  herd_total,
+  by = c('YEAR', 'FADN_code_letter', 'species')
+)
+
+comp |> 
+  dplyr::select(YEAR, FADN_code_letter, species, category_proportion_national, category_proportion_pseudoherd) |>
+  tidyr::pivot_longer(
+    cols = c(category_proportion_national, category_proportion_pseudoherd)
+  ) |>
+  ggplot() +
+  aes(x = FADN_code_letter, y = value, fill = name) +
+  geom_col(position = "dodge") +
+  coord_flip()
+
+
+```
+
+```{r share_stage}
+
+# Qobs_meat
+
+cat_juveniles <- c("LBOV1")
+cat_fattening <- c("LBOV1_2M", "LBOV2", "LHEIFFAT", "LBOV1_2F_fattening")
+cat_breeders  <- c("LHEIFBRE", "LCOWOTH", "LBOV1_2F_breeders")
+
+# estimate shares
+share_Qobs_meat <- herd_activities |>
+  # add NUTS2 and SYS02
+  dplyr::left_join(object@farm |>
+                     dplyr::select(dplyr::all_of(id_cols), NUTS2, SYS02),
+                   by = id_cols) |>
+  # sum all animals per category in each rearing stage at the NUTS2 level
+  dplyr::summarise(
+    Qobs_meat_NUTS2_cat = sum(Qobs_meat, na.rm = T),
+    .by = c(COUNTRY, NUTS2, FADN_code_letter)
+  ) |>
+  # sum all animals per category in each rearing stage at the country level
+  dplyr::mutate(
+    Qobs_meat_COUNTRY_cat = sum(Qobs_meat_NUTS2_cat, na.rm = T),
+    .by = c(COUNTRY, FADN_code_letter)
+  ) |>
+  # add rearing stage
+  dplyr::mutate(
+    stage = dplyr::case_when(
+      FADN_code_letter %in% cat_juveniles ~ "j",
+      FADN_code_letter %in% cat_fattening  ~ "f",
+      FADN_code_letter %in% cat_breeders   ~ "b",
+      TRUE ~ NA_character_
+    )
+  ) |>
+  dplyr::filter(!is.na(stage)) |>
+  # sum all animals at the NUTS2 level (per stage)
+  dplyr::mutate(
+    Qobs_meat_NUTS2_stage = sum(Qobs_meat_NUTS2_cat, na.rm = T),
+    .by = c(NUTS2, stage)
+  ) |>
+  # sum all animals at the country level (per stage)
+  dplyr::mutate(
+    Qobs_meat_COUNTRY_stage = sum(Qobs_meat_NUTS2_cat, na.rm = T),
+    .by = c(COUNTRY, stage)
+  ) |>
+  # estimate share of animal per category at the NUTS2 level
+  dplyr::mutate(
+    share_NUTS2_Qobs_meat = Qobs_meat_NUTS2_cat / Qobs_meat_NUTS2_stage,
+    share_COUNTRY_Qobs_meat = Qobs_meat_COUNTRY_cat / Qobs_meat_COUNTRY_stage
+  )
+
+
+# Qobs
+# estimate shares
+share_Qobs <- herd_activities |>
+  # add NUTS2 and SYS02
+  dplyr::left_join(object@farm |>
+                     dplyr::select(dplyr::all_of(id_cols), NUTS2, SYS02),
+                   by = id_cols) |>
+  # sum all animals per category in each rearing stage at the NUTS2 level
+  dplyr::summarise(
+    Qobs_NUTS2_cat = sum(Qobs, na.rm = T),
+    .by = c(COUNTRY, NUTS2, FADN_code_letter)
+  ) |>
+  # sum all animals per category in each rearing stage at the country level
+  dplyr::mutate(
+    Qobs_COUNTRY_cat = sum(Qobs_NUTS2_cat, na.rm = T),
+    .by = c(COUNTRY, FADN_code_letter)
+  ) |>
+  # add rearing stage
+  dplyr::mutate(
+    stage = dplyr::case_when(
+      FADN_code_letter %in% cat_juveniles ~ "j",
+      FADN_code_letter %in% cat_fattening  ~ "f",
+      FADN_code_letter %in% cat_breeders   ~ "b",
+      TRUE ~ NA_character_
+    )
+  ) |>
+  dplyr::filter(!is.na(stage)) |>
+  # sum all animals at the NUTS2 level (per stage)
+  dplyr::mutate(
+    Qobs_NUTS2_stage = sum(Qobs_NUTS2_cat, na.rm = T),
+    .by = c(NUTS2, stage)
+  ) |>
+  # sum all animals at the country level (per stage)
+  dplyr::mutate(
+    Qobs_COUNTRY_stage = sum(Qobs_NUTS2_cat, na.rm = T),
+    .by = c(COUNTRY, stage)
+  ) |>
+  # estimate share of animal per category at the NUTS2 level
+  dplyr::mutate(
+    share_NUTS2_Qobs = Qobs_NUTS2_cat / Qobs_NUTS2_stage,
+    share_COUNTRY_Qobs = Qobs_COUNTRY_cat / Qobs_COUNTRY_stage
+  )
+
+# comp
+
+comp <- dplyr::left_join(
+  share_Qobs,
+  share_Qobs_meat,
+  by = c('COUNTRY', 'NUTS2', 'FADN_code_letter', 'stage')
+)
+
+comp |> 
+  dplyr::select(FADN_code_letter, dplyr::matches("share")) |>
+  tidyr::pivot_longer(
+    cols = dplyr::matches("share")
+  ) |>
+  ggplot() +
+  aes(x = FADN_code_letter, y = value, fill = name) +
+  geom_col(position = "dodge") +
+  coord_flip()
+
+
+
+
+```
+
+
+# Emissions
+
+```{r sum_ghge}
+
+pseudoherd_ghge = object@footprints$GHGE$GHGE_pseudoherd
+
+plot(pseudoherd_ghge$farm_ghge_herd_kgCO2e_livcat_pseudoherd, pseudoherd_ghge$farm_ghge_herd_kgCO2e_livcat + pseudoherd_ghge$farm_ghge_herd_kgCO2e_livcat_offfarm)
+
+```
+
+
+```{r ghge_per_anim_offfarm}
+
+herd_ghge = object@footprints$GHGE$GHGE_herd |>
+  dplyr::filter(Qobs >= 1) |>
+  dplyr::summarise(
+    farm_ghge_herd_kgCO2e_per_anim_herd = mean(farm_ghge_herd_kgCO2e_per_anim, na.rm = TRUE),
+    .by = FADN_code_letter
+  )
+
+pseudoherd_ghge = object@footprints$GHGE$GHGE_pseudoherd |>
+  dplyr::filter(Qeq >= 1) |>
+  dplyr::summarise(
+    farm_ghge_herd_kgCO2e_per_anim_offfarm = mean(farm_ghge_herd_kgCO2e_livcat_offfarm / Qofffarm, na.rm = TRUE),
+    .by = FADN_code_letter
+  )
+
+dplyr::left_join(
+  herd_ghge,
+  pseudoherd_ghge,
+  by = c('FADN_code_letter')
+) |> 
+  dplyr::select(FADN_code_letter, farm_ghge_herd_kgCO2e_per_anim_herd, farm_ghge_herd_kgCO2e_per_anim_offfarm) |>
+  tidyr::pivot_longer(
+    cols = c(farm_ghge_herd_kgCO2e_per_anim_herd, farm_ghge_herd_kgCO2e_per_anim_offfarm)
+  ) |>
+  ggplot() +
+  aes(x = FADN_code_letter, y = value, fill = name) +
+  geom_col(position = "dodge") +
+  coord_flip()
+
+
+```
+
+```{r ghge_per_anim_Qeq}
+
+herd_ghge = object@footprints$GHGE$GHGE_herd |>
+  dplyr::filter(Qobs >= 1) |>
+  dplyr::summarise(
+    farm_ghge_herd_kgCO2e_per_anim_herd = mean(farm_ghge_herd_kgCO2e_per_anim, na.rm = TRUE),
+    .by = FADN_code_letter
+  )
+
+pseudoherd_ghge = object@footprints$GHGE$GHGE_pseudoherd |>
+  dplyr::filter(Qeq >= 1) |>
+  dplyr::summarise(
+    farm_ghge_herd_kgCO2e_per_anim_pseudoherd = mean(farm_ghge_herd_kgCO2e_livcat_pseudoherd / Qeq, na.rm = TRUE),
+    .by = FADN_code_letter
+  )
+
+dplyr::left_join(
+  herd_ghge,
+  pseudoherd_ghge,
+  by = c('FADN_code_letter')
+) |> 
+  dplyr::select(FADN_code_letter, farm_ghge_herd_kgCO2e_per_anim_herd, farm_ghge_herd_kgCO2e_per_anim_pseudoherd) |>
+  tidyr::pivot_longer(
+    cols = c(farm_ghge_herd_kgCO2e_per_anim_herd, farm_ghge_herd_kgCO2e_per_anim_pseudoherd)
+  ) |>
+  ggplot() +
+  aes(x = FADN_code_letter, y = value, fill = name) +
+  geom_col(position = "dodge") +
+  coord_flip()
+
+
+```
+
+```{r ghge_milk}
+
+object@footprints$GHGE$GHGE_milk |>
+  dplyr::summarise(
+    farm_ghge_herd_kgCO2e_per_t = mean(farm_ghge_herd_kgCO2e_per_t, na.rm= TRUE)
+  )
+
+object@footprints$GHGE$GHGE_pseudoherd_milk |>
+  dplyr::summarise(
+    farm_ghge_herd_kgCO2e_pseudoherd_per_t = mean(farm_ghge_herd_kgCO2e_pseudoherd_per_t, na.rm= TRUE)
+  )
+
+
+```
+
+```{r ghge_meat}
+
+object@footprints$GHGE$GHGE_meat |>
+  dplyr::summarise(
+    farm_ghge_herd_kgCO2e_per_t = mean(farm_ghge_herd_kgCO2e_per_t, na.rm= TRUE),
+    .by = output
+  )
+
+object@footprints$GHGE$GHGE_pseudoherd_meat |>
+  dplyr::summarise(
+    farm_ghge_herd_kgCO2e_pseudoherd_per_t = mean(farm_ghge_herd_kgCO2e_pseudoherd_per_t, na.rm= TRUE),
+    .by = output
+  )
+
+
+```
+
+

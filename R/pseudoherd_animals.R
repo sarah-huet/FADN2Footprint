@@ -1,19 +1,16 @@
-#' Estimate off-farm (pseudo-) herd animals from co-product balances
+#' Estimate pseudoherd animals
 #'
 #' @description
-#' f_pseudoherd_animals estimates the number of "pseudo-herd" animals
-#' associated with a farm's production of animal co-products (milk, meat,
-#' eggs) that are not directly observed in the farm's own herd. It combines
+#' f_pseudoherd_animals combines
 #' species-specific pseudo-herd estimates for cattle, swine and poultry into
 #' a single harmonised table.
 #'
 #' @details
 #' Pseudo-herd animals represent the livestock population that would be
-#' required, based on average production parameters, to generate the volumes
-#' of milk, meat and eggs recorded on the farm but not attributable to the
-#' observed (on-farm) herd (Qobs). This allows accounting for emissions and
-#' resource use associated with purchased or otherwise unaccounted animal
-#' products under a scope 3 / life cycle perspective.
+#' required to sustain production, based on recorded animal on the farm.
+#' This allows accounting for emissions and
+#' resource use associated with purchased or otherwise unaccounted animals
+#' under a scope 3 / life cycle perspective.
 #'
 #' The function proceeds as follows:
 #' 1. Species-specific pseudo-herd estimates are computed by calling
@@ -69,6 +66,12 @@ f_pseudoherd_animals <- function(object,
                 stop("Input must be a valid 'FADN2Footprint' object.")
         }
 
+        if (!is.null(object@practices$herding$pseudoherd$animals)&& !overwrite) {
+                message("Using cached values stored in object@practices$herding$pseudoherd$animals.")
+                return(object@practices$herding$pseudoherd$animals)  # use cached value
+        }
+
+
         id_cols = object@traceability$id_cols
         # retrieve herd activities
         herd_activities <- f_herd_activities(object)
@@ -91,20 +94,20 @@ f_pseudoherd_animals <- function(object,
         pseudoherd_animals <- pseudoherd_cattle$pseudoherd |>
                 # keep only FADN_code_letter
                 ## this remove the code for mixed categories (e.g., "LBOV1_2F_breeders")
-                dplyr::filter(FADN_code_letter %in% data_extra$livestock$FADN_code_letter) |>
-                #remove rows with only NAs or zeros
-                dplyr::filter(
-                        dplyr::if_any(
-                                dplyr::matches("Qobs|Qeq"),
-                                ~ !is.na(.x) & .x > 0
-                        )
-                ) |>
+                dplyr::filter(FADN_code_letter %in% data_extra$livestock$FADN_code_letter)|>
                 # estimate total number of animals, and off-farm animals
                 dplyr::mutate(
                         Qeq = dplyr::coalesce(Qeq_milk, 0) + dplyr::coalesce(Qeq_meat, 0),# + dplyr::coalesce(Qeq_eggs, 0),
                         Qeq = round(Qeq, 2),
                         Qofffarm = dplyr::coalesce(Qeq, 0) - dplyr::coalesce(Qobs, 0),
                         Qofffarm = round(Qofffarm, 2)
+                ) |>
+                # keep row if: Qobs > 0 OR Qeq > 0
+                dplyr::filter(
+                        dplyr::if_any(
+                                dplyr::matches("Qobs|Qeq"),
+                                ~ .x > 0
+                        )
                 )
 
 

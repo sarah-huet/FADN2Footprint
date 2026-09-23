@@ -63,9 +63,8 @@
 #'   f_GHGE_herd_output_poultry
 #'
 #' @export
-#' @importFrom dplyr filter mutate select summarise inner_join left_join
-#'   bind_rows across all_of matches
-#' @importFrom stringr str_replace
+#' @import dplyr
+#' @import stringr
 
 f_GHGE_herd_output_poultry <- function(object,
                                             overwrite = FALSE,
@@ -91,6 +90,7 @@ f_GHGE_herd_output_poultry <- function(object,
                 dplyr::mutate(
                         share_eggs_act = Qobs_eggs / Qobs
                 ) |>
+                dplyr::filter(share_eggs_act >0) |>
                 dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, share_eggs_act)
 
         # impact of animals involved in the eggs activity
@@ -121,6 +121,7 @@ f_GHGE_herd_output_poultry <- function(object,
                 dplyr::mutate(
                         share_meat_act = Qobs_meat / Qobs
                 ) |>
+                dplyr::filter(share_meat_act >0) |>
                 dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, share_meat_act)
 
         # impact of animals involved in the meat activity

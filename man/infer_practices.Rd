@@ -5,7 +5,7 @@
 \title{Function to estimate agricultural practices based on FADN data
 \code{infer_practices} Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'}
 \usage{
-infer_practices(object, overwrite = FALSE)
+infer_practices(object, overwrite = FALSE, account_pseudoherd = TRUE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}

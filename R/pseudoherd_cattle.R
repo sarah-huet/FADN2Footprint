@@ -213,8 +213,7 @@ f_pseudoherd_cattle <- function(object,
                 (1+rt_LBOV1_2F_fattening)*LBOV1_2F_fattening_Qobs_meat +
                 (2+rt_LHEIFFAT)*LHEIFFAT_Qobs_meat) / Qobs_f,
       # breeders
-      Qobs_b = LBOV1_2F_breeders_Qobs_meat  + LHEIFBRE_Qobs_meat + LCOWOTH_Qobs_meat + LCOWDAIR_Qobs,
-      ## NB: LCOWDAIR can also produce offspring that will enter the meat workshop
+      Qobs_b = LBOV1_2F_breeders_Qobs_meat  + LHEIFBRE_Qobs_meat + LCOWOTH_Qobs_meat,
       offspring = offspring_b
     )
 
@@ -267,7 +266,7 @@ f_pseudoherd_cattle <- function(object,
         ## Qobs_f >= ^Q_f estimated from juveniles & >= ^Q_f estimated from breeders
         Qobs_f >= ifelse(Qobs_j>0, (rt_f*(Qobs_j/rt_j)) - LBOV1_SSN, 0) & Qobs_f >= ifelse(Qobs_b>0, (rt_f*Qobs_b*offspring) - LBOV1_SSN, 0) ~ "fattening",
         ## Qobs_b >= ^Q_b estimated from juveniles & >= ^Q_b estimated from fattening
-        Qobs_b >= ifelse(Qobs_j>0, (Qobs_j/rt_j/offspring), 0) & Qobs_b >= ifelse(Qobs_f>0, (Qobs_f/rt_f/offspring) + LBOV1_SSN, 0) ~ "breeders",
+        Qobs_b >= ifelse(Qobs_j>0, (Qobs_j/rt_j/offspring) - LCOWDAIR_Qobs, 0) & Qobs_b >= ifelse(Qobs_f>0, (Qobs_f/rt_f/offspring) + LBOV1_SSN, 0) ~ "breeders",
         .default = ifelse(LCOWDAIR_Qobs >0 | LCOWOTH_Qobs >0, "breeders", NA)
       )
     ) |>
@@ -283,7 +282,7 @@ f_pseudoherd_cattle <- function(object,
         Q_max == "breeders" ~ (rt_f*Qobs_b*offspring) - LBOV1_SSN,
       ),
       Qeq_b_meat = dplyr::case_when(
-        Q_max == "juveniles" ~ (Qobs_j/rt_j/offspring),
+        Q_max == "juveniles" ~ (Qobs_j/rt_j/offspring) - LCOWDAIR_Qobs,
         Q_max == "fattening" ~ (Qobs_f/rt_f/offspring) + LBOV1_SSN,
         Q_max == "breeders" ~ Qobs_b
       )

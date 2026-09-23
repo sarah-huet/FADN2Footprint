@@ -65,19 +65,18 @@ The FADN2Footprint package provides a standardized framework for
 transforming raw FADN microdata (EU FADN or national FADN extracts) into
 a standardized internal representation that can be used to compute:
 
--   Farm practice indicators (e.g., fertilizer quantity/quality,
-    pesticide use, tillage intensity, crop diversity, yields, hedge
-    density, ground cover, livestock density, feed intake, manure
-    systems, etc.)
+- Farm practice indicators (e.g., fertilizer quantity/quality, pesticide
+  use, tillage intensity, crop diversity, yields, hedge density, ground
+  cover, livestock density, feed intake, manure systems, etc.)
 
--   Environmental footprint: greenhouse gas emissions, biodiversity
-    impacts (upcoming: water consumption/pollution)
+- Environmental footprint: greenhouse gas emissions, biodiversity
+  impacts (upcoming: water consumption/pollution)
 
--   Economic performance (price premium, value-added per annual working
-    unit, operating margin per non-salaried AWU, return on assets)
+- Economic performance (price premium, value-added per annual working
+  unit, operating margin per non-salaried AWU, return on assets)
 
--   Social performance (employment, generational renewal, farmer
-    education)
+- Social performance (employment, generational renewal, farmer
+  education)
 
 The package follows a life cycle assessment (LCA) spirit with Scope 3
 boundaries.
@@ -91,36 +90,58 @@ a structured, traceable manner.
 
 A `FADN2Footprint` object is an S4 container that stores:
 
--   Parsed “internal tables” derived from your raw farm-year dataset
-    (still linked by identifiers): farm, crop, herd, input, and output
-    tables,
+- Parsed “internal tables” derived from your raw farm-year dataset
+  (still linked by identifiers): farm, crop, herd, input, and output
+  tables,
 
--   Optional landscape metrics (hedges, mean field size, ground cover,
-    etc.),
+- Optional landscape metrics (hedges, mean field size, ground cover,
+  etc.),
 
--   “Empty-by-default” slots for agricultural practice indicators and
-    footprint results (to be filled by later modules),
+- “Empty-by-default” slots for agricultural practice indicators and
+  footprint results (to be filled by later modules),
 
--   A traceability log that records key transformations applied during
-    construction (e.g., identifier variable names, column removal,
-    variable mapping decisions, detected naming scheme).
+- A traceability log that records key transformations applied during
+  construction (e.g., identifier variable names, column removal,
+  variable mapping decisions, detected naming scheme).
 
 The constructor returns an S4 instance with (at least) the following
 slots:
 
-| Slot                | Description                                                 | Status After Construction      |
-|-------------------|------------------------------|-----------------------|
-| `farm`              | Farm characteristics (size, location, type)                 | Parsed from input data         |
-| `crop`              | Crop data (area, production, yield, sales, etc.)            | Parsed from input data         |
-| `herd`              | Livestock herd data (Number of head, purchase, sales, etc.) | Parsed from input data         |
-| `input`             | Input use (fertilizers, pesticides, energy, etc.)           | Parsed from input data         |
-| `output`            | Production outputs and yields                               | Parsed from input data         |
-| `landscape_metrics` | User-provided landscape data                                | As provided (or `NULL`)        |
-| `practices`         | Practice indicators                                         | Inferred                       |
-| `footprints`        | Environmental/economic footprints                           | Inferred                       |
-| `traceability`      | Data processing logs                                        | Populated with mapping details |
++---------------------+-----------------------------+---------------------+
+| Slot                | Description                 | Status After        |
+|                     |                             | Construction        |
++=====================+=============================+=====================+
+| `farm`              | Farm characteristics (size, | Parsed from input   |
+|                     | location, type)             | data                |
++---------------------+-----------------------------+---------------------+
+| `crop`              | Crop data (area,            | Parsed from input   |
+|                     | production, yield, sales,   | data                |
+|                     | etc.)                       |                     |
++---------------------+-----------------------------+---------------------+
+| `herd`              | Livestock herd data (Number | Parsed from input   |
+|                     | of head, purchase, sales,   | data                |
+|                     | etc.)                       |                     |
++---------------------+-----------------------------+---------------------+
+| `input`             | Input use (fertilizers,     | Parsed from input   |
+|                     | pesticides, energy, etc.)   | data                |
++---------------------+-----------------------------+---------------------+
+| `output`            | Production outputs and      | Parsed from input   |
+|                     | yields                      | data                |
++---------------------+-----------------------------+---------------------+
+| `landscape_metrics` | User-provided landscape     | As provided (or     |
+|                     | data                        | `NULL`)             |
++---------------------+-----------------------------+---------------------+
+| `practices`         | Practice indicators         | Inferred            |
++---------------------+-----------------------------+---------------------+
+| `footprints`        | Environmental/economic      | Inferred            |
+|                     | footprints                  |                     |
++---------------------+-----------------------------+---------------------+
+| `traceability`      | Data processing logs        | Populated with      |
+|                     |                             | mapping details     |
++---------------------+-----------------------------+---------------------+
 
-In the crop, herd and output tables, the variable FADN_code_letter encode crops, animals and products using the EU FADN codes.
+In the crop, herd and output tables, the variable FADN_code_letter
+encode crops, animals and products using the EU FADN codes.
 
 ```{r crop_codes}
 
@@ -161,21 +182,21 @@ Constructing a valid `FADN2Footprint` object requires three main steps:
 
 To build a `FADN2Footprint` object you need:
 
--   A raw European FADN data.frame at farm-year level (wide format). NB:
-    If you are using a national FADN, please, refer to the vignette
-    "Data Preparation for National FADN and LPIS"
+- A raw European FADN data.frame at farm-year level (wide format). NB:
+  If you are using a national FADN, please, refer to the vignette "Data
+  Preparation for National FADN and LPIS"
 
--   A set of identifier columns (id_cols) that must include at least:
-    "ID", "YEAR", "COUNTRY"
+- A set of identifier columns (id_cols) that must include at least:
+  "ID", "YEAR", "COUNTRY"
 
--   A variable dictionary (var_dict) that maps your dataset column names
-    (EU/national extract) to the package’s internal “common” names
-    (var_common)
+- A variable dictionary (var_dict) that maps your dataset column names
+  (EU/national extract) to the package’s internal “common” names
+  (var_common)
 
--   Optionally: A landscape_metrics data.frame (e.g., hedge density,
-    mean field size, ground cover), which is stored and can be used
-    later to compute landscape-related indicators and footprints.
-    
+- Optionally: A landscape_metrics data.frame (e.g., hedge density, mean
+  field size, ground cover), which is stored and can be used later to
+  compute landscape-related indicators and footprints.
+
 ```{r load_data}
 # These are illustrative example objects.
 # Replace them with your real data.
@@ -189,7 +210,6 @@ data("dict_FADN", package = "FADN2Footprint")
 head(mock_data$fadn_fict) |> gt()
 
 ```
-
 
 ## Build from a FADN dataset already matching the internal dictionary
 
@@ -245,5 +265,208 @@ my_object_biodiv = FADN2Footprint::compute_footprint_biodiv(
   BVIAS_constants = data_extra$BVIAS_var_constant,
   BVIAS_weights = data_extra$BVIAS_var_weight)
 
-
 ```
+
+# Object overview
+
+After running `infer_practices()` and the footprint functions, a
+`FADN2Footprint` object contains the following nine S4 slots. The exact
+set of populated nested elements depends on the input data and which
+footprint functions were run.
+
++----------------------+----------------------+-------------------------------+
+| S4 slot              | What it stores       | Typical structure or contents |
++======================+======================+===============================+
+| `@farm`              | Farm-level           | One row per farm-year.        |
+|                      | structural and       | Contains identifiers such as  |
+|                      | accounting data      | `ID`, `YEAR`, and `COUNTRY`,  |
+|                      | parsed from the      | farm characteristics,         |
+|                      | original FADN        | production-system variables,  |
+|                      | dataset.             | organic status, labour,       |
+|                      |                      | economic variables, and       |
+|                      |                      | extrapolation weights such as |
+|                      |                      | `SYS02`.                      |
++----------------------+----------------------+-------------------------------+
+| `@crop`              | Crop- and            | Generally one row per         |
+|                      | land-use-level       | farm-year × crop/activity.    |
+|                      | internal table       | Contains `FADN_code_letter`,  |
+|                      | derived from FADN    | `species`, `land_use_type`,   |
+|                      | data.                | `area_ha`, production and     |
+|                      |                      | sales quantities, output      |
+|                      |                      | values, and crop yields.      |
++----------------------+----------------------+-------------------------------+
+| `@herd`              | Livestock structure  | Generally one row per         |
+|                      | and observed animal  | farm-year × livestock         |
+|                      | numbers.             | category. Contains            |
+|                      |                      | `FADN_code_letter`, species,  |
+|                      |                      | observed animal numbers such  |
+|                      |                      | as `Qobs`, livestock          |
+|                      |                      | categories, and related herd  |
+|                      |                      | variables.                    |
++----------------------+----------------------+-------------------------------+
+| `@input`             | Farm input-use data  | One row per farm-year,        |
+|                      | used to infer        | including fertilizer,         |
+|                      | practices and        | pesticide, fuel, electricity, |
+|                      | calculate impacts.   | feed purchases, and other     |
+|                      |                      | supported input quantities or |
+|                      |                      | expenditures.                 |
++----------------------+----------------------+-------------------------------+
+| `@output`            | Parsed production    | Typically includes tables     |
+|                      | outputs, stored as a | for:                          |
+|                      | named list.          |                               |
+|                      |                      | • `crops`: crop production    |
+|                      |                      | and sales                     |
+|                      |                      |                               |
+|                      |                      | • `milk` or other animal      |
+|                      |                      | products: production, sales,  |
+|                      |                      | and output value              |
+|                      |                      |                               |
+|                      |                      | • `meat`: animal sales and    |
+|                      |                      | production                    |
+|                      |                      |                               |
+|                      |                      | • `living_animals`: numbers   |
+|                      |                      | and value of live-animal      |
+|                      |                      | production                    |
+|                      |                      |                               |
+|                      |                      | Each table retains the        |
+|                      |                      | traceability identifier       |
+|                      |                      | columns.                      |
++----------------------+----------------------+-------------------------------+
+| `@landscape_metrics` | Optional external    | A data frame or `NULL`. May   |
+|                      | landscape data       | contain hedge density, mean   |
+|                      | supplied to the      | field size, ground cover, or  |
+|                      | constructor.         | other LPIS/Sentinel-derived   |
+|                      |                      | metrics. When available,      |
+|                      |                      | these are used to infer the   |
+|                      |                      | corresponding landscape       |
+|                      |                      | practices.                    |
++----------------------+----------------------+-------------------------------+
+| `@practices`         | Inferred             | A nested list, principally    |
+|                      | agricultural and     | divided into `crops` and      |
+|                      | livestock-management | `herding`.                    |
+|                      | practices.           |                               |
+|                      |                      | **`@practices$crops`** may    |
+|                      |                      | contain:                      |
+|                      |                      |                               |
+|                      |                      | • `crop_diversity`            |
+|                      |                      |                               |
+|                      |                      | • `N_ferti`, including total, |
+|                      |                      | mineral, and organic nitrogen |
+|                      |                      | fertilization;                |
+|                      |                      |                               |
+|                      |                      | • `share_Nmin_ferti`          |
+|                      |                      |                               |
+|                      |                      | • `pesticides`                |
+|                      |                      |                               |
+|                      |                      | • `tillage`                   |
+|                      |                      |                               |
+|                      |                      | • `livestock_density`         |
+|                      |                      |                               |
+|                      |                      | • `hedge_density`             |
+|                      |                      |                               |
+|                      |                      | • `mean_field_size`           |
+|                      |                      |                               |
+|                      |                      | • `ground_cover`              |
+|                      |                      |                               |
+|                      |                      | **`@practices$herding`** may  |
+|                      |                      | contain:                      |
+|                      |                      |                               |
+|                      |                      | • `general`: milk yield,      |
+|                      |                      | livestock density, forage     |
+|                      |                      | area, feed autonomy,          |
+|                      |                      | concentrate and soybean       |
+|                      |                      | shares, etc.                  |
+|                      |                      |                               |
+|                      |                      | • `feed`: produced and        |
+|                      |                      | purchased feed, detailed feed |
+|                      |                      | intake, dry matter, gross     |
+|                      |                      | energy, and crude protein     |
+|                      |                      |                               |
+|                      |                      | • `N_excretion`: nitrogen     |
+|                      |                      | intake, retention, and        |
+|                      |                      | excretion by animal category  |
+|                      |                      |                               |
+|                      |                      | • `rearing_parameters`:       |
+|                      |                      | cattle, swine, and poultry    |
+|                      |                      | rearing parameters            |
+|                      |                      |                               |
+|                      |                      | • `activities`: allocation of |
+|                      |                      | animals to milk, meat, and    |
+|                      |                      | egg activities                |
+|                      |                      |                               |
+|                      |                      | • `pseudoherd`: off-farm      |
+|                      |                      | animals and products          |
+|                      |                      |                               |
+|                      |                      | Practice tables generally     |
+|                      |                      | include the farm identifiers  |
+|                      |                      | and, for crop practices, a    |
+|                      |                      | `valid_practice` flag. Farms  |
+|                      |                      | failing validation can be     |
+|                      |                      | removed from all slots.       |
++----------------------+----------------------+-------------------------------+
+| `@footprints`        | Computed             | A nested list, most           |
+|                      | environmental        | importantly:                  |
+|                      | footprint results    |                               |
+|                      | and model            | **`@footprints$GHGE`** —      |
+|                      | parameters.          | greenhouse-gas emissions,     |
+|                      |                      | including:                    |
+|                      |                      |                               |
+|                      |                      | • `GHGE_crops`: crop/activity |
+|                      |                      | emissions, with component     |
+|                      |                      | totals and intensities per    |
+|                      |                      | hectare and tonne             |
+|                      |                      |                               |
+|                      |                      | • `GHGE_feed`: emissions from |
+|                      |                      | produced and purchased feed   |
+|                      |                      |                               |
+|                      |                      | • `GHGE_herd`: enteric        |
+|                      |                      | methane, manure-management    |
+|                      |                      | methane and nitrous oxide,    |
+|                      |                      | plus feed emissions           |
+|                      |                      |                               |
+|                      |                      | • `GHGE_milk`, `GHGE_meat`,   |
+|                      |                      | `GHGE_eggs`: emissions        |
+|                      |                      | allocated to animal products  |
+|                      |                      |                               |
+|                      |                      | • `GHGE_farm`: aggregated     |
+|                      |                      | farm-level emissions          |
+|                      |                      |                               |
+|                      |                      | • `GHGE_pseudoherd`:          |
+|                      |                      | aggregated farm-level         |
+|                      |                      | emissions accounting for      |
+|                      |                      | off-farm animals              |
+|                      |                      |                               |
+|                      |                      | **`@footprints$BVIAS`** —     |
+|                      |                      | biodiversity impact           |
+|                      |                      | assessment results,           |
+|                      |                      | including:                    |
+|                      |                      |                               |
+|                      |                      | •                             |
+|                      |                      | `model_parameters$constants`  |
+|                      |                      |                               |
+|                      |                      | • `model_parameters$weights`  |
+|                      |                      |                               |
+|                      |                      | • `BVI_crops`                 |
+|                      |                      |                               |
+|                      |                      | • `BVI_feed`                  |
+|                      |                      |                               |
+|                      |                      | • `BVI_milk`                  |
+|                      |                      |                               |
+|                      |                      | Other footprint categories    |
+|                      |                      | may be added by future or     |
+|                      |                      | additional modules. Empty or  |
+|                      |                      | uncomputed elements remain    |
+|                      |                      | `NULL`.                       |
++----------------------+----------------------+-------------------------------+
+| `@traceability`      | Metadata documenting | A list containing the         |
+|                      | how the object was   | identifier columns            |
+|                      | built and processed. | (`id_cols`), input/version    |
+|                      |                      | and variable-mapping          |
+|                      |                      | information, removed          |
+|                      |                      | zero-only columns,            |
+|                      |                      | harmonization decisions,      |
+|                      |                      | and—after practice            |
+|                      |                      | validation—`discarded_farms`, |
+|                      |                      | including the reason each     |
+|                      |                      | farm was removed.             |
++----------------------+----------------------+-------------------------------+

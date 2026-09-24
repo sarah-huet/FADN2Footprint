@@ -1,7 +1,7 @@
 Package: FADN2Footprint
 Type: Package
 Title: Infer agricultural practices and compute environmental footprints from FADN data
-Version: 1.0.0
+Version: 1.1.0
 Authors@R: person("Sarah", "Huet", email = "sarah.huet@inrae.fr",
                   role = c("aut", "cre"))
 URL: https://sarah-huet.github.io/FADN2Footprint/, https://github.com/sarah-huet/FADN2Footprint

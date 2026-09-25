@@ -90,81 +90,20 @@ f_pseudoherd_poultry <- function(object){
 
   # 3. Estimate pseudoherd ---------------------------------------------------------------------------------
 
-  ## EGGS ----
-  ### 2.1. Differentiate farm workshops ----
-
-  # we consider that only laying hens are involved in the egg workshop
-  herd_poultry_eggs <- herd_activities |>
-    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, Qobs_eggs) |>
-    # pivot table
-    tidyr::pivot_wider(
-      names_from = FADN_code_letter,
-      names_glue = "{FADN_code_letter}_Qobs_eggs",
-      values_from = Qobs_eggs,
-      values_fill = 0
-    )
-
-  ## 2.2 Balance number of animals in each workshop ----
-
   # For poultry, we consider breeders of broilers and juveniles of laying hens as negligible, hence equilibrium quantities equaling observed quantities.
-  pseudoherd_poultry_eggs <- herd_poultry_eggs |>
-    # add rearing parameters
-    dplyr::left_join(herd_rearing_param_poultry,
-                     by = id_cols)  |>
-    dplyr::select(tidyselect::all_of(object@traceability$id_cols), dplyr::matches("Qobs")) |>
-    tidyr::pivot_longer(
-      cols = -tidyselect::all_of(object@traceability$id_cols),
-      names_to = "FADN_code_letter",
-      values_to = "Qeq_eggs"
-    ) |>
-    mutate(
-      FADN_code_letter = gsub("_Qobs","",FADN_code_letter)
-    )
-
-  ### MEAT ----
-
-  ### 3.1. Differentiate farm workshops ----
-  # we consider that only laying hens are not involved in the meat workshop
-  herd_poultry_meat <- herd_activities |>
-    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, Qobs_meat) |>
-    # pivot table
-    tidyr::pivot_wider(
-      names_from = FADN_code_letter,
-      names_glue = "{FADN_code_letter}_Qobs_meat",
-      values_from = Qobs_meat,
-      values_fill = 0
-    )
-
-  ## 3.2. Balance number of animals in each workshop ----
-
-  # For poultry, we consider breeders of broilers and juveniles of laying hens as negligible, hence equilibrium quantities equaling observed quantities.
-  pseudoherd_poultry_meat <- herd_poultry_meat |>
-    # add rearing parameters
-    dplyr::left_join(herd_rearing_param_poultry,
-                     by = id_cols)  |>
-    dplyr::select(tidyselect::all_of(object@traceability$id_cols), dplyr::matches("Qobs")) |>
-    tidyr::pivot_longer(
-      cols = dplyr::matches("Qobs"),
-      names_to = "FADN_code_letter",
-      values_to = "Qeq_meat"
-    ) |>
-    mutate(
-      FADN_code_letter = gsub("_Qobs","",FADN_code_letter)
-    ) |>
-    # round values
-    dplyr::mutate(
-      Qeq_meat = round(Qeq_meat, 2)
-    )
+  ## Thus no off-farm animal is considered
+  pseudoherd_poultry <- herd_activities |>
+    dplyr::mutate(Qeq_eggs = Qobs_eggs,
+                  Qeq_meat = Qobs_meat)
 
   # Output ----
 
   pseudoherd_poultry <- list(
     # rearing parameters
     rearing_param = herd_rearing_param_poultry |>
-      dplyr::select(tidyselect::all_of(object@traceability$id_cols),dplyr::matches("rt_|t_1st|offspring")),
-    # eggs pseudo herd
-    pseudoherd = dplyr::bind_rows(pseudoherd_poultry_eggs,
-                                  pseudoherd_poultry_meat)
+      dplyr::select(tidyselect::all_of(object@traceability$id_cols),matches("rt_|t_1st|offspring")),
+    # pseudo herd
+    pseudoherd = pseudoherd_poultry
   )
 
   return(pseudoherd_poultry)

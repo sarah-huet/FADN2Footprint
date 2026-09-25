@@ -57,11 +57,11 @@ f_herd_rearing_param_cattle <- function(object){
   # 2. Modeling farm rearing process ---------------------------------------------------------------------------------
 
   herd_cattle_process_init <- herd_cattle |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),FADN_code_letter,Qobs,ON,CN,PN,SN,SSN) |>
+    dplyr::select(dplyr::all_of(object@traceability$id_cols),FADN_code_letter,Qobs,ON,CN,PN,SN,SSN,SRN) |>
     tidyr::pivot_wider(
       id_cols = dplyr::all_of(object@traceability$id_cols),
       names_from = FADN_code_letter,
-      values_from = c(Qobs,ON,CN,PN,SN,SSN),
+      values_from = c(Qobs,ON,CN,PN,SN,SSN,SRN),
       names_glue = "{FADN_code_letter}_{.value}"
     ) |>
     # replace NAs by zeros
@@ -72,7 +72,7 @@ f_herd_rearing_param_cattle <- function(object){
                                    dplyr::filter(species == "cattle") |>
                                    dplyr::pull(FADN_code_letter),
                                  unique(herd_cattle$FADN_code_letter)),
-                  suffix = c("Qobs","ON","CN","PN","SN","SSN")) |>
+                  suffix = c("Qobs","ON","CN","PN","SN","SSN","SRN")) |>
         transmute(name = paste(code, suffix, sep = "_")) |>
         dplyr::mutate(value = 0) |>
         tidyr::pivot_wider(names_from = name,values_from = value)

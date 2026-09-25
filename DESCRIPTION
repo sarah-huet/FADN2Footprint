@@ -85,6 +85,7 @@ Collate:
     'GHGE_pseudoherd.R'
     'GHGE_pseudoherd_products.R'
     'GHGE_pseudoherd_products_cattle.R'
+    'GHGE_pseudoherd_products_swine.R'
     'compute_footprint_biodiv.R'
     'compute_footprint_ghg.R'
     'data.R'

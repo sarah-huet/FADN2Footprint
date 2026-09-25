@@ -74,7 +74,8 @@
 
 
 f_pseudoherd_swine <- function(object,
-                               overwrite = FALSE) {
+                               overwrite = FALSE
+) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -131,6 +132,7 @@ f_pseudoherd_swine <- function(object,
       rt_f = rt_LPIGFAT,
       # breeders
       Qobs_b = LSOWBRE_Qobs + LPIGOTH_Qobs,
+      # LPIGOTH are probably male breeders
       offspring = offspring_LSOWBRE
     )
 
@@ -185,22 +187,29 @@ f_pseudoherd_swine <- function(object,
       )
     ) |>
     dplyr::mutate(
-      Qeq_j = case_when(
+      Qeq_j_meat = case_when(
         Q_max == "juveniles" ~ Qobs_j,
         Q_max == "fattening" ~ (rt_j*(Qobs_f/rt_f)),
         Q_max == "breeders" ~ (rt_j*Qobs_b*offspring)
       ),
-      Qeq_f = case_when(
+      Qeq_f_meat = case_when(
         Q_max == "juveniles" ~ (rt_f*(Qobs_j/rt_j)),
         Q_max == "fattening" ~ Qobs_f,
         Q_max == "breeders" ~ (rt_f*Qobs_b*offspring)
       ),
-      Qeq_b = case_when(
+      Qeq_b_meat = case_when(
         Q_max == "juveniles" ~ (Qobs_j/rt_j/offspring),
         Q_max == "fattening" ~ (Qobs_f/rt_f/offspring),
         Q_max == "breeders" ~ Qobs_b
       )
+    ) |>
+    # check that Qeq >= Qobs
+    dplyr::mutate(
+      Qeq_j_meat = pmax(Qeq_j_meat, Qobs_j, na.rm = TRUE),
+      Qeq_f_meat = pmax(Qeq_f_meat, Qobs_f, na.rm = TRUE),
+      Qeq_b_meat = pmax(Qeq_b_meat, Qobs_b, na.rm = TRUE)
     )
+
 
   # View(herd_swine_meat_eq |> summarise(across(everything(), ~sum(is.na(.x)))) |> tidyr::pivot_longer(cols = everything()))
   # View(herd_swine_meat_eq |> tidyr::pivot_longer(cols = -c(ID,YEAR,NUTS2,Q_max)) |> dplyr::filter(value >0))
@@ -209,70 +218,83 @@ f_pseudoherd_swine <- function(object,
 
   # We allocate animal equilibrium number across livestock categories
   # according to the share of animals in each category observed at the NUTS2 level
+  # underlying hypothesis: NUTS2 animal numbers are at equilibrium
 
   # define which categories belong to which rearing stage
-  cat_juveniles_swine <- c("LPIGLET")
-  cat_fattening_swine <- c("LPIGFAT")
-  cat_breeders_swine  <- c("LSOWBRE", "LPIGOTH")
+  cat_juveniles <- c("LPIGLET")
+  cat_fattening <- c("LPIGFAT")
+  cat_breeders  <- c("LSOWBRE", "LPIGOTH")
 
-  share_Qobs_swine <- object@herd |>
-    dplyr::select(dplyr::all_of(id_cols), NUTS2, FADN_code_letter, Qobs) |>
+  # estimate shares
+  share_Qobs <- herd_activities |>
+    # add NUTS2 and SYS02
+    dplyr::left_join(object@farm |>
+                       dplyr::select(dplyr::all_of(id_cols), NUTS2, SYS02),
+                     by = id_cols) |>
     # sum all animals per category in each rearing stage at the NUTS2 level
-    dplyr::group_by(NUTS2, FADN_code_letter) |>
-    dplyr::summarise(Qobs_NUTS2_cat = sum(Qobs, na.rm = TRUE), .groups = "drop") |>
+    dplyr::summarise(
+      Qobs_meat_NUTS2_cat = sum(Qobs_meat, na.rm = T),
+      .by = c(COUNTRY, NUTS2, FADN_code_letter)
+    ) |>
+    # sum all animals per category in each rearing stage at the country level
+    dplyr::mutate(
+      Qobs_meat_COUNTRY_cat = sum(Qobs_meat_NUTS2_cat, na.rm = T),
+      .by = c(COUNTRY, FADN_code_letter)
+    ) |>
     # add rearing stage
     dplyr::mutate(
       stage = dplyr::case_when(
-        FADN_code_letter %in% cat_juveniles_swine ~ "j",
-        FADN_code_letter %in% cat_fattening_swine  ~ "f",
-        FADN_code_letter %in% cat_breeders_swine   ~ "b",
+        FADN_code_letter %in% cat_juveniles ~ "j",
+        FADN_code_letter %in% cat_fattening  ~ "f",
+        FADN_code_letter %in% cat_breeders   ~ "b",
         TRUE ~ NA_character_
       )
     ) |>
     dplyr::filter(!is.na(stage)) |>
     # sum all animals at the NUTS2 level (per stage)
-    dplyr::group_by(NUTS2, stage) |>
-    dplyr::mutate(Qobs_NUTS2_stage = sum(Qobs_NUTS2_cat, na.rm = TRUE)) |>
-    dplyr::ungroup() |>
+    dplyr::mutate(
+      Qobs_meat_NUTS2_stage = sum(Qobs_meat_NUTS2_cat, na.rm = T),
+      .by = c(NUTS2, stage)
+    ) |>
+    # sum all animals at the country level (per stage)
+    dplyr::mutate(
+      Qobs_meat_COUNTRY_stage = sum(Qobs_meat_NUTS2_cat, na.rm = T),
+      .by = c(COUNTRY, stage)
+    ) |>
     # estimate share of animal per category at the NUTS2 level
     dplyr::mutate(
-      share_NUTS2 = dplyr::case_when(
-        Qobs_NUTS2_stage > 0 ~ Qobs_NUTS2_cat / Qobs_NUTS2_stage,
-        # fallback: equal split within stage if no animals observed at NUTS2 level
-        TRUE ~ 1 / dplyr::case_when(
-          stage == "j" ~ length(cat_juveniles_swine),
-          stage == "f" ~ length(cat_fattening_swine),
-          stage == "b" ~ length(cat_breeders_swine)
-        )
-      )
-    ) |>
-    dplyr::select(NUTS2, FADN_code_letter, share_NUTS2)
-
-  # pivot shares to wide format for joining
-  share_Qobs_swine_wide <- share_Qobs_swine |>
-    tidyr::pivot_wider(
-      names_from = FADN_code_letter,
-      values_from = share_NUTS2,
-      names_glue = "share_{FADN_code_letter}"
+      share_NUTS2 = Qobs_meat_NUTS2_cat / Qobs_meat_NUTS2_stage,
+      share_COUNTRY = Qobs_meat_COUNTRY_cat / Qobs_meat_COUNTRY_stage
     )
 
+  # allocate animals
   pseudoherd_swine_meat <- herd_swine_meat_eq |>
-    # add NUTS2-level shares
-    dplyr::left_join(share_Qobs_swine_wide, by = "NUTS2") |>
+    # add shares
+    #dplyr::left_join(share_Qobs |>
+    #                   dplyr::select(FADN_code_letter, NUTS2, share_COUNTRY) |>
+    #                   tidyr::pivot_wider(names_from = FADN_code_letter, values_from = share_COUNTRY,
+    #                                      names_prefix = "share_"),
+    #                 by = c('NUTS2')) |>
+    dplyr::left_join(share_Qobs |>
+                       dplyr::select(FADN_code_letter, COUNTRY, share_COUNTRY) |>
+                       dplyr::distinct() |>
+                       tidyr::pivot_wider(names_from = FADN_code_letter, values_from = share_COUNTRY,
+                                          names_prefix = "share_"),
+                     by = c('COUNTRY')) |>
     # balance number of animals for the meat workshop
     dplyr::mutate(
 
       # --- juveniles (single category, no weighting needed) ---
-      LPIGLET_Qeq_meat = Qeq_j,
+      LPIGLET_Qeq_meat = Qeq_j_meat,
 
       # --- fattening: weight residual by NUTS2-level category share ---
-      LPIGFAT_Qeq_meat = Qeq_f,
+      LPIGFAT_Qeq_meat = Qeq_f_meat,
 
       # --- breeders (single category, no weighting needed) ---
-      LSOWBRE_Qeq_meat = LSOWBRE_Qobs +
-        (Qeq_b - Qobs_b) * share_LSOWBRE,
-      LPIGOTH_Qeq_meat = LPIGOTH_Qobs +
-        (Qeq_b - Qobs_b) * share_LPIGOTH
+      LSOWBRE_Qeq_meat =  LSOWBRE_Qobs_meat +
+        (Qeq_b_meat - Qobs_b) * share_LSOWBRE,
+      LPIGOTH_Qeq_meat = LPIGOTH_Qobs_meat +
+        (Qeq_b_meat - Qobs_b) * share_LPIGOTH
     ) |>
     # select columns
     dplyr::select(tidyselect::all_of(object@traceability$id_cols), dplyr::matches("Qeq_meat")) |>
@@ -292,16 +314,24 @@ f_pseudoherd_swine <- function(object,
 
   # Output ----
 
-  pseudofarm_herd_swine <- list(
+  # all possible combination of livestock category in each farm
+  full_grid <- herd_activities |>
+    dplyr::distinct(dplyr::across(dplyr::all_of(id_cols))) |>
+    tidyr::expand_grid(FADN_code_letter = unique(herd_activities$FADN_code_letter))
+
+  pseudoherd_swine <- list(
     # rearing parameters
-    rearing_param = herd_swine_meat_aggr |>
+    rearing_param = herd_rearing_param_swine |>
       dplyr::select(tidyselect::all_of(object@traceability$id_cols),matches("rt_|t_1st|offspring")),
-    # meat pseudo herd
-    pseudoherd = pseudoherd_swine_meat
+    # pseudo herd
+    pseudoherd = full_grid |>
+      dplyr::left_join(herd_activities, by = c(id_cols, 'FADN_code_letter')) |>
+      dplyr::left_join(pseudoherd_swine_meat, by = c(id_cols, 'FADN_code_letter')) |>
+      dplyr::mutate(species = "swine")
   )
 
 
-  return(pseudofarm_herd_swine)
+  return(pseudoherd_swine)
 
 }
 

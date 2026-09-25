@@ -9,11 +9,11 @@ f_GHGE_pseudoherd_output_cattle(object, overwrite = FALSE, ...)
 \arguments{
 \item{object}{An S4 object of class "FADN2Footprint" prepared by the
 package workflow, providing \code{object@traceability$id_cols},
-\code{object@farm} (for NUTS2), and object@output (living_animals, meat,
+\code{object@farm} (for NUTS2), and \code{object@output} (living_animals, meat,
 other_herd_products).}
 
 \item{overwrite}{Logical. If TRUE, forces recomputation of intermediate
-results (f_pseudoherd_animals, f_GHGE_pseudoherd, f_GHGE_herd_output_cattle,
+results (f_pseudoherd_animals, f_GHGE_pseudoherd,
 f_pseudoherd_output_off_farm) rather than reusing previously
 cached/stored values. Default is FALSE.}
 
@@ -51,13 +51,14 @@ The function proceeds in two main steps:
 cow meat. The share of pseudoherd animals involved in the milk activity
 is derived from f_pseudoherd_animals (share_milk_act_Qeq = Qeq_milk /
 Qeq) and used to weight the total pseudoherd emissions (from
-f_GHGE_pseudoherd). Because off-farm animals are estimated from the
-renewal of dairy cows, there are no off-farm dairy cows and therefore no
-off-farm milk or cull cow meat production; the economic allocation
-ratio (econ_alloc_milk) between milk and cull cow meat is thus computed
-solely from on-farm sales values (\code{object@output$meat} filtered on
-"meat_cull_cow" and \code{object@output$other_herd_products} filtered on
-"milk"), and applied to split the milk activity's pseudoherd emissions
+f_GHGE_pseudoherd, joined on id_cols and FADN_code_letter). Because
+off-farm animals are estimated from the renewal of dairy cows, there
+are no off-farm dairy cows and therefore no off-farm milk or cull cow
+meat production; the economic allocation ratio (econ_alloc_milk)
+between milk and cull cow meat is thus computed solely from on-farm
+sales values (\code{object@output$meat} filtered on "meat_cull_cow" and
+\code{object@output$other_herd_products} filtered on "milk"), and applied
+(joined on id_cols) to split the milk activity's pseudoherd emissions
 between the two co-products.
 \item \strong{Meat}: the meat activity produces three co-products — living
 animals, veal meat and beef meat. The share of pseudoherd animals
@@ -77,10 +78,11 @@ Milk production volume (prod_t) is retrieved from on-farm data only
 (\code{object@output$other_herd_products}), since there is no off-farm milk
 production. Meat production volume combines on-farm production
 (\code{object@output$meat}) with estimated off-farm production
-(\code{f_pseudoherd_output_off_farm}$pseudoherd_output_meat). These production
-volumes are joined to the allocated pseudoherd emissions, and emission
-intensities are computed for all pseudoherd GHG-related columns (matching
-"kgCO2e" and "pseudoherd"):
+(\code{f_pseudoherd_output_off_farm}$pseudoherd_output_meat), summed per farm
+and output. These production volumes are joined (on id_cols and output)
+to the allocated pseudoherd emissions, and emission intensities are
+computed for all pseudoherd GHG-related columns (matching "kgCO2e" and
+"pseudoherd"):
 \itemize{
 \item per hectare of on-farm feed area (excluding pseudofarm-related
 columns), suffixed "_per_ha_farm";
@@ -99,8 +101,8 @@ head(ghge_pseudoherd_output_cattle)
 }
 \seealso{
 f_GHGE_pseudoherd, f_pseudoherd_animals,
-f_pseudoherd_output_off_farm, f_GHGE_herd_output_cattle,
-f_GHGE_pseudoherd_output_swine, f_GHGE_pseudoherd_output_poultry
+f_pseudoherd_output_off_farm, f_GHGE_pseudoherd_output_swine,
+f_GHGE_pseudoherd_output_poultry
 }
 \concept{footprint-ghge}
 \concept{practice-pseudoherd}

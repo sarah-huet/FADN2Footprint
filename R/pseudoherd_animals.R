@@ -78,26 +78,25 @@ f_pseudoherd_animals <- function(object,
 
         # Estimate off-farm herd ----
         pseudoherd_cattle = f_pseudoherd_cattle(object)
-        #pseudoherd_swine = f_pseudoherd_swine(object)
-        #pseudoherd_poultry = f_pseudoherd_poultry(object)
+        pseudoherd_swine = f_pseudoherd_swine(object)
+        pseudoherd_poultry = f_pseudoherd_poultry(object)
 
 
 
         #pseudoherd_sheep = f_pseudoherd_sheep(object)
 
 
-       #pseudoherd_animals <- Reduce(bind_rows,
-       #                             list(pseudoherd_cattle$pseudoherd,
-       #                                  pseudoherd_swine$pseudoherd,
-       #                                  pseudoherd_poultry$pseudoherd
-       #                                  )) |>
-        pseudoherd_animals <- pseudoherd_cattle$pseudoherd |>
+       pseudoherd_animals <- Reduce(bind_rows,
+                                    list(pseudoherd_cattle$pseudoherd,
+                                         pseudoherd_swine$pseudoherd,
+                                         pseudoherd_poultry$pseudoherd
+                                         )) |>
                 # keep only FADN_code_letter
                 ## this remove the code for mixed categories (e.g., "LBOV1_2F_breeders")
                 dplyr::filter(FADN_code_letter %in% data_extra$livestock$FADN_code_letter)|>
                 # estimate total number of animals, and off-farm animals
                 dplyr::mutate(
-                        Qeq = dplyr::coalesce(Qeq_milk, 0) + dplyr::coalesce(Qeq_meat, 0),# + dplyr::coalesce(Qeq_eggs, 0),
+                        Qeq = dplyr::coalesce(Qeq_milk, 0) + dplyr::coalesce(Qeq_meat, 0) + dplyr::coalesce(Qeq_eggs, 0),
                         Qeq = round(Qeq, 2),
                         Qofffarm = dplyr::coalesce(Qeq, 0) - dplyr::coalesce(Qobs, 0),
                         Qofffarm = round(Qofffarm, 2)

@@ -113,7 +113,7 @@ f_pseudoherd_output_off_farm <- function(object,
 
 
 
-        pseudoherd_activities <- f_pseudoherd_animals(object)
+        pseudoherd_animals <- f_pseudoherd_animals(object)
         # with Qobs: number of animal on-farm
         # and Qofffarm: number of animals off-farm
 
@@ -161,7 +161,7 @@ f_pseudoherd_output_off_farm <- function(object,
 
         # for animals off-farm number (Qofffarm), estimate the number of animals sold for slaughter and those sold for rearing
 
-        pseudoherd_output <- pseudoherd_activities |>
+        pseudoherd_output <- pseudoherd_animals |>
                 # join farm identification info (NUTS2, COUNTRY) to the pseudoherd activities
                 dplyr::left_join(object@farm |>
                                          dplyr::select(dplyr::all_of(id_cols), NUTS2),

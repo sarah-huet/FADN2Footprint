@@ -2,37 +2,76 @@
 % Please edit documentation in R/pseudoherd_cattle.R
 \name{f_pseudoherd_cattle}
 \alias{f_pseudoherd_cattle}
-\title{Function to estimate off-farm animals of the cattle herd based on FADN data
-\code{f_pseudoherd_cattle} Estimate off-farm animals of the cattle herd}
+\title{Estimate off-farm animals of the cattle pseudoherd}
 \usage{
 f_pseudoherd_cattle(object, overwrite = FALSE)
 }
 \arguments{
-\item{object}{An S4 object of class "FADN2Footprint" prepared by the package
-workflow. The function expects the object to provide:
+\item{object}{An S4 object of class "FADN2Footprint" prepared by the
+package workflow. The function expects the object to provide:
 \itemize{
 \item object@traceability$id_cols (vector of id column names used for joins),
-\item object@herd (for sheep, goats, horses),
-\item helper functions f_herd_rearing_param_cattle, f_herd_rearing_param_swine,
-f_herd_rearing_param_poultry to supply rearing parameter tables,
-\item package data table data_extra$livestock for species lookup.
+\item object@farm (for SYS02, NUTS2, COUNTRY),
+\item helper function f_herd_rearing_param_cattle to supply rearing
+parameter tables,
+\item helper function f_herd_activities to supply observed herd activities.
 }}
 
-\item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
-the function returns
-the cached object and no recomputation is performed. If TRUE, existing
-cached GHGE results are ignored and computations are re-run.}
+\item{overwrite}{Logical (default FALSE). Currently unused within the
+function body but reserved for future caching behavior consistent with
+other package functions.}
 }
 \value{
-A list with, for each livestock category:
-\itemize{
-\item Q_obs: the number of animals observed in the farm (in number of heads)
-\item Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+A list with:
+\describe{
+\item{rearing_param}{A tibble of rearing parameters (turnover rates,
+time to first calving, offspring rates) per farm.}
+\item{pseudoherd}{A tibble with one row per farm × livestock category,
+containing observed animal numbers for milk and meat activities
+(Qobs_milk, Qobs_meat) and estimated pseudoherd equilibrium numbers
+(Qeq_milk, Qeq_meat), together with species = "cattle".}
 }
 }
 \description{
-Function to estimate off-farm animals of the cattle herd based on FADN data
-\code{f_pseudoherd_cattle} Estimate off-farm animals of the cattle herd
+f_pseudoherd_cattle models the on-farm cattle rearing process (milk and
+meat activities) and estimates the pseudoherd, i.e. the equilibrium
+number of animals (Qeq) needed at each rearing stage (juveniles,
+fattening, breeders) to sustain observed on-farm production, for both the
+milk and meat activities.
+}
+\details{
+The function proceeds in the following steps:
+
+\strong{1. Model farm rearing process:} rearing parameters (turnover rates,
+time to first calving, offspring rates) are obtained from
+f_herd_rearing_param_cattle.
+
+\strong{2. On-farm herd activities:} observed animal numbers per livestock
+category and activity (milk, meat) are obtained from f_herd_activities,
+filtered on cattle.
+
+\strong{3. Estimate pseudoherd:}
+\itemize{
+\item \strong{Milk}: the number of animals involved in the milk activity is taken
+directly from observed dairy cows (LCOWDAIR). The renewal categories
+(LHEIFBRE, LBOV1_2F breeders share, LBOV1) required to sustain the
+dairy herd are then derived from the dairy cow turnover rate and the
+respective category turnover rates.
+\item \strong{Meat}: on-farm animals are aggregated into three rearing stages —
+juveniles (LBOV1), fattening (LBOV1_2M, LBOV2, LHEIFFAT, and the
+fattening share of LBOV1_2F) and breeders (LHEIFBRE, LCOWOTH, LBOV1_2F
+breeders share, plus LCOWDAIR as a source of offspring). Missing
+turnover rates and offspring rates are replaced by NUTS2/country
+average values (via h_average_practices). The rearing stage with the
+highest observed-to-equilibrium animal ratio (Q_max) is used as the
+reference to compute the equilibrium number of animals at each stage
+(Qeq_j_meat, Qeq_f_meat, Qeq_b_meat), accounting for direct sales of
+juveniles (LBOV1_SSN). These stage-level equilibrium numbers are then
+redistributed across individual livestock categories in proportion to
+their observed country-level share within each stage (share_Qobs),
+with mixed categories (LBOV1_2F) split between their fattening and
+breeding shares.
+}
 }
 \examples{
 data(fadn_fict)

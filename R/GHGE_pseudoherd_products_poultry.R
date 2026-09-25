@@ -1,9 +1,9 @@
-#' Calculate GHG emission intensity of cattle pseudoherd outputs (milk and meat)
+#' Calculate GHG emission intensity of poultry pseudoherd outputs (eggs and meat)
 #'
 #' @description
-#' f_GHGE_pseudoherd_output_cattle allocates the greenhouse gas emissions of
-#' the cattle pseudoherd (on-farm and estimated off-farm animals) to their
-#' respective co-products (milk, cull cow meat, veal/beef meat, living
+#' f_GHGE_pseudoherd_output_poultry allocates the greenhouse gas emissions of
+#' the poultry pseudoherd (on-farm and estimated off-farm animals) to their
+#' respective co-products (eggs, meat, living
 #' animals) using economic allocation, and computes emission intensities per
 #' hectare (farm and pseudofarm) and per tonne of product.
 #'
@@ -11,34 +11,26 @@
 #' The function proceeds in two main steps:
 #'
 #' **1. Allocate activity emissions to co-products:**
-#' - **Milk**: the milk activity produces two co-products — milk and cull
-#'   cow meat. The share of pseudoherd animals involved in the milk activity
-#'   is derived from f_pseudoherd_animals (share_milk_act_Qeq = Qeq_milk /
+#' - **Eggs**: the eggs activity produces one product.
+#'   The share of pseudoherd animals involved in the eggs activity
+#'   is derived from f_pseudoherd_animals (share_eggs_act_Qeq = Qeq_eggs /
 #'   Qeq) and used to weight the total pseudoherd emissions (from
 #'   f_GHGE_pseudoherd, joined on id_cols and FADN_code_letter). Because
-#'   off-farm animals are estimated from the renewal of dairy cows, there
-#'   are no off-farm dairy cows and therefore no off-farm milk or cull cow
-#'   meat production; the economic allocation ratio (econ_alloc_milk)
-#'   between milk and cull cow meat is thus computed solely from on-farm
-#'   sales values (`object@output$meat` filtered on "meat_cull_cow" and
-#'   `object@output$other_herd_products` filtered on "milk"), and applied
-#'   (joined on id_cols) to split the milk activity's pseudoherd emissions
-#'   between the two co-products.
-#' - **Meat**: the meat activity produces three co-products — living
-#'   animals, veal meat and beef meat. The share of pseudoherd animals
+#'   off-farm animals are considered negligible for this activity, there
+#'   are no off-farm animals nor production; as there is only one product,
+#'   all pseudoherd emissions of this activity are attributed to eggs.
+#'
+#' - **Meat**: the meat activity produces on product — chicken meat.
+#'   The share of pseudoherd animals
 #'   involved in the meat activity (share_meat_act_Qeq = Qeq_meat / Qeq) is
-#'   used to weight pseudoherd emissions. The economic allocation ratio
-#'   (econ_alloc_meat) is computed from both on-farm sales
-#'   (`object@output$living_animals`, `object@output$meat`) and estimated
-#'   off-farm production (from f_pseudoherd_output_off_farm), after
-#'   excluding dairy cows (FADN_code_letter == "LCOWDAIR") since their cull
-#'   cow meat impact is already accounted for in the milk activity. The cull
-#'   cow meat emissions from the milk activity are subsequently added to the
-#'   meat co-product emissions.
+#'   used to weight pseudoherd emissions.
+#'   Because off-farm animals are considered negligible for this activity, there
+#'   are no off-farm animals nor production; as there is only one product,
+#'   all pseudoherd emissions of this activity are attributed to chicken meat.
 #'
 #' **2. Calculate emission intensity:**
-#' Milk production volume (prod_t) is retrieved from on-farm data only
-#' (`object@output$other_herd_products`), since there is no off-farm milk
+#' Eggs production volume (prod_t) is retrieved from on-farm data only
+#' (`object@output$other_herd_products`), since there is no off-farm eggs
 #' production. Meat production volume combines on-farm production
 #' (`object@output$meat`) with estimated off-farm production
 #' (`f_pseudoherd_output_off_farm`$pseudoherd_output_meat), summed per farm
@@ -65,8 +57,8 @@
 #' @param ... Additional arguments passed to f_pseudoherd_animals and
 #'   f_GHGE_pseudoherd.
 #'
-#' @return A tibble with one row per farm × output (milk, meat_cull_cow,
-#'   veal/beef meat, etc.) for cattle, containing:
+#' @return A tibble with one row per farm × output (eggs, chicken meat, etc.)
+#'  for poultry, containing:
 #' \describe{
 #'   \item{Allocated GHG emissions}{Pseudoherd-related columns matching
 #'     "kgCO2e" and "pseudoherd", allocated to each co-product via economic
@@ -82,8 +74,8 @@
 #' @examples
 #' \dontrun{
 #' # f is a prepared FADN2Footprint object
-#' ghge_pseudoherd_output_cattle <- f_GHGE_pseudoherd_output_cattle(f)
-#' head(ghge_pseudoherd_output_cattle)
+#' ghge_pseudoherd_output_poultry <- f_GHGE_pseudoherd_output_poultry(f)
+#' head(ghge_pseudoherd_output_poultry)
 #' }
 #'
 #' @seealso f_GHGE_pseudoherd, f_pseudoherd_animals,
@@ -97,7 +89,7 @@
 #' @import stringr
 
 
-f_GHGE_pseudoherd_output_cattle <- function(object,
+f_GHGE_pseudoherd_output_poultry <- function(object,
                                             overwrite = FALSE,
                                             ...) {
         if (!inherits(object, "FADN2Footprint")) {
@@ -112,69 +104,34 @@ f_GHGE_pseudoherd_output_cattle <- function(object,
 
         # 1. Allocate activity emissions to co-products ---------------------------
 
-        ## Milk ----
-        # The milk activity yield two co-products: milk and cull cow meat
-        ## We economically allocate the impact of the milk activity between these two co-products
+        ## eggs ----
+        # The eggs activity yield one products: eggs
+        ## no economic allocation is needed as only eggs are produced
 
-        # number of animals involved in the milk activity
-        nb_animals_milk_Qeq <- pseudoherd_activities |>
-                dplyr::filter(species == "cattle") |>
+        # number of animals involved in the eggs activity
+        nb_animals_eggs_Qeq <- pseudoherd_activities |>
+                dplyr::filter(species == "poultry") |>
                 dplyr::mutate(
-                        share_milk_act_Qeq = dplyr::coalesce(Qeq_milk / Qeq, 0)
+                        share_eggs_act_Qeq = dplyr::coalesce(Qeq_eggs / Qeq, 0)
                 ) |>
-                dplyr::filter(share_milk_act_Qeq >0) |>
-                dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, share_milk_act_Qeq)
+                dplyr::filter(share_eggs_act_Qeq >0) |>
+                dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, share_eggs_act_Qeq)
 
-        # economic allocation ratio between cull cow meat and milk => no needed here
-                # as we estimated off-farm animals based on the renewal of dairy cows,
-                # there is no dairy cows as off-farm animals, hence no production of cull cow meat or milk off-farm
-        # we thus allopcate emissions based on the on-farm production
-        econ_alloc_milk = dplyr::bind_rows(
-                object@output$meat |>
-                        dplyr::filter(output == "meat_cull_cow", species == "cattle"),
-                object@output$other_herd_products |>
-                        dplyr::filter(output == "milk", species == "cattle")
-        )|>
-                dplyr::summarise(
-                        sales_e_output = sum(sales_e, na.rm = TRUE),
-                        .by = c(dplyr::all_of(id_cols), output, species)
-                ) |>
-                dplyr::mutate(
-                        sum_SV_species = sum(sales_e_output, na.rm = TRUE),
-                        .by = c(dplyr::all_of(id_cols), species)
-                ) |>
-                dplyr::mutate(
-                        econ_ratio = sales_e_output / sum_SV_species
-                )
-
-
-        # pseudoherd output for milk is directly estimated from pseudoherd GHGE
+        # pseudoherd output for eggs is directly estimated from pseudoherd GHGE
         # because there is no off-farm co-products
-        # impact of animals involved in the milk activity
-        # final impact allocated to milk vs cull cow meat
-        GHGE_milk_activity_pseudoherd <- GHGE_pseudoherd |>
-                dplyr::filter(species == "cattle") |>
+        # impact of animals involved in the eggs activity
+        GHGE_eggs_activity_pseudoherd <- GHGE_pseudoherd |>
+                dplyr::filter(species == "poultry") |>
                 # sum activity impact
                 dplyr::inner_join(
-                        nb_animals_milk_Qeq,
+                        nb_animals_eggs_Qeq,
                         by = c(id_cols, "FADN_code_letter")) |>
                 dplyr::summarise(
                         dplyr::across(.cols = dplyr::matches("_pseudoherd"),
-                                      .fns = ~ sum(.x * share_milk_act_Qeq, na.rm = TRUE)),
+                                      .fns = ~ sum(.x * share_eggs_act_Qeq, na.rm = TRUE)),
                         .by = dplyr::all_of(id_cols)) |>
-                # allocate impact to co-products
-                # add NUTS2
-                dplyr::left_join(object@farm |>
-                                         dplyr::select(dplyr::all_of(id_cols), NUTS2),
-                                 by = id_cols)|>
-                dplyr::left_join(
-                        econ_alloc_milk,
-                        by = id_cols) |>
-                dplyr::mutate(
-                        dplyr::across(.cols = dplyr::matches("_pseudoherd"),
-                                      .fns = ~ .x * econ_ratio)
-                )
-
+                # no economic allocation
+                dplyr::mutate(output = "eggs")
 
         ## Meat ----
         # The meat activity yield three co-product: living animals, veal meat and beef meat
@@ -182,14 +139,14 @@ f_GHGE_pseudoherd_output_cattle <- function(object,
         ## We economically allocate the impact of the meat activity between these co-products
         # For on-farm animals, the economic allocation is based on observed production
         # For off-farm animals, the economic allocation is based on estimated off-farm production
-        ## Then we add the cull cow meat impact from the milk activity
+        ## Then we add the cull cow meat impact from the eggs activity
 
 
         # then, we add on-farm and off-farm production
 
         # number of animals involved in the meat activity
         nb_animals_meat_Qeq  = pseudoherd_activities |>
-                dplyr::filter(species == "cattle") |>
+                dplyr::filter(species == "poultry") |>
                 dplyr::mutate(
                         share_meat_act_Qeq = dplyr::coalesce(Qeq_meat / Qeq, 0)
                 ) |>
@@ -198,8 +155,6 @@ f_GHGE_pseudoherd_output_cattle <- function(object,
 
         off_farm_prod = f_pseudoherd_output_off_farm(object, overwrite = overwrite)
 
-
-
         # economic allocation ratio between living animals and meat
         econ_alloc_meat <- dplyr::bind_rows(
                 object@output$living_animals,
@@ -207,9 +162,7 @@ f_GHGE_pseudoherd_output_cattle <- function(object,
                 off_farm_prod$pseudoherd_output_living_animals,
                 off_farm_prod$pseudoherd_output_meat
         ) |>
-                dplyr::filter(species == "cattle") |>
-                # remove dairy cows as cull cow meat impact has already been estimated in the milk activity
-                dplyr::filter(FADN_code_letter != "LCOWDAIR") |>
+                dplyr::filter(species == "poultry") |>
                 # sum sales per output
                 dplyr::summarise(
                         sales_e_output = sum(sales_e, na.rm = TRUE),
@@ -223,11 +176,9 @@ f_GHGE_pseudoherd_output_cattle <- function(object,
                         econ_ratio = sales_e_output / sum_SV_species
                 )
 
-
-
         # impact of off-farm animals involved in the meat activity
         GHGE_meat_activity_pseudoherd <- GHGE_pseudoherd |>
-                dplyr::filter(species == "cattle") |>
+                dplyr::filter(species == "poultry") |>
                 # sum activity impact
                 dplyr::inner_join(nb_animals_meat_Qeq,
                                   by = c(id_cols, "FADN_code_letter")) |>
@@ -247,10 +198,10 @@ f_GHGE_pseudoherd_output_cattle <- function(object,
 
         # 2. Calculate Emission intensity ----------------------------------------
 
-        # milk production
-        # no off-farm production for milk
-        milk_prod = object@output$other_herd_products |>
-                dplyr::filter(species == "cattle", output == "milk") |>
+        # eggs production
+        # no off-farm production for eggs
+        eggs_prod = object@output$other_herd_products |>
+                dplyr::filter(species == "poultry", output == "eggs") |>
                 dplyr::select(dplyr::all_of(id_cols), output,
                               prod_t)
 
@@ -260,23 +211,20 @@ f_GHGE_pseudoherd_output_cattle <- function(object,
         meat_prod = object@output$meat |>
         # add off-farm production for meat
                 dplyr::bind_rows(off_farm_prod$pseudoherd_output_meat) |>
-                dplyr::filter(species == "cattle") |>
+                dplyr::filter(species == "poultry") |>
                 dplyr::summarise(
                         prod_t = sum(prod_t, na.rm = TRUE),
                         .by = c(dplyr::all_of(id_cols), output))
 
         # Split output and add production
-        ## milk
-        GHGE_milk = GHGE_milk_activity_pseudoherd |>
-                dplyr::filter(output == "milk") |>
+        ## eggs
+        GHGE_eggs = GHGE_eggs_activity_pseudoherd |>
+                dplyr::filter(output == "eggs") |>
                 # add production
-                dplyr::inner_join(milk_prod,
+                dplyr::inner_join(eggs_prod,
                                   by = c(id_cols, "output"))
         ## meat
         GHGE_meat = GHGE_meat_activity_pseudoherd |>
-                dplyr::bind_rows(
-                        GHGE_milk_activity_pseudoherd |>
-                                dplyr::filter(output == "meat_cull_cow"))|>
                 # add production
                 dplyr::inner_join(meat_prod,
                                   by = c(id_cols, "output"))
@@ -285,9 +233,9 @@ f_GHGE_pseudoherd_output_cattle <- function(object,
 
         co2_cols <- names(GHGE_pseudoherd)[grepl("kgCO2e", names(GHGE_pseudoherd)) & grepl("pseudoherd", names(GHGE_pseudoherd))]
 
-        GHGE_pseudoherd_output_cattle <- Reduce(
+        GHGE_pseudoherd_output_poultry <- Reduce(
                 f = bind_rows,
-                x = list(GHGE_milk,
+                x = list(GHGE_eggs,
                          GHGE_meat))  |>
                 # allocate impact per ha and per ton
                 dplyr::mutate(
@@ -310,6 +258,6 @@ f_GHGE_pseudoherd_output_cattle <- function(object,
                 )
 
 
-        return(GHGE_pseudoherd_output_cattle)
+        return(GHGE_pseudoherd_output_poultry)
 
 }

@@ -117,10 +117,10 @@ f_GHGE_pseudoherd_output <- function(object,
   GHGE_pseudoherd_output_cattle <- f_GHGE_pseudoherd_output_cattle(object)
 
   ## swine ----
-  #GHGE_pseudoherd_output_swine <- f_GHGE_pseudoherd_output_swine(object)
+  GHGE_pseudoherd_output_swine <- f_GHGE_pseudoherd_output_swine(object)
 
   ## poultry ----
-  #GHGE_pseudoherd_output_poultry <- f_GHGE_pseudoherd_output_poultry(object)
+  GHGE_pseudoherd_output_poultry <- f_GHGE_pseudoherd_output_poultry(object)
 
 
   # 5. Per product type tables ------------------------------------------------------------------------------
@@ -128,16 +128,13 @@ f_GHGE_pseudoherd_output <- function(object,
   milk_impact <- GHGE_pseudoherd_output_cattle |>
     dplyr::filter(output == "milk")
 
-  #meat_impact <- Reduce(f = bind_rows,
-  #                      x = list(GHGE_pseudoherd_output_cattle |>
-  #                                 dplyr::filter(grepl("meat", output)),
-  #                               GHGE_pseudoherd_output_swine,
-  #                               GHGE_pseudoherd_output_poultry |>
-  #                                 dplyr::filter(grepl("meat", output))
-  #                      ))
-#
-  meat_impact <- GHGE_pseudoherd_output_cattle |>
-    dplyr::filter(output != "milk")
+  meat_impact <- Reduce(f = bind_rows,
+                        x = list(GHGE_pseudoherd_output_cattle |>
+                                   dplyr::filter(grepl("meat", output)),
+                                 GHGE_pseudoherd_output_swine,
+                                 GHGE_pseudoherd_output_poultry |>
+                                   dplyr::filter(grepl("meat", output))
+                        ))
 
   #eggs_impact <- GHGE_pseudoherd_output_poultry |>
   #  dplyr::filter(grepl("eggs", output))

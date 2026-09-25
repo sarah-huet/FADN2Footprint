@@ -2,7 +2,7 @@
 % Please edit documentation in R/pseudoherd_animals.R
 \name{f_pseudoherd_animals}
 \alias{f_pseudoherd_animals}
-\title{Estimate off-farm (pseudo-) herd animals from co-product balances}
+\title{Estimate pseudoherd animals}
 \usage{
 f_pseudoherd_animals(object, overwrite = FALSE)
 }
@@ -32,19 +32,16 @@ production/purchase (poultry only).}
 }
 }
 \description{
-f_pseudoherd_animals estimates the number of "pseudo-herd" animals
-associated with a farm's production of animal co-products (milk, meat,
-eggs) that are not directly observed in the farm's own herd. It combines
+f_pseudoherd_animals combines
 species-specific pseudo-herd estimates for cattle, swine and poultry into
 a single harmonised table.
 }
 \details{
 Pseudo-herd animals represent the livestock population that would be
-required, based on average production parameters, to generate the volumes
-of milk, meat and eggs recorded on the farm but not attributable to the
-observed (on-farm) herd (Qobs). This allows accounting for emissions and
-resource use associated with purchased or otherwise unaccounted animal
-products under a scope 3 / life cycle perspective.
+required to sustain production, based on recorded animal on the farm.
+This allows accounting for emissions and
+resource use associated with purchased or otherwise unaccounted animals
+under a scope 3 / life cycle perspective.
 
 The function proceeds as follows:
 \enumerate{

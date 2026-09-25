@@ -54,7 +54,7 @@ devtools::load_all()
 
 ## Load raw data and run model
 #source("validation_FADN_data.R")
-#source("validation_FADN_data_offline.R")
+source("validation_FADN_data_offline.R")
 ## 
 #load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
 #load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
@@ -127,18 +127,15 @@ pseudoherd_total = pseudoherd_animals |>
 
 
 
+# Total number of animals
 pseudoherd_total = pseudoherd_animals |>
   dplyr::summarise(
     category_count = sum(Qeq, na.rm = T),
-    .by = c(dplyr::all_of(id_cols), FADN_code_letter, species, YEAR)
+    .by = c(FADN_code_letter, species, YEAR)
   ) |>
   dplyr::mutate(
     category_proportion_pseudoherd = category_count / sum(category_count),
-    .by = c(dplyr::all_of(id_cols), species, YEAR)
-  ) |>
-  dplyr::summarise(
-    category_proportion_pseudoherd = mean(category_proportion_pseudoherd, na.rm = T),
-    .by = c(FADN_code_letter, species, YEAR)
+    .by = c(species, YEAR)
   )
 
 # comp
@@ -157,10 +154,113 @@ comp |>
   ggplot() +
   aes(x = FADN_code_letter, y = value, fill = name) +
   geom_col(position = "dodge") +
+  #facet_wrap(species) +
   coord_flip()
 
 
 ```
+
+```{r cat_totals_weighted}
+
+
+# herd
+herd_total = object@herd |>
+  # add SYS02
+  dplyr::left_join(
+    object@farm |>
+      dplyr::select(dplyr::all_of(id_cols), SYS02),
+    by = id_cols
+  ) |>
+  dplyr::summarise(
+    category_count_national = sum(Qobs * SYS02, na.rm = T),
+    .by = c(FADN_code_letter, species, YEAR)
+  ) 
+
+
+# pseudoherd
+
+pseudoherd_animals <- f_pseudoherd_animals(object)
+
+# Total number of animals - weighted
+pseudoherd_total = pseudoherd_animals |>
+  # add SYS02
+  dplyr::left_join(
+    object@farm |>
+      dplyr::select(dplyr::all_of(id_cols), SYS02),
+    by = id_cols
+  ) |>
+  dplyr::summarise(
+    category_count_pseudoherd = sum(Qeq * SYS02, na.rm = T),
+    .by = c(FADN_code_letter, species, YEAR)
+  )
+
+# Total number of animals - unweighted
+#pseudoherd_total = pseudoherd_animals |>
+#  dplyr::summarise(
+#    category_count_pseudoherd = sum(Qeq, na.rm = T),
+#    .by = c(FADN_code_letter, species, YEAR)
+#  )
+
+
+# remove export
+Agreste_Echanges_extérieurs_d_animaux_de_boucherie_vivants <- read_csv("Agreste_Echanges extérieurs d’animaux de boucherie vivants.csv")
+
+exports <- Agreste_Echanges_extérieurs_d_animaux_de_boucherie_vivants |>
+  tidyr::pivot_longer(cols = -c("YEAR","Indicateur"),
+                      names_to = "agreste_cat",
+                      values_to = "value") |>
+  tidyr::pivot_wider(
+    id_cols = c(YEAR, agreste_cat),
+    names_from = Indicateur
+  ) |>
+  dplyr::mutate(
+    YEAR = as.character(YEAR),
+    #balance = `Exportations tous animaux (tête)`
+    balance = `Exportations tous animaux (tête)` - `Importations tous animaux (tête)`
+  ) |>
+  # match category
+  dplyr::mutate(
+    FADN_code_letter = dplyr::case_when(
+      agreste_cat == "Veaux de boucherie" ~ "LBOV1",
+      agreste_cat == "Broutards légers" ~ "LBOV1_2M",
+      agreste_cat == "Génisses" ~ "LHEIFFAT",
+      agreste_cat == "Vaches" ~ "LCOWOTH",
+      agreste_cat == "Gros bovins mâles" ~ " LBOV2"
+    )
+  )
+
+pseudoherd_balanced <- pseudoherd_total |>
+  # add export balance
+  dplyr::left_join(exports |>
+                     dplyr::select(FADN_code_letter, YEAR, balance),
+                   by = c('FADN_code_letter', 'YEAR')) |>
+  # balance
+  dplyr::mutate(
+    category_count_pseudoherd_balance = category_count_pseudoherd - dplyr::coalesce(balance, 0)
+  )
+
+# comp
+dplyr::left_join(
+  pseudoherd_balanced,
+  herd_total,
+  by = c('YEAR', 'FADN_code_letter', 'species')
+) |> 
+  #dplyr::filter(species == "cattle") |>
+  dplyr::select(YEAR, FADN_code_letter, species, dplyr::matches("count")) |>
+  tidyr::pivot_longer(
+    cols = c(category_count_national, category_count_pseudoherd, category_count_pseudoherd_balance)
+    #cols = c(category_count_national, category_count_pseudoherd)
+  ) |>
+  ggplot() +
+  aes(x = name, y = value, fill = FADN_code_letter) +
+  geom_col(position = "fill") +
+  facet_grid(vars(species)) +
+  coord_flip() +
+  scale_fill_viridis_d() 
+
+```
+
+https://agreste.agriculture.gouv.fr/agreste-saiku/?plugin=true&query=query/open/COMEXABVIV#query/open/COMEXABVIV
 
 ```{r share_stage}
 
@@ -169,6 +269,8 @@ comp |>
 cat_juveniles <- c("LBOV1")
 cat_fattening <- c("LBOV1_2M", "LBOV2", "LHEIFFAT", "LBOV1_2F_fattening")
 cat_breeders  <- c("LHEIFBRE", "LCOWOTH", "LBOV1_2F_breeders")
+
+herd_activities <- f_herd_activities(object)
 
 # estimate shares
 share_Qobs_meat <- herd_activities |>
@@ -270,10 +372,11 @@ comp |>
     cols = dplyr::matches("share")
   ) |>
   ggplot() +
-  aes(x = FADN_code_letter, y = value, fill = name) +
-  geom_col(position = "dodge") +
-  coord_flip()
-
+  aes(x = name, y = value, fill = FADN_code_letter) +
+  geom_col(position = "fill") +
+  #facet_grid(vars(species)) +
+  coord_flip() +
+  scale_fill_viridis_d() 
 
 
 

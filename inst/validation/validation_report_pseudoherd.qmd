@@ -1,24 +1,11 @@
 ---
-title: "FADN2Footprint — Validation Report"
+title: "FADN2Footprint — Validation Report for Pseudoherd"
 subtitle: "Comparison of package estimates of the pseudoherd with observed herd"
 author: "Sarah HUET & Valentin BELLASSEN"
 date: today
-format:
-  html:
-    toc: true
-    toc-depth: 2
-    code-fold: true
-    embed-resources: true        
-  pdf:
-    toc: true
-execute:
-  echo: true
-  warning: false
 editor: 
   markdown: 
     wrap: 150
-bibliography: ../../vignettes/references.bib
-link-citations: true
 ---
 
 # Setup

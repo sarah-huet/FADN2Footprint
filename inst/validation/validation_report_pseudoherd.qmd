@@ -39,10 +39,10 @@ below a per-indicator threshold, or **out of range** otherwise.
 
 ## Load raw data and run model
 #source("validation_FADN_data.R")
-source("validation_FADN_data_offline.R")
+#source("validation_FADN_data_offline.R")
 ## 
 #load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
-#load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
 #my_object_GHGE <- m_prune_farms(my_object_GHGE,
 #                                YEAR %in% c("2018", "2019", "2020"))
 
@@ -79,8 +79,10 @@ object@herd |>
                      dplyr::select(dplyr::all_of(id_cols), SYS02),
                    by = id_cols) |>
   # sum
-  dplyr::summarise(sum_calves_SYS02 = sum(SSN * SYS02, na.rm = T),
-                   sum_calves = sum(SSN, na.rm = T),
+  dplyr::summarise(sum_calves_Qobs_SYS02 = sum(Qobs * SYS02, na.rm = T),
+                   sum_calves_Qobs = sum(Qobs, na.rm = T),
+                   sum_calves_SSN_SYS02 = sum(SSN * SYS02, na.rm = T),
+                   sum_calves_SSN = sum(SSN, na.rm = T),
                    .by = YEAR)
 
 ```
@@ -95,9 +97,12 @@ object@herd |>
                      dplyr::select(dplyr::all_of(id_cols), SYS02),
                    by = id_cols) |>
   # sum
-  dplyr::summarise(sum_SYS02 = sum(SSN * SYS02, na.rm = T),
-                   sum = sum(SSN, na.rm = T),
-                   .by = c(YEAR, FADN_code_letter))
+  dplyr::summarise(sum_Qobs_SYS02 = sum(Qobs * SYS02, na.rm = T),
+                   sum_Qobs = sum(Qobs, na.rm = T),
+                   sum_SSN_SYS02 = sum(SSN * SYS02, na.rm = T),
+                   sum_SSN = sum(SSN, na.rm = T),
+                   .by = c(YEAR, FADN_code_letter)) |>
+  view()
 
 
 ```
@@ -443,20 +448,20 @@ herd_ghge = object@footprints$GHGE$GHGE_herd |>
   dplyr::filter(Qobs >= 1) |>
   dplyr::summarise(
     farm_ghge_herd_kgCO2e_per_anim_herd = mean(farm_ghge_herd_kgCO2e_per_anim, na.rm = TRUE),
-    .by = FADN_code_letter
+    .by = c(FADN_code_letter, YEAR)
   )
 
 pseudoherd_ghge = object@footprints$GHGE$GHGE_pseudoherd |>
   dplyr::filter(Qeq >= 1) |>
   dplyr::summarise(
     farm_ghge_herd_kgCO2e_per_anim_offfarm = mean(farm_ghge_herd_kgCO2e_livcat_offfarm / Qofffarm, na.rm = TRUE),
-    .by = FADN_code_letter
+    .by = c(FADN_code_letter, YEAR)
   )
 
 dplyr::left_join(
   herd_ghge,
   pseudoherd_ghge,
-  by = c('FADN_code_letter')
+  by = c('FADN_code_letter', 'YEAR')
 ) |> 
   dplyr::select(FADN_code_letter, farm_ghge_herd_kgCO2e_per_anim_herd, farm_ghge_herd_kgCO2e_per_anim_offfarm) |>
   tidyr::pivot_longer(
@@ -476,20 +481,20 @@ herd_ghge = object@footprints$GHGE$GHGE_herd |>
   dplyr::filter(Qobs >= 1) |>
   dplyr::summarise(
     farm_ghge_herd_kgCO2e_per_anim_herd = mean(farm_ghge_herd_kgCO2e_per_anim, na.rm = TRUE),
-    .by = FADN_code_letter
+    .by = c(FADN_code_letter, YEAR)
   )
 
 pseudoherd_ghge = object@footprints$GHGE$GHGE_pseudoherd |>
   dplyr::filter(Qeq >= 1) |>
   dplyr::summarise(
     farm_ghge_herd_kgCO2e_per_anim_pseudoherd = mean(farm_ghge_herd_kgCO2e_livcat_pseudoherd / Qeq, na.rm = TRUE),
-    .by = FADN_code_letter
+    .by = c(FADN_code_letter, YEAR)
   )
 
 dplyr::left_join(
   herd_ghge,
   pseudoherd_ghge,
-  by = c('FADN_code_letter')
+  by = c('FADN_code_letter', 'YEAR')
 ) |> 
   dplyr::select(FADN_code_letter, farm_ghge_herd_kgCO2e_per_anim_herd, farm_ghge_herd_kgCO2e_per_anim_pseudoherd) |>
   tidyr::pivot_longer(
@@ -523,13 +528,13 @@ object@footprints$GHGE$GHGE_pseudoherd_milk |>
 object@footprints$GHGE$GHGE_meat |>
   dplyr::summarise(
     farm_ghge_herd_kgCO2e_per_t = mean(farm_ghge_herd_kgCO2e_per_t, na.rm= TRUE),
-    .by = output
+    .by = c(output, YEAR)
   )
 
 object@footprints$GHGE$GHGE_pseudoherd_meat |>
   dplyr::summarise(
     farm_ghge_herd_kgCO2e_pseudoherd_per_t = mean(farm_ghge_herd_kgCO2e_pseudoherd_per_t, na.rm= TRUE),
-    .by = output
+    .by = c(output, YEAR)
   )
 
 

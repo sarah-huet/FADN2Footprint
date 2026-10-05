@@ -4,6 +4,7 @@
 # Run from the package root (this file lives in inst/scripts/).
 
 # 1. Packages --------------------------------------------------------------
+devtools::load_all()
 required <- c("jsonlite", "dplyr", "tidyr", "purrr", "tibble", "usethis", "FADN2Footprint")
 missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
 if (length(missing)) stop("Install required packages: ", paste(missing, collapse = ", "))
@@ -101,45 +102,108 @@ map_tbl <- tribble(
   "LBOV1", "B1100",
   "LBOV1_2F", "B1120", "LBOV1_2M", "B1120",
   "LBOV2", "B1220",
-  "LCOWDAIR", "B1230", "LCOWOTH", "B1230",
+  "LCOWDAIR", "B1230", "LCOWOTH", "B1230", "LBUFDAIRPRS", "B1230",
   "LHEIFBRE", "B1240", "LHEIFFAT", "B1240",
   "LPIGLET", "B3100", "LPIGFAT", "B3100", "LSOWBRE", "B3100", "LPIGOTH", "B3100",
   "LEWEBRE", "B4100", "LSHEPOTH", "B4100",
   "LGOATBRE", "B4200", "LGOATOTH", "B4200",
+  "LEQD", "B5000",
   "LPLTRBROYL", "B7000", "LPLTROTH", "B7000", "LHENSLAY", "B7000",
-  "LRABBIT", "B8000", "LRABOTH", "B8000"
+  "LRABBIT", "B8000", "LRABBRE", "B8000", "LRABOTH", "B8000"
 )
 # Unmatched codes are excluded rather than silently assigned to a meat category.
 # In particular, the B5000 horse/ass/mule category is not mapped without a
 # confirmed FADN livestock code; inspect names before adding one.
 fadn_long <- left_join(fadn_long, map_tbl, by = "FADN_code_letter")
 
-# 6. Estimate exact-fit coefficients and documented fallbacks ----------------
-## sum sales by country/year/meat to compare with Eurostat totals. This is used to
-## compute the ratio of Eurostat slaughterings to FADN sales   
+# 6. Optimise coefficients ----------------
+
 fadn_sum <- fadn_long |>
-  filter(!is.na(eurostat_meat)) |>
-  summarise(SN = sum(SN * SYS02, na.rm = TRUE),
-         .by = c(Country_ISO_3166_1_A3, YEAR, TF14, eurostat_meat, FADN_code_letter)) |>
-  left_join(eurostat_long |>
-                select(Country_ISO_3166_1_A3, YEAR = year, eurostat_meat = meat, T = heads),
+  dplyr::filter(!is.na(eurostat_meat)) |>
+  # sum
+  dplyr::summarise(sum_SN_SYS02 = sum(SN * SYS02, na.rm = T),
+                   sum_SN = sum(SN, na.rm = T),
+                   sum_SSN_SYS02 = sum(SSN * SYS02, na.rm = T),
+                   sum_SSN = sum(SSN, na.rm = T),
+                   .by = c(YEAR, COUNTRY, Country_ISO_3166_1_A3, eurostat_meat, FADN_code_letter)) |>
+  dplyr::left_join(eurostat_long |>
+                dplyr::select(Country_ISO_3166_1_A3, YEAR = year, eurostat_meat = meat, T = heads),
             by = c("Country_ISO_3166_1_A3", "YEAR", "eurostat_meat")) |>
-    mutate(SN_sum_eurostat_meat = sum(SN, na.rm = TRUE),
-           .by = c("Country_ISO_3166_1_A3", "YEAR", "TF14", "eurostat_meat")) |>
-    mutate(SN_share_FADN_code_letter = SN / SN_sum_eurostat_meat) |>
-    mutate(ratio = if_else(!is.na(SN) & !is.na(T), T * SN_share_FADN_code_letter / SN, NA_real_),
-           ratio = pmin(ratio, 1),  # cap at 1 to avoid infeasible coefficients
-           flag = case_when(is.na(T) ~ "no_target",
-                            is.na(SN) | SN <= 0 ~ "no_fadn",
-                            TRUE ~ "ok")) |>
-    mutate(avrg_ratio = mean(ratio, na.rm = TRUE),
-           .by = c("YEAR", "FADN_code_letter")) |>
-    mutate(ratio = ifelse(is.na(ratio), avrg_ratio, ratio),
-           share_SSN = if_else(!is.na(ratio), pmin(pmax(ratio, 0), 1), NA_real_),
-           share_SRN = 1 - share_SSN)
+  dplyr::mutate(SN_sum_eurostat_meat = sum(sum_SN_SYS02, na.rm = TRUE),
+           .by = c(YEAR, COUNTRY, Country_ISO_3166_1_A3, eurostat_meat)) |>
+  dplyr::mutate(SN_share_FADN_code_letter = sum_SN_SYS02 / SN_sum_eurostat_meat,
+          T_share_FADN_code_letter = T * SN_share_FADN_code_letter)
 
+## Per-meat-category coefficients (recommended)
+## each meat category has its own slaughter share.
+categories <- fadn_sum |>
+  dplyr::select(YEAR, COUNTRY, Country_ISO_3166_1_A3, eurostat_meat, FADN_code_letter) |>
+  dplyr::distinct()
 
-# 7. Save ------------
-EUROSTAT_slaughter <- fadn_sum 
+coefs_by_meat <- fadn_sum |>
+  dplyr::group_split(YEAR, COUNTRY, Country_ISO_3166_1_A3, eurostat_meat, FADN_code_letter) |>
+  lapply(function(sub) {
 
-usethis::use_data(EUROSTAT_slaughter, overwrite = T)
+    # rows usable for calibration
+    ok <- is.finite(sub$sum_SN_SYS02) &
+          is.finite(sub$T_share_FADN_code_letter) &
+          is.finite(sub$T) & sub$T > 0
+
+    if (!any(ok) || sum(sub$sum_SN_SYS02[ok]) == 0) {
+      return(dplyr::mutate(sub,
+                           share_SSN = NA_real_, share_SRN = NA_real_,
+                           SSN_predicted = NA_real_, rel_error = NA_real_,
+                           within_10pct = NA))
+    }
+
+    fit <- sub[ok, ]
+
+    objective_meat <- function(coef) {
+      pred <- fit$sum_SN_SYS02 * coef
+      sum(((pred - fit$T_share_FADN_code_letter) / fit$T)^2)
+    }
+
+    opt <- optimise(objective_meat, interval = c(0, 1))
+    coef_opt <- opt$minimum
+
+    sub |>
+      dplyr::mutate(
+        share_SSN     = coef_opt,
+        share_SRN     = 1 - coef_opt,
+        SSN_predicted = sum_SN_SYS02 * share_SSN,
+        rel_error     = dplyr::if_else(
+          T_share_FADN_code_letter > 0,
+          round(abs(SSN_predicted - T_share_FADN_code_letter) /
+                  T_share_FADN_code_letter * 100, 2),
+          NA_real_),
+        within_10pct  = rel_error <= 10
+      )
+  }) |>
+  dplyr::bind_rows()
+
+cat("\n=== Per-meat-category optimisation ===\n")
+coefs_by_meat |>
+  dplyr::summarise(
+    mean_rel_error = mean(rel_error, na.rm = TRUE),
+    mean_within_10pct = mean(within_10pct, na.rm = TRUE),
+    .by = eurostat_meat
+  ) |>
+  print(n = Inf)
+
+cat("\nShare of meat categories within 10% margin:",
+    mean(coefs_by_meat$within_10pct, na.rm = TRUE) * 100, "%\n")
+
+# 8. Save the coefficients ---------------------------------------------------
+# Save the per-meat-category coefficients as the primary output
+# The global coefficient is a useful fallback for unmatched categories.
+EUROSTAT_slaughter <- coefs_by_meat |>
+  dplyr::select(
+    FADN_code_letter,
+    Country_ISO_3166_1_A3,
+    YEAR,
+    eurostat_meat,
+    share_SSN,
+    share_SRN
+  )
+
+usethis::use_data(EUROSTAT_slaughter, overwrite = TRUE)

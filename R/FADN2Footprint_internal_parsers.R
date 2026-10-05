@@ -807,9 +807,21 @@
     # add average share of SSN and SRN
     dplyr::left_join(
       EUROSTAT_slaughter |>
-        dplyr::select(FADN_code_letter, Country_ISO_3166_1_A3, YEAR, TF14, share_SSN, share_SRN) |>
+        dplyr::select(FADN_code_letter, Country_ISO_3166_1_A3, YEAR, share_SSN, share_SRN) |>
         dplyr::mutate(YEAR = as.character(YEAR)),
-      by = c('FADN_code_letter', 'Country_ISO_3166_1_A3', 'YEAR', 'TF14')
+      by = c('FADN_code_letter', 'Country_ISO_3166_1_A3', 'YEAR')
+    ) |>
+    ## fallback: average per FADN_code_letter and country
+    dplyr::mutate(
+      share_SSN = dplyr::coalesce(share_SSN, mean(share_SSN, na.rm = TRUE)),
+      share_SRN = dplyr::coalesce(share_SRN, mean(share_SRN, na.rm = TRUE)),
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3)
+    ) |>
+    ## fallback: average per FADN_code_letter
+    dplyr::mutate(
+      share_SSN = dplyr::coalesce(share_SSN, mean(share_SSN, na.rm = TRUE)),
+      share_SRN = dplyr::coalesce(share_SRN, mean(share_SRN, na.rm = TRUE)),
+      .by = c(FADN_code_letter)
     ) |>
     # version: average NUTS2
     # check if SN = SRN + SSN

@@ -19,7 +19,9 @@
 #' for the average to be computed. If the count is not strictly greater than \code{min_obs}, the primary
 #' average is set to \code{NA} (and later imputed from the secondary level, if available). Default is 15.
 #'
-#' @return A data frame containing the primary grouping columns and the imputed average practices.
+#' @return A \code{\link[tibble]{tibble}} containing the primary grouping columns and the imputed average practices.
+#' The tibble includes columns for each of the \code{target_vars} and the grouping columns specified in \code{primary_grp}.
+#' 
 #' @import dplyr
 #'
 #' @concept utils

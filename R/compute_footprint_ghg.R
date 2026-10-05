@@ -12,17 +12,16 @@
 #' The function performs the following steps:
 #' - validates that the supplied object inherits from the S4 class
 #'   "FADN2Footprint";
-#' - if cached GHGE results already exist in object@footprints$GHGE and
-#'   overwrite = FALSE, the function returns the cached results (with a
+#' - if cached GHGE results already exist in `object@footprints$GHGE` and
+#'   `overwrite = FALSE`, the function returns the cached results (with a
 #'   message) and no further computation is performed;
 #' - otherwise the function:
 #'     1. calls f_GHGE_crops(object) to compute per‑farm / per‑activity crop
 #'        greenhouse gas emissions and stores the returned table in
-#'        object@footprints$GHGE$GHGE_crops;
+#'        `object@footprints$GHGE$GHGE_crops`;
 #'     2. calls f_GHGE_herd_output(object) to compute GHGE allocated to herd
-#'        outputs and stores the milk result in
-#'        object@footprints$GHGE$GHGE_milk (the herd function may return a
-#'        list with multiple elements for milk/meat/eggs);
+#'        outputs (milk, meat, eggs) and stores the results in
+#'        `object@footprints$GHGE$GHGE_milk`, `$GHGE_meat`, and `$GHGE_eggs`;
 #' - finally the updated FADN2Footprint object (with added/updated footprints)
 #'   is returned.
 #'
@@ -43,6 +42,9 @@
 #'   the function returns
 #'   the cached object and no recomputation is performed. If TRUE, existing
 #'   cached GHGE results are ignored and computations are re-run.
+#' @param account_pseudoherd Logical (default TRUE). If TRUE, the function also
+#'   computes and stores pseudo‑herd GHGE impacts; if FALSE, pseudo‑herd
+#'  calculations are skipped.
 #'
 #' @return The input FADN2Footprint S4 object updated with GHGE footprints:
 #'   - object@footprints$GHGE$GHGE_crops: table with crop GHGE results (per
@@ -79,40 +81,41 @@ compute_footprint_ghg <- function(object,
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
-  if (!is.null(object@footprints$GHGE$GHGE_crops) && !overwrite) {
-    message("Using cached values stored in object@footprints$GHGE$GHGE_crops.")
-    return(object@footprints$GHGE$GHGE_crops)  # use cached value
-  }
-  if (!is.null(object@footprints$GHGE$GHGE_milk) && !overwrite) {
-    message("Using cached values stored in object@footprints$GHGE$GHGE_milk.")
-    return(object@footprints$GHGE$GHGE_milk)  # use cached value
+
+  if (!is.null(object@footprints$GHGE$GHGE_crops) &&
+        !is.null(object@footprints$GHGE$GHGE_milk) &&
+        !overwrite) {
+    message("Using cached values stored in object@footprints$GHGE$GHGE_*.")
+    # Return full FADN2Footprint object (the cached tables are already stored
+    # in the appropriate slots). This keeps the return type consistent.
+    return(object)
   }
 
   # CROPS ----------------------------------------------------------------------
 
   # Compute GHGE for crops
-  crop_impact = f_GHGE_crops(object, overwrite = overwrite)
+  crop_impact <- f_GHGE_crops(object, overwrite = overwrite)
   object@footprints$GHGE$GHGE_crops <- crop_impact
 
   # HERD -----------------------------------------------------------------------
 
   ## Feed ----
   # Compute GHGE from produced and purchased feed
-  feed_impact = f_GHGE_feed(object, overwrite = overwrite)
+  feed_impact <- f_GHGE_feed(object, overwrite = overwrite)
   object@footprints$GHGE$GHGE_feed <- feed_impact
 
   ## Herd ----
 
   # Compute GHGE per animal
-  herd_impact = f_GHGE_herd(object, overwrite = overwrite)
+  herd_impact <- f_GHGE_herd(object, overwrite = overwrite)
   object@footprints$GHGE$GHGE_herd <- herd_impact
 
   if (account_pseudoherd == TRUE) {
 
-    pseudoherd_impact = f_GHGE_pseudoherd(object, overwrite = overwrite)
+    pseudoherd_impact <- f_GHGE_pseudoherd(object, overwrite = overwrite)
     object@footprints$GHGE$GHGE_pseudoherd <- pseudoherd_impact
 
-    pseudoherd_output_impact = f_GHGE_pseudoherd_output(object)
+    pseudoherd_output_impact <- f_GHGE_pseudoherd_output(object)
     object@footprints$GHGE$GHGE_pseudoherd_milk <- pseudoherd_output_impact$GHGE_milk
     object@footprints$GHGE$GHGE_pseudoherd_meat <- pseudoherd_output_impact$GHGE_meat
     object@footprints$GHGE$GHGE_pseudoherd_eggs <- pseudoherd_output_impact$GHGE_eggs
@@ -121,7 +124,7 @@ compute_footprint_ghg <- function(object,
 
   ## Herd products ----
   # Compute GHGE for milk, meat and eggs
-  herd_prod_impact = f_GHGE_herd_output(object, overwrite = overwrite)
+  herd_prod_impact <- f_GHGE_herd_output(object, overwrite = overwrite)
   object@footprints$GHGE$GHGE_milk <- herd_prod_impact$GHGE_milk
   object@footprints$GHGE$GHGE_meat <- herd_prod_impact$GHGE_meat
   object@footprints$GHGE$GHGE_eggs <- herd_prod_impact$GHGE_eggs
@@ -129,7 +132,7 @@ compute_footprint_ghg <- function(object,
   # FARMS ----------------------------------------------------------------------
 
   # Compute total GHGE at farm scale
-  farm_impact = f_GHGE_farm(object, overwrite = overwrite)
+  farm_impact <- f_GHGE_farm(object, overwrite = overwrite)
   object@footprints$GHGE$GHGE_farm <- farm_impact
 
 

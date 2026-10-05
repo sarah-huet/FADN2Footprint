@@ -21,13 +21,6 @@ bibliography: ../../vignettes/references.bib
 link-citations: true
 ---
 
-# Purpose
-
-This report compares the outputs of `FADN2Footprint` (v`r packageVersion("FADN2Footprint")`)
-against published literature ranges.
-An estimate is flagged **in range** if it falls within the literature min–max,
-**within tolerance** if the relative deviation from the literature midpoint is
-below a per-indicator threshold, or **out of range** otherwise.
 
 # Setup
 
@@ -40,12 +33,19 @@ library(gt)
 
 library(ggplot2)
 
-devtools::load_all()
+devtools::load_all("../../")
 #library(FADN2Footprint)
 
 ```
 
-#TODO: check cattle_meat VS meat
+# Purpose
+
+This report compares the outputs of `FADN2Footprint` (v`r packageVersion("FADN2Footprint")`)
+against published literature ranges.
+An estimate is flagged **in range** if it falls within the literature min–max,
+**within tolerance** if the relative deviation from the literature midpoint is
+below a per-indicator threshold, or **out of range** otherwise.
+
 
 # Produce package estimates
 

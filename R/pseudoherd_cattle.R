@@ -259,32 +259,41 @@ f_pseudoherd_cattle <- function(object,
 
   # we remove calves sold for slaughter and dairy cows
   herd_cattle_meat_eq1 <- herd_cattle_meat_aggr |>
+    # juveniles sold for slaughter never reach the fattening stage
+    # when estimating the juveniles or breeders from fattening, "add" juveniles sold for slaughter
+    # When estimating the fattening from juveniles or breeders, "remove" juveniles sold for slaughter
+    dplyr::mutate(
+      #add_juv = ifelse(LBOV1_SN >0 & LBOV1_SRN >0, LBOV1_SN/LBOV1_SRN, LBOV1_SSN/LBOV1_Qobs_meat),
+      #remove_juv = ifelse(LBOV1_SN >0 & LBOV1_SRN >0, LBOV1_SRN/LBOV1_SN, LBOV1_Qobs_meat/LBOV1_SSN)
+      add_juv = ifelse(LBOV1_SN >0 & LBOV1_SRN >0, LBOV1_SN/LBOV1_SRN, 1),
+      remove_juv = ifelse(LBOV1_SN >0 & LBOV1_SRN >0, LBOV1_SRN/LBOV1_SN, 0)
+    ) |>
     # select the livestock category from which the pseudo-herd at equilibrium will be estimated as the pseudoherd with the highest numbers of animals
     dplyr::mutate(
       Q_max = case_when(
         ## Qobs_j >= ^Q_j estimated from fattening & >= ^Q_j estimated from breeders
-        Qobs_j >= ifelse(Qobs_f>0, (rt_j*(Qobs_f/rt_f)) * (LBOV1_SN/LBOV1_SRN), 0) & Qobs_j >= ifelse(Qobs_b>0, (rt_j*Qobs_b*offspring), 0) ~ "juveniles",
+        Qobs_j >= ifelse(Qobs_f>0, (rt_j*(Qobs_f/rt_f)) * add_juv, 0) & Qobs_j >= ifelse(Qobs_b>0, (rt_j*Qobs_b*offspring), 0) ~ "juveniles",
         ## Qobs_f >= ^Q_f estimated from juveniles & >= ^Q_f estimated from breeders
-        Qobs_f >= ifelse(Qobs_j>0, (rt_f*(Qobs_j/rt_j)) * (LBOV1_SRN/LBOV1_SN), 0) & Qobs_f >= ifelse(Qobs_b>0, (rt_f*Qobs_b*offspring) * (LBOV1_SRN/LBOV1_SN), 0) ~ "fattening",
+        Qobs_f >= ifelse(Qobs_j>0, (rt_f*(Qobs_j/rt_j)) * remove_juv, 0) & Qobs_f >= ifelse(Qobs_b>0, (rt_f*Qobs_b*offspring) * remove_juv, 0) ~ "fattening",
         ## Qobs_b >= ^Q_b estimated from juveniles & >= ^Q_b estimated from fattening
-        Qobs_b >= ifelse(Qobs_j>0, (Qobs_j/rt_j/offspring) - LCOWDAIR_Qobs, 0) & Qobs_b >= ifelse(Qobs_f>0, (Qobs_f/rt_f/offspring) * (LBOV1_SN/LBOV1_SRN), 0) ~ "breeders",
-        .default = ifelse(LCOWDAIR_Qobs >0 | LCOWOTH_Qobs >0, "breeders", NA)
+        Qobs_b >= ifelse(Qobs_j>0, (Qobs_j/rt_j/offspring) - LCOWDAIR_Qobs, 0) & Qobs_b >= ifelse(Qobs_f>0, (Qobs_f/rt_f/offspring) * add_juv, 0) ~ "breeders"#,
+        #.default = ifelse(LCOWDAIR_Qobs >0 | LCOWOTH_Qobs >0, "breeders", NA)
       )
     ) |>
     dplyr::mutate(
       Qeq_j_meat = dplyr::case_when(
         Q_max == "juveniles" ~ Qobs_j,
-        Q_max == "fattening" ~ (rt_j*(Qobs_f/rt_f)) * (LBOV1_SN/LBOV1_SRN),
+        Q_max == "fattening" ~ (rt_j*(Qobs_f/rt_f)) * add_juv,
         Q_max == "breeders" ~ (rt_j*Qobs_b*offspring)
       ),
       Qeq_f_meat = dplyr::case_when(
-        Q_max == "juveniles" ~ (rt_f*(Qobs_j/rt_j)) * (LBOV1_SRN/LBOV1_SN),
+        Q_max == "juveniles" ~ (rt_f*(Qobs_j/rt_j)) * remove_juv,
         Q_max == "fattening" ~ Qobs_f,
-        Q_max == "breeders" ~ (rt_f*Qobs_b*offspring) * (LBOV1_SRN/LBOV1_SN),
+        Q_max == "breeders" ~ (rt_f*Qobs_b*offspring) * remove_juv,
       ),
       Qeq_b_meat = dplyr::case_when(
         Q_max == "juveniles" ~ (Qobs_j/rt_j/offspring) - LCOWDAIR_Qobs,
-        Q_max == "fattening" ~ (Qobs_f/rt_f/offspring) * (LBOV1_SN/LBOV1_SRN),
+        Q_max == "fattening" ~ (Qobs_f/rt_f/offspring) * add_juv,
         Q_max == "breeders" ~ Qobs_b
       )
     ) |>
@@ -304,8 +313,8 @@ f_pseudoherd_cattle <- function(object,
         ## Qobs_f >= ^Q_f estimated from juveniles & >= ^Q_f estimated from breeders
         Qobs_f >= ifelse(Qobs_j>0, (rt_f*(Qobs_j/rt_j)), 0) & Qobs_f >= ifelse(Qobs_b>0, (rt_f*Qobs_b*offspring), 0) ~ "fattening",
         ## Qobs_b >= ^Q_b estimated from juveniles & >= ^Q_b estimated from fattening
-        Qobs_b >= ifelse(Qobs_j>0, (Qobs_j/rt_j/offspring), 0) & Qobs_b >= ifelse(Qobs_f>0, (Qobs_f/rt_f/offspring), 0) ~ "breeders",
-        .default = ifelse(LCOWDAIR_Qobs >0 | LCOWOTH_Qobs >0, "breeders", NA)
+        Qobs_b >= ifelse(Qobs_j>0, (Qobs_j/rt_j/offspring), 0) & Qobs_b >= ifelse(Qobs_f>0, (Qobs_f/rt_f/offspring), 0) ~ "breeders"#,
+        #.default = ifelse(LCOWDAIR_Qobs >0 | LCOWOTH_Qobs >0, "breeders", NA)
       )
     ) |>
     dplyr::mutate(

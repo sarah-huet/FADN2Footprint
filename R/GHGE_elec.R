@@ -58,22 +58,20 @@
 #'   implementation.
 #' @param ... Additional arguments.
 #'
-#' @return A \code{\link[tibble]{tibble}} containing one row per farm
-#' observation, with the following columns:
+#' @return A **list** with two tibble elements:
 #' \describe{
-#'   \item{...}{Traceability identifier columns as defined in
-#'     \code{object@traceability$id_cols} (e.g., farm ID, year, NUTS2 region).}
-#'   \item{elec_V}{\code{numeric}. Electricity expenditure from FADN (€).}
-#'   \item{Country_ISO_3166_1_A3}{\code{character}. Country ISO 3166-1 alpha-3
-#'     code.}
-#'   \item{euro_kWh}{\code{numeric}. National average electricity price
-#'     (€ kWh\eqn{^{-1}}), from EUROSTAT \code{NRG_PC_205}.}
-#'   \item{elec_kWh}{\code{numeric}. Estimated electricity consumption (kWh
-#'     yr\eqn{^{-1}}).}
-#'   \item{EF_elec}{\code{numeric}. Country- and year-specific electricity
-#'     emission factor (kg CO2-eq kWh\eqn{^{-1}}).}
-#'   \item{ghg_elec_kgCO2e}{\code{numeric}. Total GHG emissions from electricity
-#'     consumption (kg CO2-eq yr\eqn{^{-1}}).}
+#'   \item{total_GHGE_electricity}{\code{tibble}. One row per farm (identified by the
+#'     traceability columns). Columns include:\cr
+#'     \code{elec_V} (electricity expenditure, €),\cr
+#'     \code{euro_kWh} (national electricity price, € kWh⁻¹),\cr
+#'     \code{elec_kWh} (estimated electricity consumption, kWh yr⁻¹),\cr
+#'     \code{EF_elec} (electricity emission factor, kg CO₂‑eq kWh⁻¹),\cr
+#'     \code{farm_ghg_elec_kgCO2e} (total electricity‑related GHG, kg CO₂‑eq yr⁻¹).}
+#'   \item{alloc_GHGE_electricity}{\code{tibble}. Same traceability identifiers plus
+#'     output‑level variables (e.g., `activity`, `species`, `output`,
+#'     `FADN_code_letter`, `FADN_code_letter_output`) and the column
+#'     \code{ghg_elec_kgCO2e_output}, which is the electricity‑related GHG
+#'     allocated to each output (kg CO₂‑eq yr⁻¹).}
 #' }
 #'
 #' @references
@@ -122,10 +120,10 @@ f_GHGE_elec <- function(object,
       by = join_by(Country_ISO_3166_1_A3, YEAR)
       # TODO: check for replacing NAs with price from "European Union - 27 countries (from 2020)"
     ) |>
-    ## replace NAs by EF mean
+    ## replace NAs by EF or price mean
     dplyr::mutate(
       dplyr::across(
-        .cols = dplyr::starts_with("EF"),
+        .cols = dplyr::matches("EF_elec|elec_kWh"),
         .fns = ~ dplyr::if_else(is.na(.), mean(., na.rm = TRUE), .)
       )
     ) |>

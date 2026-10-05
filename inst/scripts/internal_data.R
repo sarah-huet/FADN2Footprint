@@ -27,7 +27,7 @@ load("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/R/sysdata.rda")
 
 source("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/data_extra.R")
 
-source("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/pseudoherd_reference_table.R")
+source("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/eurostat_slaughter.R")
 
 usethis::use_data(
   data_extra,
@@ -37,6 +37,7 @@ usethis::use_data(
   EUROSTAT_elec_price,
   EUROSTAT_gaz_price,
   EUROSTAT_input_price,
+  EUROSTAT_slaughter,
   GWP,
   ref_fuel_wob,
   reference_rearing_param,

@@ -769,7 +769,7 @@
         cbind(AN,temp_alu_calc),
         na.rm = TRUE
       )
-      ) |>
+    ) |>
     dplyr::select(-temp_alu_calc) |>
     # Filter out empty records (Qobs > 0)
     dplyr::filter(Qobs > 0)
@@ -786,21 +786,67 @@
   }
 
   final_data <- processed_data |>
-    # add NUTS2
+    # add NUTS2 and TF14
     dplyr::left_join(
       df_harmonized |>
-        dplyr::select(dplyr::all_of(id_cols), NUTS2) |>
+        dplyr::select(dplyr::all_of(id_cols), NUTS2, TF14) |>
         dplyr::mutate(NUTS2 = as.character(NUTS2)),
       by = id_cols
     ) |>
     # add average share of SSN and SRN
+    #dplyr::left_join(
+    #  FADN_averages$sales_shares,
+    #  by = c('FADN_code_letter', 'NUTS2', 'TF14')
+    #) |>
+    # add country name
     dplyr::left_join(
-      FADN_averages$sales_shares,
-      by = c('FADN_code_letter', 'NUTS2')
+      data_extra$country_names |>
+        dplyr::select(Country_ISO_3166_1_A3, country_FADN),
+      by = dplyr::join_by(COUNTRY == country_FADN)
     ) |>
+    # add average share of SSN and SRN
+    dplyr::left_join(
+      EUROSTAT_slaughter |>
+        dplyr::select(FADN_code_letter, Country_ISO_3166_1_A3, YEAR, TF14, share_SSN, share_SRN) |>
+        dplyr::mutate(YEAR = as.character(YEAR)),
+      by = c('FADN_code_letter', 'Country_ISO_3166_1_A3', 'YEAR', 'TF14')
+    ) |>
+    # version: average NUTS2
     # check if SN = SRN + SSN
+    #dplyr::mutate(
+    #  complete_sales = dplyr::coalesce(SN == (SRN + SSN), FALSE),
+    #  SSN = ifelse(complete_sales,
+    #               dplyr::coalesce(SSN, 0),
+    #               SN * share_SSN),
+    #  SRN = ifelse(complete_sales,
+    #               dplyr::coalesce(SRN, 0),
+    #               SN * share_SRN),
+    #  SSV = ifelse(complete_sales,
+    #               dplyr::coalesce(SSV, 0),
+    #               SV * share_SSN),
+    #  SRV = ifelse(complete_sales,
+    #               dplyr::coalesce(SRV, 0),
+    #               SV * share_SRN)
+    #) #|>
+    # version: average COUNTRY x YEAR x type of farming
+    # check if SN = SRN + SSN
+    #dplyr::mutate(
+    #  complete_sales = dplyr::coalesce(SN == (SRN + SSN), FALSE),
+    #  SSN = ifelse(complete_sales,
+    #               dplyr::coalesce(SSN, 0),
+    #               SN * share_SSN),
+    #  SRN = ifelse(complete_sales,
+    #               dplyr::coalesce(SRN, 0),
+    #               SN * share_SRN),
+    #  SSV = ifelse(complete_sales,
+    #               dplyr::coalesce(SSV, 0),
+    #               SV * share_SSN),
+    #  SRV = ifelse(complete_sales,
+    #               dplyr::coalesce(SRV, 0),
+    #               SV * share_SRN)
+    #) #|>
     dplyr::mutate(
-      complete_sales = dplyr::coalesce(SN == (SRN + SSN), FALSE),
+      complete_sales = dplyr::coalesce(dplyr::coalesce(SN, 0) == (dplyr::coalesce(SRN, 0) + dplyr::coalesce(SSN, 0)), FALSE),
       SSN = ifelse(complete_sales,
                    dplyr::coalesce(SSN, 0),
                    SN * share_SSN),
@@ -814,13 +860,13 @@
                    dplyr::coalesce(SRV, 0),
                    SV * share_SRN)
     ) #|>
-    # old version
-    #dplyr::mutate(
-    #  SSN = dplyr::coalesce(SSN, SN), # If SSN missing, take SN
-    #  SSV = dplyr::coalesce(SSV, SV), # If SSV missing, take SV
-    #  SRN = dplyr::coalesce(SRN, 0),  # If SRN missing, assume 0
-    #  SRV = dplyr::coalesce(SRV, 0)   # If SRV missing, assume 0
-    #)
+  # version: default SSN
+  #dplyr::mutate(
+  #  SSN = dplyr::coalesce(SSN, SN), # If SSN missing, take SN
+  #  SSV = dplyr::coalesce(SSV, SV), # If SSV missing, take SV
+  #  SRN = dplyr::coalesce(SRN, 0),  # If SRN missing, assume 0
+  #  SRV = dplyr::coalesce(SRV, 0)   # If SRV missing, assume 0
+  #)
 
 
   return(final_data)
@@ -1283,7 +1329,7 @@
   output_herd_products <- output_herd_products |>
     dplyr::mutate(
       prod_t = ifelse(output == "eggs", prod_t * 1000 * 6*10^-5, prod_t)
-      )
+    )
 
 
 
@@ -1318,12 +1364,12 @@
   # Animals sold for slaughter
   output_herd_meat <- herd_data |>
     # add country iso names
-    dplyr::left_join(
-      data_extra$country_names |>
-        dplyr::select(COUNTRY = country_FADN,
-               Country_ISO_3166_1_A3),
-      by = 'COUNTRY'
-    ) |>
+    #dplyr::left_join(
+    #  data_extra$country_names |>
+    #    dplyr::select(COUNTRY = country_FADN,
+    #                  Country_ISO_3166_1_A3),
+    #  by = 'COUNTRY'
+    #) |>
     # add animal live weights
     dplyr::left_join(
       livestock_weights,

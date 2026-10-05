@@ -72,3 +72,10 @@ inst/ext_data/EF_parameters/
 inst/ext_data/EUROSTAT_prices/
 inst/ext_data/ref_fuel/
 inst/ext_data/UNFCCC_ghg_inventories/
+
+# Agent-generated reports (regenerable, not source of truth)
+IA_agents/reports/
+IA_agents/output/
+audit/
+*.report.txt
+*.agent-output.*

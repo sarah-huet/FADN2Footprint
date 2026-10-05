@@ -30,7 +30,9 @@
 #' 1. First filters the main farm data based on the provided conditions
 #' 2. Then filters all other data slots to only include data for the remaining farms
 #' 3. Handles both simple data.frame slots and nested list structures
-#'
+#' 
+#' Additionally, this function updates the traceability slot to log discarded farms.
+#' 
 #' @examples
 #' # Filter to keep only farms from France
 #' pruned_obj <- m_prune_farms(fadn_obj, COUNTRY == "FRA")
@@ -132,6 +134,13 @@ setMethod("m_prune_farms", "FADN2Footprint", function(object, ...) {
 #' @importFrom tidyselect all_of
 #' @import methods
 #'
+#' @details 
+#' This function filters out specific farms from all data slots (farm, crop, herd,
+#' inputs, practices, footprints, etc.) of a FADN2Footprint object. It automatically
+#' handles nested lists and updates the traceability slot to log discarded farms.
+#' 
+#' Additionally, this function updates the traceability slot to log discarded farms.
+#' 
 #' @examples
 #' \dontrun{
 #' # Define farms to remove (e.g., outliers)
@@ -250,6 +259,14 @@ setMethod("m_remove_farms", "FADN2Footprint", function(object, farms_to_remove) 
 #' @importFrom tidyselect all_of
 #' @import methods
 #'
+#' @details
+#' This function filters a FADN2Footprint object so that ONLY the specified farms
+#' are retained across all data slots (farm, crop, herd, inputs, practices,
+#' footprints, etc.). It automatically handles nested lists and updates the
+#' traceability slot to log discarded farms (those NOT kept).
+#' 
+#' Additionally, this function updates the traceability slot to log discarded farms.
+#' 
 #' @examples
 #' \dontrun{
 #' # Define farms to keep (e.g., a study subset)

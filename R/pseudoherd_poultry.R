@@ -66,12 +66,12 @@
 #' @import dplyr tidyr tidyselect
 
 
-f_pseudoherd_poultry <- function(object){
+f_pseudoherd_poultry <- function(object) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
-  id_cols = object@traceability$id_cols
+  id_cols <- object@traceability$id_cols
 
   ## Steps:
   ## 1. Model farm rearing process
@@ -85,7 +85,7 @@ f_pseudoherd_poultry <- function(object){
 
   # 2. On-farm herd activities ---------------------------------------------------------------------------------
 
-  herd_activities = f_herd_activities(object) |>
+  herd_activities <- f_herd_activities(object) |>
     dplyr::filter(species == "poultry")
 
   # 3. Estimate pseudoherd ---------------------------------------------------------------------------------
@@ -101,7 +101,7 @@ f_pseudoherd_poultry <- function(object){
   pseudoherd_poultry <- list(
     # rearing parameters
     rearing_param = herd_rearing_param_poultry |>
-      dplyr::select(tidyselect::all_of(object@traceability$id_cols),matches("rt_|t_1st|offspring")),
+      dplyr::select(tidyselect::all_of(object@traceability$id_cols), matches("rt_|t_1st|offspring")),
     # pseudo herd
     pseudoherd = pseudoherd_poultry
   )

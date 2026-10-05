@@ -111,11 +111,13 @@ compute_footprint_biodiv <- function(object,
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
-  if (!is.null(object@footprints$BVIAS$BVI_crops) && !overwrite) {
-    message("Using cached values stored in object@footprints$BVIAS$BVI_crops.")
-    return(object@footprints$BVIAS$BVI_crops)  # use cached value
+  if (!is.null(object@footprints$BVIAS$BVI_crops) &&
+        !is.null(object@footprints$BVIAS$BVI_feed) &&
+        !is.null(object@footprints$BVIAS$BVI_milk) &&
+        !overwrite) {
+    message("Using cached values stored in object@footprints$BVIAS$BVI_*.")
+    return(object)  # use cached value
   }
-  # TODO: add a message for default constants and weights variables
 
   # check model constants and weights
   if (!is.null(BVIAS_constants) && !is.data.frame(BVIAS_constants)) {

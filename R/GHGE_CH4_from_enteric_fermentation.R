@@ -31,9 +31,10 @@
 #'     where \eqn{DMI} is the dry matter intake (kg head\eqn{^{-1}} yr\eqn{^{-1}})
 #'     and \eqn{MY} is the methane yield (g CH4 kg DMI\eqn{^{-1}}) (IPCC Equation 10.21A).
 #' }
-#' Total cattle CH4 emissions are estimated as the average of the two methods:
-#' \deqn{CH4_{enteric} = Q_{obs} \times \frac{EF_{Ym} + EF_{MY}}{2}}
-#'
+#' Total cattle CH4 emissions are estimated using the Ym method (Equation 10.21):
+#' \deqn{CH4_{enteric} = Q_{obs} \times EF_{Ym}}
+#' Note: The MY method (Equation 10.21A) is calculated but not used in the final output.
+#' 
 #' ## Sheep (Tier 2)
 #' For sheep, a fixed methane conversion factor \eqn{Y_m = 6.7\%} (IPCC Table 10.13)
 #' is used with the Ym method (IPCC Equation 10.21):
@@ -45,6 +46,15 @@
 #' is used with the Ym method (IPCC Equation 10.21):
 #' \deqn{EF_{Ym} = \frac{GE \times (Y_m / 100)}{55.65}}
 #' \deqn{CH4_{enteric} = Q_{obs} \times EF_{Ym}}
+#' 
+#' ## Swine (Tier 1)
+#' For swine, a default emission factor of 1.25 kg CH4 head\eqn{^{-1}} yr\eqn{^{-1}} 
+#' is used (IPCC Table 10.10), and total CH4 emissions are estimated as:
+#' \deqn{CH4_{enteric} = Q_{obs} \times EF}
+#' 
+#' ## Poultry (Tier 1)
+#' For poultry, enteric fermentation emissions are considered negligible under IPCC guidelines,
+#' and total CH4 emissions are set to zero.
 #'
 #' ## CO2 equivalents conversion
 #' All CH4 emissions are converted to CO2 equivalents using the GWP coefficient
@@ -72,13 +82,13 @@
 #' @return A \code{\link[tibble]{tibble}} containing one row per farm-livestock
 #' category combination, with the following columns:
 #' \describe{
-#'   \item{...}{Traceability identifier columns as defined in
-#'     \code{object@traceability$id_cols} (e.g., farm ID, year, NUTS2 region).}
-#'   \item{FADN_code_letter}{\code{character}. FADN livestock category code.}
-#'   \item{species}{\code{character}. Livestock species (\code{"cattle"},
+#'  \item{...}{Traceability identifier columns as defined in
+#'     \code{`object@traceability$id_cols`} (e.g., farm ID, year, NUTS2 region).}
+#'  \item{FADN_code_letter}{\code{character}. FADN livestock category code.}
+#'  \item{species}{\code{character}. Livestock species (\code{"cattle"},
 #'     \code{"sheep"}, or \code{"goats"}).}
-#'   \item{Qobs}{\code{numeric}. Observed number of animals (heads).}
-#'   \item{CH4_enteric_kgCO2e_livcat}{\code{numeric}. Total CH4 emissions from enteric
+#'  \item{Qobs}{\code{numeric}. Observed number of animals (heads).}
+#'  \item{CH4_enteric_kgCO2e_livcat}{\code{numeric}. Total CH4 emissions from enteric
 #'     fermentation expressed in kg CO2 equivalents per year.}
 #' }
 #'

@@ -168,7 +168,7 @@ View(crop_yields)
 # Share = SSN / SN and SRN / SN for each livestock category
 
 sales_raw <- fadn_data |>
-  dplyr::select(ID, YEAR, COUNTRY, NUTS2, SYS02,
+  dplyr::select(ID, YEAR, COUNTRY, NUTS2, SYS02, TF14,
                 dplyr::matches("_SN$|_SSN$|_SRN$"))
 
 sales_raw_long <- sales_raw |>
@@ -181,7 +181,7 @@ sales_raw_long <- sales_raw |>
     var = stringr::str_extract(name,"SN$|SSN$|SRN$")
   ) |>
   tidyr::pivot_wider(
-    id_cols = c('ID', 'YEAR', 'COUNTRY', 'NUTS2', 'SYS02', 'FADN_code_letter'),
+    id_cols = c('ID', 'YEAR', 'COUNTRY', 'NUTS2', 'TF14', 'SYS02', 'FADN_code_letter'),
     names_from = 'var',
     values_from = 'value',
     values_fill = 0
@@ -202,13 +202,13 @@ sales_shares_raw <- sales_raw_long |>
     share_SSN = SSN / SN
   )
 
-# Missing NUTS2 x livestock category
+# Missing NUTS2 x livestock category x type of farming
 missing_cat <- dplyr::anti_join(
   sales_raw_long |>
-    dplyr::select(NUTS2, FADN_code_letter) |>
+    dplyr::select(NUTS2, TF14, FADN_code_letter) |>
     dplyr::distinct(),
   sales_shares_raw |>
-    dplyr::select(NUTS2, FADN_code_letter) |>
+    dplyr::select(NUTS2, TF14, FADN_code_letter) |>
     dplyr::distinct(),
   by = c('NUTS2', 'FADN_code_letter')
 )
@@ -222,7 +222,7 @@ sales_shares <- h_average_practices(
   data          = sales_shares_raw |>
     dplyr::bind_rows(missing_cat),
   target_vars   = c("share_SRN", "share_SSN"),
-  primary_grp   = c('FADN_code_letter', "NUTS2"),
+  primary_grp   = c('FADN_code_letter', "NUTS2", "TF14"),
   secondary_grp = c('FADN_code_letter'),
   weight_var    = "SYS02"            # adjust to actual weight column name
 )

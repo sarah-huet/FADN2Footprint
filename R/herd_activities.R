@@ -129,16 +129,20 @@ f_herd_activities <- function(object,
       #LBOV1_2F_milk_Qobs = LBOV1_2F_breeders_Qobs * ((LCOWDAIR_Qobs/rt_LCOWDAIR)/ ((LCOWDAIR_Qobs/rt_LCOWDAIR) + (LCOWOTH_Qobs/rt_LCOWOTH))),
 
       # juveniles
-      LBOV1_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
-                               rt_LBOV1 * (LBOV1_2F_breeders_Qobs_milk/rt_LBOV1_2F_breeders),
-                               0))  |>
+      LBOV1_rearing_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
+                                # here residence time equals one as we consider the first rearing stage of LBOV1 as the one that will produce the LBOV1_2F breeders
+                               1 * (LBOV1_2F_breeders_Qobs_milk/rt_LBOV1_2F_breeders),
+                               0),
+      LBOV1_slaughter_Qobs_milk = 0,                         
+      LBOV1_Qobs_milk = LBOV1_rearing_Qobs_milk
+      )  |>
     # dplyr::select columns
     dplyr::select(dplyr::all_of(object@traceability$id_cols), dplyr::matches("Qobs")) |>
     # pivot table
     tidyr::pivot_longer(
       cols = -dplyr::all_of(object@traceability$id_cols),
       names_to = c("FADN_code_letter", "variable"),
-      names_pattern = "(.+)_(Qobs(?:_milk)?)"  # captures 'LHEIFFAT' and 'Qobs' or 'Qobs_milk'
+      names_pattern = "(.+)_(Qobs(?:_milk)?)"  # captures 'Qobs' or 'Qobs_milk'
     ) |>
     tidyr::pivot_wider(
       names_from = variable,

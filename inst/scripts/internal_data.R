@@ -21,13 +21,11 @@ for (file in file_path) {
   source(file)
 }
 
+devtools::load_all("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/")
 
 load("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/R/sysdata.rda")
 
-
-source("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/data_extra.R")
-
-source("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/eurostat_slaughter.R")
+source("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/pseudoherd_reference_table.R")
 
 usethis::use_data(
   data_extra,

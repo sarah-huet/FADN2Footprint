@@ -98,7 +98,6 @@ infer_practices <- function(object,
   # Remove farms with aberrant gross energy values for their main livestock category
   ## GE thresholds
   tmp_mean_GE <- FADN_averages$GE_MJ_anim_day |>
-    # TODO: remove when data clean enough to have good averages
     dplyr::summarise(
       mean_GE_MJ_anim_day = mean(mean_GE_MJ_anim_day, na.rm = T),
       sd_GE_MJ_anim_day = mean(sd_GE_MJ_anim_day, na.rm = T),
@@ -122,7 +121,7 @@ infer_practices <- function(object,
       LU = Qobs * livestock_unit_coef
     ) |>
     # filter max LU
-    dplyr::slice_max(order_by = LU, with_ties = FALSE, by = id_cols) |>
+    dplyr::slice_max(order_by = LU, with_ties = FALSE, by = dplyr::all_of(id_cols)) |>
     # select columns
     dplyr::select(dplyr::all_of(id_cols),FADN_code_letter) |>
     # add thresholds
@@ -156,6 +155,50 @@ infer_practices <- function(object,
     dplyr::mutate(
       problem = "aberrant_feed"
     )
+
+
+
+
+ # Remove farms where species other than cattle, sheep, pigs, and poultry 
+  # account for > 95% of total livestock units
+  ## Define the FADN code letters for the main species
+  main_species_codes <- data_extra$livestock |>
+    dplyr::filter(species %in% c("cattle", "sheep", "goats", "swine", "poultry")) |>
+    dplyr::pull(FADN_code_letter)
+  
+  ## Calculate the share of LU for non-main species
+  aberrant_species <- object@herd |>
+    dplyr::mutate(
+      LU = Qobs * livestock_unit_coef,
+      is_main_species = FADN_code_letter %in% main_species_codes
+    ) |>
+    dplyr::summarise(
+      total_LU = sum(LU, na.rm = TRUE),
+      non_main_species_LU = sum(LU[!is_main_species], na.rm = TRUE),
+      .by = tidyselect::all_of(id_cols)
+    ) |>
+    dplyr::mutate(
+      share_non_main_species = non_main_species_LU / total_LU,
+      # Flag farms where non-main species account for > 95% of LU
+      valid_practice = dplyr::case_when(
+        # Handle cases with no livestock or no LU
+        total_LU == 0 | is.na(total_LU) ~ FALSE,
+        # Check the threshold
+        share_non_main_species > 0.95 ~ FALSE,
+        .default = TRUE
+      )
+    ) |>
+    dplyr::filter(valid_practice == FALSE) |>
+    dplyr::select(tidyselect::all_of(id_cols)) |>
+    dplyr::mutate(
+      problem = "minor_main_livestock_category"
+    )
+
+    # reactable::reactable(aberrant_species, filterable = TRUE, searchable = TRUE)
+    # reactable::reactable(object@herd, filterable = TRUE, searchable = TRUE)
+  
+  # Add these farms to the farms to remove list
+  farms_to_remove <- dplyr::bind_rows(farms_to_remove, aberrant_species)
 
   #### N excretion ----
 

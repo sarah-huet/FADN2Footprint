@@ -25,6 +25,8 @@ library(ggplot2)
 devtools::load_all()
 #library(FADN2Footprint)
 
+wd_path = "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint"
+
 ```
 # Purpose
 
@@ -33,16 +35,18 @@ against the national inventories.
 An estimate is flagged **in range** if it falls within the literature min–max,
 **within tolerance** if the relative deviation from the literature midpoint is
 below a per-indicator threshold, or **out of range** otherwise.
+
 # Run package
 
 ```{r load_data, echo=FALSE, message=TRUE, warning=FALSE}
 
 ## Load raw data and run model
 #source("validation_FADN_data.R")
-#source("validation_FADN_data_offline.R")
-## 
+#source("inst/validation/validation_FADN_data_offline.R")
+##
+#load("data_raw/FADN_FRA_2018_2021_obj.RData") 
 #load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
-load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+load(paste0(wd_path, "/data_raw/FADN_FRA_2018_2021_obj_GHGE.RData"))
 #my_object_GHGE <- m_prune_farms(my_object_GHGE,
 #                                YEAR %in% c("2018", "2019", "2020"))
 
@@ -56,14 +60,6 @@ cat("Years covered:", paste(sort(unique(my_object_GHGE@farm$YEAR)), collapse = "
 ```
 
 # Animal numbers
-
-```{r sum_Q}
-
-pseudoherd_animals <- f_pseudoherd_animals(object)
-
-plot(pseudoherd_animals$Qeq, pseudoherd_animals$Qobs + pseudoherd_animals$Qofffarm)
-
-```
 
 ## Number of calves sold for slaughter
 
@@ -109,106 +105,13 @@ object@herd |>
 
 
 
-## Total area
-
-https://agreste.agriculture.gouv.fr/agreste-web/download/publication/publie/GraFra2025Chap1.2/GraphAgri2025_utilisation-du-territoire.pdf
-28 591 milliers d'hectare en 2020
-```{r total_area}
-
-object@farm |>
-  dplyr::summarise(
-    sum_area_w = sum(SE025 * SYS02, na.rm = T),
-    sum_area = sum(SE025, na.rm = T),
-    .by = YEAR
-    )
-
-```
-total dairy cow
-
 ## Share between categories
 
-
-```{r cat_shares}
-
-# herd
-herd_total = object@herd |>
-  # add SYS02
-  dplyr::left_join(
-    object@farm |>
-      dplyr::select(dplyr::all_of(id_cols), SYS02),
-    by = id_cols
-  ) |>
-  dplyr::summarise(
-    category_count = sum(Qobs * SYS02, na.rm = T),
-    .by = c(FADN_code_letter, species, YEAR, NUTS2)
-  ) |>
-  dplyr::mutate(
-    category_proportion_national = category_count / sum(category_count),
-    .by = c(species, YEAR, NUTS2)
-  )  |>
-  dplyr::summarise(
-    category_proportion_national = mean(category_proportion_national, na.rm = T),
-    .by = c(FADN_code_letter, species, YEAR)
-  )
-
-# pseudoherd
-
-pseudoherd_animals <- f_pseudoherd_animals(object)
-
-# Total number of animals
-pseudoherd_total = pseudoherd_animals |>
-  # add SYS02
-  dplyr::left_join(
-    object@farm |>
-      dplyr::select(dplyr::all_of(id_cols), SYS02),
-    by = id_cols
-  ) |>
-  dplyr::summarise(
-    category_count = sum(Qeq * SYS02, na.rm = T),
-    .by = c(FADN_code_letter, species, YEAR)
-  ) |>
-  dplyr::mutate(
-    category_proportion_pseudoherd = category_count / sum(category_count),
-    .by = c(species, YEAR)
-  )
+To ensure that the pseudoherd is consistent with the observed herd,  we compare the share of each livestock category in the total number of animals in the observed herd and in the pseudoherd.
+We add to the observed herd the number of animals exported, as the pseudoherd is meant to account for all animals involved in the production, including those exported.
 
 
-
-# Total number of animals
-pseudoherd_total = pseudoherd_animals |>
-  dplyr::summarise(
-    category_count = sum(Qeq, na.rm = T),
-    .by = c(FADN_code_letter, species, YEAR)
-  ) |>
-  dplyr::mutate(
-    category_proportion_pseudoherd = category_count / sum(category_count),
-    .by = c(species, YEAR)
-  )
-
-# comp
-
-comp <- dplyr::left_join(
-  pseudoherd_total,
-  herd_total,
-  by = c('YEAR', 'FADN_code_letter', 'species')
-)
-
-comp |> 
-  dplyr::select(YEAR, FADN_code_letter, species, category_proportion_national, category_proportion_pseudoherd) |>
-  tidyr::pivot_longer(
-    cols = c(category_proportion_national, category_proportion_pseudoherd)
-  ) |>
-  ggplot() +
-  aes(x = FADN_code_letter, y = value, fill = name) +
-  geom_col(position = "dodge") +
-  #facet_wrap(species) +
-  coord_flip()
-
-
-```
-
-```{r cat_totals_weighted}
-
+```{r cat_add_export}
 
 # herd
 herd_total = object@herd |>
@@ -248,10 +151,9 @@ pseudoherd_total = pseudoherd_animals |>
 #    .by = c(FADN_code_letter, species, YEAR)
 #  )
 
-
-# remove export
+# add export
 library(readr)
-Agreste_Echanges_extérieurs_d_animaux_de_boucherie_vivants <- read_csv("Agreste_Echanges extérieurs d’animaux de boucherie vivants.csv")
+Agreste_Echanges_extérieurs_d_animaux_de_boucherie_vivants <- read_csv(paste0(wd_path, "/inst/validation/Agreste_Echanges extérieurs d’animaux de boucherie vivants.csv"))
 
 exports <- Agreste_Echanges_extérieurs_d_animaux_de_boucherie_vivants |>
   tidyr::pivot_longer(cols = -c("YEAR","Indicateur"),
@@ -263,8 +165,8 @@ exports <- Agreste_Echanges_extérieurs_d_animaux_de_boucherie_vivants |>
   ) |>
   dplyr::mutate(
     YEAR = as.character(YEAR),
-    #balance = `Exportations tous animaux (tête)`
-    balance = `Exportations tous animaux (tête)` - `Importations tous animaux (tête)`
+    balance = `Exportations tous animaux (tête)`
+    #balance = `Exportations tous animaux (tête)` - `Importations tous animaux (tête)`
   ) |>
   # match category
   dplyr::mutate(
@@ -273,174 +175,45 @@ exports <- Agreste_Echanges_extérieurs_d_animaux_de_boucherie_vivants |>
       agreste_cat == "Broutards légers" ~ "LBOV1_2M",
       agreste_cat == "Génisses" ~ "LHEIFFAT",
       agreste_cat == "Vaches" ~ "LCOWOTH",
-      agreste_cat == "Gros bovins mâles" ~ " LBOV2"
+      agreste_cat == "Gros bovins mâles" ~ "LBOV2"
     )
   )
 
-pseudoherd_balanced <- pseudoherd_total |>
+herd_balanced <- herd_total |>
   # add export balance
   dplyr::left_join(exports |>
                      dplyr::select(FADN_code_letter, YEAR, balance),
                    by = c('FADN_code_letter', 'YEAR')) |>
   # balance
   dplyr::mutate(
-    category_count_pseudoherd_balance = category_count_pseudoherd - dplyr::coalesce(balance, 0)
+    category_count_national_balance = category_count_national + dplyr::coalesce(balance, 0)
   )
 
 # comp
 dplyr::left_join(
-  pseudoherd_balanced,
-  herd_total,
+  pseudoherd_total,
+  herd_balanced,
   by = c('YEAR', 'FADN_code_letter', 'species')
 ) |> 
   #dplyr::filter(species == "cattle") |>
   dplyr::select(YEAR, FADN_code_letter, species, dplyr::matches("count")) |>
   tidyr::pivot_longer(
     #cols = c(category_count_national, category_count_pseudoherd, category_count_pseudoherd_balance)
-    cols = c(category_count_national, category_count_pseudoherd)
+    cols = c(category_count_national_balance, category_count_pseudoherd)
   ) |>
   ggplot() +
   aes(x = name, y = value, fill = FADN_code_letter) +
   geom_col(position = "fill") +
   facet_grid(vars(species)) +
   coord_flip() +
-  scale_fill_viridis_d() 
+  paletteer::scale_fill_paletteer_d("ggthemes::Tableau_20")
 
 ```
-
-https://agreste.agriculture.gouv.fr/agreste-saiku/?plugin=true&query=query/open/COMEXABVIV#query/open/COMEXABVIV
-
-```{r share_stage}
-
-# Qobs_meat
-
-cat_juveniles <- c("LBOV1")
-cat_fattening <- c("LBOV1_2M", "LBOV2", "LHEIFFAT", "LBOV1_2F_fattening")
-cat_breeders  <- c("LHEIFBRE", "LCOWOTH", "LBOV1_2F_breeders")
-
-herd_activities <- f_herd_activities(object)
-
-# estimate shares
-share_Qobs_meat <- herd_activities |>
-  # add NUTS2 and SYS02
-  dplyr::left_join(object@farm |>
-                     dplyr::select(dplyr::all_of(id_cols), NUTS2, SYS02),
-                   by = id_cols) |>
-  # sum all animals per category in each rearing stage at the NUTS2 level
-  dplyr::summarise(
-    Qobs_meat_NUTS2_cat = sum(Qobs_meat, na.rm = T),
-    .by = c(COUNTRY, NUTS2, FADN_code_letter)
-  ) |>
-  # sum all animals per category in each rearing stage at the country level
-  dplyr::mutate(
-    Qobs_meat_COUNTRY_cat = sum(Qobs_meat_NUTS2_cat, na.rm = T),
-    .by = c(COUNTRY, FADN_code_letter)
-  ) |>
-  # add rearing stage
-  dplyr::mutate(
-    stage = dplyr::case_when(
-      FADN_code_letter %in% cat_juveniles ~ "j",
-      FADN_code_letter %in% cat_fattening  ~ "f",
-      FADN_code_letter %in% cat_breeders   ~ "b",
-      TRUE ~ NA_character_
-    )
-  ) |>
-  dplyr::filter(!is.na(stage)) |>
-  # sum all animals at the NUTS2 level (per stage)
-  dplyr::mutate(
-    Qobs_meat_NUTS2_stage = sum(Qobs_meat_NUTS2_cat, na.rm = T),
-    .by = c(NUTS2, stage)
-  ) |>
-  # sum all animals at the country level (per stage)
-  dplyr::mutate(
-    Qobs_meat_COUNTRY_stage = sum(Qobs_meat_NUTS2_cat, na.rm = T),
-    .by = c(COUNTRY, stage)
-  ) |>
-  # estimate share of animal per category at the NUTS2 level
-  dplyr::mutate(
-    share_NUTS2_Qobs_meat = Qobs_meat_NUTS2_cat / Qobs_meat_NUTS2_stage,
-    share_COUNTRY_Qobs_meat = Qobs_meat_COUNTRY_cat / Qobs_meat_COUNTRY_stage
-  )
-
-
-# Qobs
-# estimate shares
-share_Qobs <- herd_activities |>
-  # add NUTS2 and SYS02
-  dplyr::left_join(object@farm |>
-                     dplyr::select(dplyr::all_of(id_cols), NUTS2, SYS02),
-                   by = id_cols) |>
-  # sum all animals per category in each rearing stage at the NUTS2 level
-  dplyr::summarise(
-    Qobs_NUTS2_cat = sum(Qobs, na.rm = T),
-    .by = c(COUNTRY, NUTS2, FADN_code_letter)
-  ) |>
-  # sum all animals per category in each rearing stage at the country level
-  dplyr::mutate(
-    Qobs_COUNTRY_cat = sum(Qobs_NUTS2_cat, na.rm = T),
-    .by = c(COUNTRY, FADN_code_letter)
-  ) |>
-  # add rearing stage
-  dplyr::mutate(
-    stage = dplyr::case_when(
-      FADN_code_letter %in% cat_juveniles ~ "j",
-      FADN_code_letter %in% cat_fattening  ~ "f",
-      FADN_code_letter %in% cat_breeders   ~ "b",
-      TRUE ~ NA_character_
-    )
-  ) |>
-  dplyr::filter(!is.na(stage)) |>
-  # sum all animals at the NUTS2 level (per stage)
-  dplyr::mutate(
-    Qobs_NUTS2_stage = sum(Qobs_NUTS2_cat, na.rm = T),
-    .by = c(NUTS2, stage)
-  ) |>
-  # sum all animals at the country level (per stage)
-  dplyr::mutate(
-    Qobs_COUNTRY_stage = sum(Qobs_NUTS2_cat, na.rm = T),
-    .by = c(COUNTRY, stage)
-  ) |>
-  # estimate share of animal per category at the NUTS2 level
-  dplyr::mutate(
-    share_NUTS2_Qobs = Qobs_NUTS2_cat / Qobs_NUTS2_stage,
-    share_COUNTRY_Qobs = Qobs_COUNTRY_cat / Qobs_COUNTRY_stage
-  )
-
-# comp
-
-comp <- dplyr::left_join(
-  share_Qobs,
-  share_Qobs_meat,
-  by = c('COUNTRY', 'NUTS2', 'FADN_code_letter', 'stage')
-)
-
-comp |> 
-  dplyr::select(FADN_code_letter, dplyr::matches("share")) |>
-  tidyr::pivot_longer(
-    cols = dplyr::matches("share")
-  ) |>
-  ggplot() +
-  aes(x = name, y = value, fill = FADN_code_letter) +
-  geom_col(position = "fill") +
-  #facet_grid(vars(species)) +
-  coord_flip() +
-  scale_fill_viridis_d() 
-
-
-
-```
-
 
 # Emissions
 
-```{r sum_ghge}
-
-pseudoherd_ghge = object@footprints$GHGE$GHGE_pseudoherd
-
-plot(pseudoherd_ghge$farm_ghge_herd_kgCO2e_livcat_pseudoherd, pseudoherd_ghge$farm_ghge_herd_kgCO2e_livcat + pseudoherd_ghge$farm_ghge_herd_kgCO2e_livcat_offfarm)
-
-```
-
+We compare the emissions per animal in the observed herd and in the pseudoherd, for each livestock category.
+First, we look at the emission of the off-farm animals.
 
 ```{r ghge_per_anim_offfarm}
 
@@ -474,6 +247,7 @@ dplyr::left_join(
 
 
 ```
+Then, we look at the emission of all animals in the pseudoherd, including those on-farm and off-farm.
 
 ```{r ghge_per_anim_Qeq}
 
@@ -529,13 +303,15 @@ object@footprints$GHGE$GHGE_meat |>
   dplyr::summarise(
     farm_ghge_herd_kgCO2e_per_t = mean(farm_ghge_herd_kgCO2e_per_t, na.rm= TRUE),
     .by = c(output, YEAR)
-  )
+  ) |>
+  dplyr::arrange(output, YEAR)
 
 object@footprints$GHGE$GHGE_pseudoherd_meat |>
   dplyr::summarise(
     farm_ghge_herd_kgCO2e_pseudoherd_per_t = mean(farm_ghge_herd_kgCO2e_pseudoherd_per_t, na.rm= TRUE),
     .by = c(output, YEAR)
-  )
+  ) |>
+  dplyr::arrange(output, YEAR)
 
 
 ```

@@ -165,8 +165,9 @@ sheets <- excel_sheets(file_path)
 data_list <- lapply(sheets, function(s) suppressMessages(read_excel(file_path, sheet = s)))
 names(data_list) <- sheets
 
-# choose a sample size
-n <- 5000
+# Generate enough candidates to retain a useful practice-ready sample after
+# running the same validation used by the analysis workflow.
+n <- 10000L
 
 # The EU sheets only report mean/sd/min/max (no quartiles), so distributions
 # are moment-matched (gamma for non-negative variables) within each
@@ -193,6 +194,90 @@ fadn_fict <- h_generate_mock_data(
     ID = paste0("FARM_", formatC(seq_len(n), width = nchar(n) + 1, flag = "0")),
     YEAR = 2020)
 
+# Independent sampling of every crop variable can create crop records with
+# production but no area, as well as crop types without practice references.
+# Keep the major cereal and forage types used by the validated workflow.
+practice_crop_codes <- c(
+  "CWHTC", "CWHTD", "CBRL", "COAT", "CMZ", "CRYE", "CRICE",
+  "CGRSXRG", "CRG"
+)
+crop_codes <- unique(data_extra$crops$FADN_code_letter)
+
+for (code in crop_codes) {
+  crop_cols <- grep(paste0("^", code, "_"), names(fadn_fict), value = TRUE)
+  if (length(crop_cols) == 0) {
+    next
+  }
+
+  if (!code %in% practice_crop_codes) {
+    for (col in crop_cols) {
+      if (is.numeric(fadn_fict[[col]])) {
+        fadn_fict[[col]][] <- 0
+      }
+    }
+    next
+  }
+
+  area_cols <- intersect(paste0(code, c("_TA", "_A")), names(fadn_fict))
+  if (length(area_cols) == 0) {
+    for (col in crop_cols) {
+      if (is.numeric(fadn_fict[[col]])) {
+        fadn_fict[[col]][] <- 0
+      }
+    }
+    next
+  }
+
+  area_ha <- Reduce(pmax, c(fadn_fict[area_cols], list(na.rm = TRUE)))
+  no_area <- is.na(area_ha) | area_ha <= 0
+  for (col in crop_cols) {
+    if (is.numeric(fadn_fict[[col]])) {
+      fadn_fict[[col]][no_area] <- 0
+    }
+  }
+}
+
+# Certification and mineral-fertilizer inputs are otherwise sampled
+# independently, which creates impossible organic-farm combinations.
+organic_farms <- as.character(fadn_fict$ORGANIC) %in% c("2", "4")
+fadn_fict$INUSE_Q[organic_farms] <- 0
+
+# Use infer_practices() as the source of truth for mock eligibility. Retain
+# enough invalid farms to make approximately 10% of the final sample fail.
+candidate_n <- nrow(fadn_fict)
+practice_ready <- data_4FADN2Footprint(fadn_fict) |>
+  infer_practices(overwrite = TRUE)
+valid_ids <- practice_ready@farm |>
+  dplyr::select(ID)
+invalid_ids <- practice_ready@traceability$discarded_farms |>
+  dplyr::select(ID) |>
+  dplyr::distinct()
+
+target_pass_rate <- 0.9
+n_invalid_to_keep <- round(nrow(valid_ids) * (1 - target_pass_rate) / target_pass_rate)
+if (nrow(invalid_ids) < n_invalid_to_keep) {
+  stop("Not enough invalid candidate farms to produce a mock with a 90% pass rate.")
+}
+
+set.seed(42)
+retained_invalid_ids <- invalid_ids |>
+  dplyr::slice_sample(n = n_invalid_to_keep)
+retained_ids <- dplyr::bind_rows(valid_ids, retained_invalid_ids)
+
+fadn_fict <- fadn_fict |>
+  dplyr::semi_join(retained_ids, by = "ID")
+
+if (nrow(fadn_fict) == 0) {
+  stop("No EU mock farms were retained; refusing to save empty mock data.")
+}
+
+pass_rate <- nrow(valid_ids) / nrow(fadn_fict)
+message(
+  nrow(fadn_fict), " of ", candidate_n, " generated EU mock farms retained; ",
+  sum(fadn_fict$ID %in% valid_ids$ID), " (",
+  round(pass_rate * 100, 1), "%) pass infer_practices()."
+)
+
 # export data ----
 
 mock_data <- list(
@@ -201,4 +286,3 @@ mock_data <- list(
 )
 
 usethis::use_data(mock_data, overwrite = T)
-

@@ -42,8 +42,8 @@ impact in two steps:
 
 The package combines three types of input data:
 
-1.  **Farm-specific variables recorded in FADN** (primary): animal inventories, crop areas and production, input amounts (synthetic fertiliser, energy, feed
-    purchases), landscape variables (for the national version of the package).
+1.  **Farm-specific variables recorded in FADN** (primary): animal inventories, crop areas and production, input amounts (synthetic fertiliser,
+    energy, feed purchases), landscape variables (for the national version of the package).
 2.  **Farm-specific variables estimated by FADN2Footprint** (secondary): feed dry matter and nitrogen intake, organic fertiliser quantities.
 3.  **Country-specific parameters from UNFCCC national inventories or IPCC defaults** (fallback): animal waste management system (AWMS) distributions,
     emission factors (EF1–EF5), fraction parameters (Frac_gas_mm, Frac_leach, Frac_gas_f), volatile solid excretion and B₀ values.
@@ -53,8 +53,8 @@ The package combines three types of input data:
 # Greenhouse gas emissions {#sec-method-ghge}
 
 The computation of greenhouse gas (GHG) emissions at farm level relies on a combination of data sources and methodological frameworks
-(@tbl-ghg-sources). IPCC 2006 Guidelines and 2019 Refinement equations form the methodological backbone, covering enteric fermentation (Ch. 10), manure management (Ch.
-10), managed soils (Ch. 11), and indirect CO~2~ emissions from energy use (Ch. 3).
+(@tbl-ghg-sources). IPCC 2006 Guidelines and 2019 Refinement equations form the methodological backbone, covering enteric fermentation (Ch. 10),
+manure management (Ch. 10), managed soils (Ch. 11), and indirect CO~2~ emissions from energy use (Ch. 3).
 
 ::: {#tbl-ghg-sources}
 ```{r tbl-ghg-sources, echo=FALSE, message=FALSE, warning=FALSE}
@@ -171,15 +171,14 @@ procedure consisted of three sequential steps:
 
 ### Cattle (Tier 2)
 
-For cattle, emission factors are derived using IPCC Tier 2 approache, drawing on IPCC Table 10.12 and differentiated by livestock
-category (dairy cows by milk productivity level, other cattle by feed digestibility). We use the methane conversion factor
- *Y*~m~ (%, proportion of gross energy converted to CH~4~), yielding an emission factor (kg CH~4~
-head⁻¹ yr^-1^) computed as (IPCC Equation 10.21):
+For cattle, emission factors are derived using IPCC Tier 2 approache, drawing on IPCC Table 10.12 and differentiated by livestock category (dairy cows
+by milk productivity level, other cattle by feed digestibility). We use the methane conversion factor *Y*~m~ (%, proportion of gross energy converted
+to CH~4~), yielding an emission factor (kg CH~4~ head⁻¹ yr^-1^) computed as (IPCC Equation 10.21):
 
 $$EF = \frac{GE \times (Y_m / 100)}{55.65}$$
 
-where *GE* is the gross energy intake (MJ head⁻¹ day⁻¹; see xx ref to other vignette for GE estimation), *Ym* is the methane conversion factor derived from IPCC,
- and *55.65 MJ kg⁻¹ CH~4~* is the energy content of methane.
+where *GE* is the gross energy intake (MJ head⁻¹ day⁻¹; see xx ref to other vignette for GE estimation), *Ym* is the methane conversion factor derived
+from IPCC, and *55.65 MJ kg⁻¹ CH~4~* is the energy content of methane.
 
 The total cattle CH~4~ emission is calculated as:
 
@@ -196,11 +195,13 @@ $$CH_{4,enteric} = Q_{obs} \times EF_{Y_m}$$
 
 ### Swine (Tier 1)
 
-For swine, as suggested in the 2019 Refinements of the 2006 IPCC Guidelines, we use a Tier 1 approach with a default emission factor that we multiply by the number of animals to obtain the total methane emission from swine.
+For swine, as suggested in the 2019 Refinements of the 2006 IPCC Guidelines, we use a Tier 1 approach with a default emission factor that we multiply
+by the number of animals to obtain the total methane emission from swine.
 
 ### Poultry
 
-For poultry, no default emission factor exists in the 2019 Refinements of the 2006 IPCC Guidelines, so we do not account for enteric fermentation for poultry.
+For poultry, no default emission factor exists in the 2019 Refinements of the 2006 IPCC Guidelines, so we do not account for enteric fermentation for
+poultry.
 
 ## CH~4~ Emissions from Manure Management
 
@@ -347,11 +348,11 @@ $N_2O_{G,mm}$ (indirect volatilisation), and $N_2O_{L,mm}$ (indirect leaching), 
 Direct and indirect nitrous oxide (N~2~O) emissions from managed soils (cropland and grassland) were estimated following IPCC Tier 2/3 methodology
 [@IPCC2006; @IPCC2019], anchored on country-specific emission factors reported to the UNFCCC. Three emission pathways were considered:
 
--   direct N~2~O emissions from nitrogen inputs to managed soils,
+- direct N~2~O emissions from nitrogen inputs to managed soils,
 
--   indirect N~2~O emissions from atmospheric deposition of volatilised NH₃ and NO~x~,
+- indirect N~2~O emissions from atmospheric deposition of volatilised NH₃ and NO~x~,
 
--   indirect N~2~O emissions from nitrogen leaching and runoff.
+- indirect N~2~O emissions from nitrogen leaching and runoff.
 
 ### Activity Data Assembly
 
@@ -364,17 +365,17 @@ crop-specific IPCC parameters could not be matched to a given species, generic d
 
 Six nitrogen input variables were considered:
 
--   **Synthetic nitrogen** ($F_{SN}$, kg N yr^-1^): synthetic fertiliser nitrogen applied per crop and farm, estimated via the `f_n_ferti` function.
+- **Synthetic nitrogen** ($F_{SN}$, kg N yr^-1^): synthetic fertiliser nitrogen applied per crop and farm, estimated via the `f_n_ferti` function.
 
--   **Organic nitrogen on arable soils** ($F_{ON}$, kg N yr^-1^): organic fertiliser nitrogen applied to arable crops, estimated via `f_n_ferti`; set
-    to zero for grassland.
+- **Organic nitrogen on arable soils** ($F_{ON}$, kg N yr^-1^): organic fertiliser nitrogen applied to arable crops, estimated via `f_n_ferti`; set to
+  zero for grassland.
 
--   **Nitrogen deposited by grazing animals on pasture** ($F_{PRP}$, kg N yr^-1^): approximated as the organic fertilisation of grassland from
-    `f_n_ferti`; set to zero for arable land.
+- **Nitrogen deposited by grazing animals on pasture** ($F_{PRP}$, kg N yr^-1^): approximated as the organic fertilisation of grassland from
+  `f_n_ferti`; set to zero for arable land.
 
--   **Crop residue nitrogen** ($F_{CR}$, kg N yr^-1^): nitrogen in crop residues returned to soil, estimated from above-ground and below-ground dry
-    matter residues using IPCC crop-specific regression parameters (Tables 11.1 and 11.2). Above-ground dry matter ($AG_{DM,T}$) was estimated as a
-    linear function of crop yield:
+- **Crop residue nitrogen** ($F_{CR}$, kg N yr^-1^): nitrogen in crop residues returned to soil, estimated from above-ground and below-ground dry
+  matter residues using IPCC crop-specific regression parameters (Tables 11.1 and 11.2). Above-ground dry matter ($AG_{DM,T}$) was estimated as a
+  linear function of crop yield:
 
 $$AG_{DM,T} = Crop_T \times Slope_T + Intercept_T$$
 
@@ -390,10 +391,10 @@ where $RS_T$ is the root-to-shoot ratio, $N_{AG,T}$ and $N_{BG,T}$ are the nitro
 and $Frac_{renew,T}$ is the fraction of land renewed annually. Grasslands were assumed to be renewed every six years ($Frac_{renew} = 1/6$), while
 annual crops had $Frac_{renew} = 1$. Residue removal and burning were assumed to be zero ($Frac_{remove} = 0$; $Frac_{burn} = 0$).
 
--   **Nitrogen mineralised from soil organic matter** ($F_{SOM}$, kg N yr^-1^): nitrogen mineralised following land use change; currently set to zero,
-    pending integration with a land use change module.
+- **Nitrogen mineralised from soil organic matter** ($F_{SOM}$, kg N yr^-1^): nitrogen mineralised following land use change; currently set to zero,
+  pending integration with a land use change module.
 
--   **Drained organic soils** ($F_{OS}$, ha): area of drained organic soils; currently set to zero.
+- **Drained organic soils** ($F_{OS}$, ha): area of drained organic soils; currently set to zero.
 
 ### Direct N~2~O Emissions
 
@@ -416,8 +417,9 @@ $$N_2O\text{-}N_{ATD} = \left(F_{SN} \times Frac_{GASF} + (F_{ON} + F_{PRP}) \ti
 $$N_2O_{ATD} = N_2O\text{-}N_{ATD} \times \frac{44}{28}$$
 
 where $Frac_{GASF} = 0.11$ is the fraction of synthetic fertiliser nitrogen that volatilises as NH₃ and NO~x~, $Frac_{GASM} = 0.21$ is the
-corresponding fraction for organic nitrogen amendments and grazing deposits (IPCC Table 11.3) XX why not recover them from UNFCCC table 3.D? => TODO Table3.D (C32:C34)XX, and
-$EF_4$ is the emission factor for N~2~O from atmospheric deposition of volatilised nitrogen, sourced from UNFCCC submissions XX how do you do this?XX.
+corresponding fraction for organic nitrogen amendments and grazing deposits (IPCC Table 11.3) XX why not recover them from UNFCCC table 3.D? =\> TODO
+Table3.D (C32:C34)XX, and $EF_4$ is the emission factor for N~2~O from atmospheric deposition of volatilised nitrogen, sourced from UNFCCC submissions
+XX how do you do this?XX.
 
 ### Indirect N~2~O Emissions from Leaching and Runoff
 
@@ -428,8 +430,8 @@ $$N_2O\text{-}N_L = (F_{SN} + F_{ON} + F_{PRP} + F_{CR} + F_{SOM}) \times Frac_{
 $$N_2O_L = N_2O\text{-}N_L \times \frac{44}{28}$$
 
 where $Frac_{leach,H} = 0.24$ is the fraction of total nitrogen additions that is lost through leaching and runoff in regions where leaching occurs
-(IPCC Table 11.3)XX why not recover them from UNFCCC table 3.D? => TODO Table3.D (C32:C34)XX, and $EF_5$ is the emission factor for N~2~O from nitrogen leaching and runoff,
-sourced from UNFCCC submissionsXX how do you do this?XX.
+(IPCC Table 11.3)XX why not recover them from UNFCCC table 3.D? =\> TODO Table3.D (C32:C34)XX, and $EF_5$ is the emission factor for N~2~O from
+nitrogen leaching and runoff, sourced from UNFCCC submissionsXX how do you do this?XX.
 
 ### Total N~2~O Emissions from Managed Soils
 
@@ -445,10 +447,8 @@ methodology [@IPCC2006energy], using country- and year-specific emission factors
 
 #### Activity Data
 
-On-farm fuel consumption was distinguished into two categories: 
-- "motor fuels" (diesel consumed by farm machinery and field operations), 
-- "heating fuels" consumed in farm buildings and livestock facilities. 
-Fuel quantities, expressed in both litres and megajoules (MJ), were retrieved from the
+On-farm fuel consumption was distinguished into two categories: - "motor fuels" (diesel consumed by farm machinery and field operations), - "heating
+fuels" consumed in farm buildings and livestock facilities. Fuel quantities, expressed in both litres and megajoules (MJ), were retrieved from the
 FADN, with the conversion from litres to MJ performed upstream during the farm practices inference step (`infer_practices`).
 
 #### Emission Factors
@@ -788,18 +788,18 @@ aggregation weights for each type of land use are calibrated (separately for ara
 minimizing the fourth power of the distance from one of the ratio between our predicted values and the target values of Table A xxx (average croplands
 and grasslands) and Table AErreur : source de la référence non trouvée:
 
--   Initially, the functional forms of the responses are taken from Lindner et al. (2019). Unlike initial Lindner’s method (2022) that aggregates
-    variables by averaging them, the variable weights used for their aggregation are assigned manually such that their value corresponds to the effect
-    size of variables listed in the literature (Table A xxx), with a minimum weight of 0.05 (for the negative effect sizes and the variables not
-    listed in the literature).
+- Initially, the functional forms of the responses are taken from Lindner et al. (2019). Unlike initial Lindner’s method (2022) that aggregates
+  variables by averaging them, the variable weights used for their aggregation are assigned manually such that their value corresponds to the effect
+  size of variables listed in the literature (Table A xxx), with a minimum weight of 0.05 (for the negative effect sizes and the variables not listed
+  in the literature).
 
--   Then, both the functional forms of the responses (all constants except epsilon and gamma, which modulates the response range, and beta which
-    define the variation direction; see code available online) and the aggregation weights are calibrated using the basic optim function of R (R Core
-    Team, 2023)
+- Then, both the functional forms of the responses (all constants except epsilon and gamma, which modulates the response range, and beta which define
+  the variation direction; see code available online) and the aggregation weights are calibrated using the basic optim function of R (R Core Team,
+  2023)
 
--   Note that the effect size of each variable (or its relative importance) results from the combination of both weights and functional forms. In
-    principle, a very “responsive” functional form combined with low weight can confer the same importance as a very “flat” functional form combined
-    with high weight.
+- Note that the effect size of each variable (or its relative importance) results from the combination of both weights and functional forms. In
+  principle, a very “responsive” functional form combined with low weight can confer the same importance as a very “flat” functional form combined
+  with high weight.
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 

@@ -26,6 +26,8 @@ from UNFCCC (@tbl-practice-list).
 
 ::: {#tbl-practice-list}
 +----------------+----------------+----------------+----------------+
+|                |                |                |                |
++================+================+================+================+
 | Data source /  | FADN (+ Farm   | \+ LPIS & SWF  | Parameters     |
 | Practices      | practices      | & SENTINEL-2   | from national  |
 |                | survey & feed  | (farm level)   | GHGIs (yearly  |
@@ -241,15 +243,15 @@ To extract these plots, we use the PACAGE plot numbers (identification
 number of the plot in the Common Agricultural Policy registration) as
 primary join key. We face two situations:
 
--   The farm has the same PACAGE number in FADN: then the LPIS plots
-    with this PACAGE number are associated with that FADN-AC-FQS farm;
+- The farm has the same PACAGE number in FADN: then the LPIS plots with
+  this PACAGE number are associated with that FADN-AC-FQS farm;
 
--   No PACAGE number is registered in the FADN , or the PACAGE number in
-    FADN does not correspond to a LPIS PACAGE number: no plot is
-    associated the FADN holding. In 2020, such cases are found for 443
-    and 318 metropolitan farms, respectively. These holdings are mainly
-    concentrated in the OTEX viticulture, market gardening and pig
-    and/or poultry farming.
+- No PACAGE number is registered in the FADN , or the PACAGE number in
+  FADN does not correspond to a LPIS PACAGE number: no plot is
+  associated the FADN holding. In 2020, such cases are found for 443 and
+  318 metropolitan farms, respectively. These holdings are mainly
+  concentrated in the OTEX viticulture, market gardening and pig and/or
+  poultry farming.
 
 This extraction results in a subsample of the LPIS that we intersect
 with the Hedges layer of the BD TOPO® database (IGN and ASP, 2020) to
@@ -300,14 +302,13 @@ from the intersection:
 Then, to calculate the hedge density for each farm, we distinguish four
 plot categories for each variable (hedge length and UAA):
 
--   Total
+- Total
 
--   Permanent grassland (including grasslands, moors and alpine
-    pastures)
+- Permanent grassland (including grasslands, moors and alpine pastures)
 
--   Arboriculture (including vines)
+- Arboriculture (including vines)
 
--   Other crops
+- Other crops
 
 ## Mean field size {#sec-method-practices-mean-field-size}
 
@@ -315,14 +316,13 @@ The mean field size is the ratio of the UAA to the number of plots. We
 distinguish four plot categories for each variable (UAA and number of
 plots):
 
--   Total
+- Total
 
--   Permanent grassland (including grasslands, moors and alpine
-    pastures)
+- Permanent grassland (including grasslands, moors and alpine pastures)
 
--   Arboriculture (including vines)
+- Arboriculture (including vines)
 
--   Other crops
+- Other crops
 
 ## Crop diversity {#sec-method-practices-crop-div}
 
@@ -360,14 +360,13 @@ we calculated the plot average number of covered days using the area
 statistics algorithm in QGIS (QGIS Development Team, 2022) for four plot
 categories:
 
--   Total
+- Total
 
--   Permanent grassland (including grasslands, moors and alpine
-    pastures)
+- Permanent grassland (including grasslands, moors and alpine pastures)
 
--   Arboriculture (including vines)
+- Arboriculture (including vines)
 
--   Other crops
+- Other crops
 
 The number of uncovered days is then calculated as: Number of uncovered
 day = 366 – number of covered day.
@@ -391,15 +390,15 @@ grasslands are considered as crops as they are part of a crop rotation.
 To estimate practices associated with livestock, we need to estimate
 five main elements:
 
--   herd/flock structure
+- herd/flock structure
 
--   herd feed
+- herd feed
 
--   other inputs
+- other inputs
 
--   manure/waste management
+- manure/waste management
 
--   Animal products
+- Animal products
 
 When these elements are estimated, we can model the pseudo-farm by
 gathering on-farm practices as well as off-farm ones (e.g., purchased
@@ -438,8 +437,7 @@ three rearing stage: juveniles, fattening, or breeders
 for which we have a least one animal in our whole dataset.
 
 ::: {#fig-herd-flows}
-![Cattle](FADN_prod_flow_cattle.png)
-![Swine](FADN_prod_flow_swine.png)
+![Cattle](FADN_prod_flow_cattle.png) ![Swine](FADN_prod_flow_swine.png)
 ![Poultry](FADN_prod_flow_poultry.png)
 
 Rearing process charts for cattle, swine and poultry. For each livestock
@@ -479,11 +477,13 @@ $$
 F_{l-1}^{out} = Q_{l-1}^{sales} + \sum_L (F_{l}^{in}  - Q_{l}^{purchases})
 $$ {#eq-Fout}
 
-where $F$ are flows $in$ or $out$ the considered livestock category $l$ ((encompassing all animals entering or leaving the category; upward category $l-1$), L is the ensemble of categories directly downward to
+where $F$ are flows $in$ or $out$ the considered livestock category $l$
+((encompassing all animals entering or leaving the category; upward
+category $l-1$), L is the ensemble of categories directly downward to
 $l-1$ and $Q$ are registered numbers of animals (i.e., $average$,
 $opening$, $closing$, $purchases$, or $sales$).
 
-Note that some farm can experience animal losses, resulting in negative
+Note that some farms can experience animal losses, resulting in negative
 flows. Losses are not recorded, so they are generally assumed to be
 null. The exception is when this assumption leads to negative inflows:
 this is impossible, so inflow is then set to zero.
@@ -523,8 +523,9 @@ fattener without piglets and sows), preventing the estimation of
 associated rearing parameters. When the rearing parameter is not
 available or infinite, we replace the missing value by a reference value
 based on our data. We estimate reference values for each rearing
-parameter as the median farm in the same NUTS2, or, if less than 3 farms
-are registered for the NUTS2, the median farm in the same NUTS1. We also
+parameter as the median in farms of the same NUTS2 where the species is
+present, or, if less than 3 farms are registered for the NUTS2, the
+median farm where the species is present in the same NUTS1. We also
 estimate thresholds below and above which a value is considered aberrant
 by graphically determining outliers on the rearing parameter
 distribution in data set. Note that the maximum threshold for categories
@@ -542,7 +543,7 @@ distinguished in the FADN between fattening and breeding ones, female
 below two y.o. are not (@fig-herd-flows). In such mixed category, only
 the number of animals sold are differentiated between sales for
 slaughtering and those for rearing. We consider that sales for rearing
-are for breeding purposes and that sales for slaughter are fattening
+are for breeding purposes and that sales for slaughter are fattened
 animals (i.e., $Q_{B}^{sales}$ and $Q_{F}^{sales}$, respectively; see
 section Animal products). For other numbers (i.e., observed, average,
 opening, closing, and purchases) in these mixed categories, we
@@ -552,10 +553,12 @@ based on their proportion in the downward flow of animals (see Eq.
 animals for fattening).
 
 $$
-\bar{Q}_{l_F} = \bar{Q}_{l} \cdot \frac{\sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}})}{ \sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}}) + \sum (\bar{Q}_{l_B+1} \cdot \frac{1}{t_{l_B+1}}) }
+\bar{Q}_{F,l} = \bar{Q}_{l} \cdot \frac{F_{B,out}}{F_{B,out} + F_{F,out}} \\
+= \bar{Q}_{l} \cdot \frac{\sum (\bar{Q}_{F,l+1} \cdot \frac{1}{t_{F,l+1}})}{ \sum (\bar{Q}_{F,l+1} \cdot \frac{1}{t_{F,l+1}}) + \sum (\bar{Q}_{B,l+1} \cdot \frac{1}{t_{B,l+1}}) }
 $$ {#eq-mixed_cat}
 
-where $l_F$ are fattening animals and $l_B$ are breeders in category $l$.
+where $F,l$ are fattening animals and $B,l$ are breeders in category
+$l$.
 
 ### Estimation of pseudo-herd {#sec-method-practices-pseudoherd}
 
@@ -573,22 +576,22 @@ they are present on-farm or not (i.e., off-farm).
 
 #### Restrain pseudo-herd animals to farm activities
 
-First, we estimate animals involved in each activity (i.e.,
-milk, eggs, and meat). 
+First, we estimate animals involved in each activity (i.e., milk, eggs,
+and meat).
 
-For cattle, we first estimate animals involved in 
-the dairy herd with Equation @eq-restrain_herd_act. We consider all 
-additional cattle as part of the meat activity (e.g. additional calves
-spawned from dairy cows).
+For cattle, we first estimate animals involved in the dairy herd with
+Equation @eq-restrain_herd_act. We consider all additional cattle as
+part of the meat activity (e.g. additional calves spawned from dairy
+cows).
 
 $$
 \sum \bar{Q}_{l-1, \; \text{milk}} = \sum (\frac{t_{l-1} \cdot \bar{Q}_{l-1}}{\bar{Q}_{l-1}}) \cdot \frac{\bar{Q}_{l, \; \text{milk}} }{t_{l}}
 $$ {#eq-restrain_herd_act}
 
-For swine, we consider all animals as involved in the meat activity.
-For poultry, we consider that all animals needed in the production of
-either eggs (i.e., laying hens) or meat (i.e., broilers and other
-poultry) are present on-farm, the pseudo-herd thus equaling the herd.
+For swine, we consider all animals as involved in the meat activity. For
+poultry, we consider that all animals needed in the production of either
+eggs (i.e., laying hens) or meat (i.e., broilers and other poultry) are
+present on-farm, the pseudo-herd thus equaling the herd.
 
 Second, we estimate the pseudo herd by calculating the balanced number
 of animals (see next section).
@@ -598,16 +601,15 @@ of animals (see next section).
 To estimate the total number of both on- and off-farm animals involved
 in the rearing process, we compute what would be the herd at equilibrium
 based on the actual stock in each rearing stage (i.e., juveniles ,
-fattening or breeders), and the rearing parameters estimated XXreplace
-reference to relevant sectionXX. For cattle specifically, such
-estimation of the equilibrium quantities assumes that all calves reach
-the next rearing stage. However, some calves are sold for slaughter and
+fattening or breeders), the rearing parameters estimated XXreplace
+reference to relevant sectionXX, and the share of animals reaching the
+next rearing stage. For example, some calves are sold for slaughter and
 produce veal, hence never reach downward stages. To account for
 slaughtered calves, we remove the number of calves sold for slaughter
-from the equilibrium quantities estimated for fattening animals ( \* in
-Table x). Conversely, we add the number of calves sold for slaughter to
-equilibrium quantities of calves estimated from the observed fattening
-animals ( \*\* in Table x).
+from the equilibrium quantities of fattening animals estimated based on
+the observed juveniles or breeders ( \* in Table x). Conversely, we add
+the number of calves sold for slaughter to equilibrium quantities of
+calves estimated from the observed fattening animals ( \*\* in Table x).
 
 ::: {#tbl-pseudoherd_eq}
 ```{r tbl-pseudoherd_eq, echo=FALSE, message=FALSE, warning=FALSE}
@@ -855,14 +857,14 @@ Lindner et al. (2022).
 
 The fraction of manure handled by each manure management system (AWMS)
 on a farm is not measured directly in FADN for most countries. Instead
-AWMS fractions are inferred from UNFCCC CRF tables together with 
-IPCC/UNFCCC MCF and Bo parameters to compute CH4 and
-(together with N excretion and EF) N2O from manure management.
+AWMS fractions are inferred from UNFCCC CRF tables together with
+IPCC/UNFCCC MCF and Bo parameters to compute CH4 and (together with N
+excretion and EF) N2O from manure management.
 
 ## Animal weight estimation {#sec-method-practices-animal-weight}
 
-Animal weights are not reported in FADN. We use the national animal liveweights
-reported in UNFCCC CRF tables.
+Animal weights are not reported in FADN. We use the national animal
+liveweights reported in UNFCCC CRF tables.
 
 # Yields (observed vs. imputed) {#sec-method-practices-yields}
 

@@ -80,88 +80,56 @@ names(data_list) <- sheets
 
 ## Generate Mock data ----
 
-rica_fict <- list(
+# Standardise the descriptive statistics sheets: continuous variables are
+# simulated from mean/sd/min/max and the quartiles (P25, Median, P75);
+# categorical variables are sampled from the observed level frequencies.
+prep_cont <- function(df) {
+  df |>
+    dplyr::mutate(
+      variable = Variable,
+      mean = as.numeric(Mean),
+      sd   = as.numeric(SD),
+      min  = as.numeric(Min),
+      p25  = as.numeric(P25),
+      p50  = as.numeric(Median),
+      p75  = as.numeric(P75),
+      max  = as.numeric(Max)
+    )
+}
+prep_cat <- function(df) {
+  df |>
+    dplyr::filter(!is.na(N)) |>
+    dplyr::mutate(variable = Variable,
+                  level = as.character(Category),
+                  count = as.numeric(N))
+}
 
-  rica = h_generate_mock_data(
-    n = 500,
-    seed = 42,
-    continuous_stats = data_list$rica20_cont |>
-      dplyr::mutate(
-        variable = Variable,
-        mean = as.numeric(Mean),
-        sd = as.numeric(SD),
-        min = as.numeric(Min),
-        max = as.numeric(Max)
-      ),
-    categorical_stats = data_list$rica20_cat |>
-      dplyr::filter(!is.na(N)) |>
-      dplyr::mutate(variable = Variable,
-                    level = Category,
-                    count = as.numeric(N))
-  ),
+# Number of records of each table in the real data (N / share of total)
+table_size <- function(cat_df) {
+  stats::median(as.numeric(cat_df$N) / (as.numeric(cat_df$`N/total`) / 100),
+                na.rm = TRUE)
+}
 
-  veg  = h_generate_mock_data(
-    n = 500,
-    seed = 42,
-    continuous_stats = data_list$veg20_cont |>
-      dplyr::mutate(
-        variable = Variable,
-        mean = as.numeric(Mean),
-        sd = as.numeric(SD),
-        min = as.numeric(Min),
-        max = as.numeric(Max)
-      ),
-    categorical_stats = data_list$veg20_cat |>
-      dplyr::filter(!is.na(N)) |>
-      dplyr::mutate(variable = Variable,
-                    level = Category,
-                    count = as.numeric(N))
-  ),
+n_farms <- 500
+tables <- c(rica = "rica20", veg = "veg20", ani = "ani20", pan = "pan20")
 
-  ani  = h_generate_mock_data(
-    n = 500,
-    seed = 42,
-    continuous_stats = data_list$ani20_cont |>
-      dplyr::mutate(
-        variable = Variable,
-        mean = as.numeric(Mean),
-        sd = as.numeric(SD),
-        min = as.numeric(Min),
-        max = as.numeric(Max)
-      ),
-    categorical_stats = data_list$ani20_cat |>
-      dplyr::filter(!is.na(N)) |>
-      dplyr::mutate(variable = Variable,
-                    level = Category,
-                    count = as.numeric(N))
-  ),
+# Each table keeps its real size relative to the farm table (e.g. several
+# crop rows per farm in `veg`)
+size_rica <- table_size(data_list$rica20_cat)
 
-  pan  = h_generate_mock_data(
-    n = 500,
+rica_fict <- lapply(tables, function(tb) {
+  h_generate_mock_data(
+    n = round(n_farms * table_size(data_list[[paste0(tb, "_cat")]]) / size_rica),
     seed = 42,
-    continuous_stats = data_list$pan20_cont |>
-      dplyr::mutate(
-        variable = Variable,
-        mean = as.numeric(Mean),
-        sd = as.numeric(SD),
-        min = as.numeric(Min),
-        max = as.numeric(Max)
-      ),
-    categorical_stats = data_list$pan20_cat |>
-      dplyr::filter(!is.na(N)) |>
-      dplyr::mutate(variable = Variable,
-                    level = Category,
-                    count = as.numeric(N))
+    continuous_stats  = prep_cont(data_list[[paste0(tb, "_cont")]]),
+    categorical_stats = prep_cat(data_list[[paste0(tb, "_cat")]])
   )
-)
+})
 
 # add common identifier
-
-
 set.seed(42)
 
-# Infer n from first table if not provided
-n <- nrow(rica_fict[[1]])
+n <- nrow(rica_fict$rica)
 
 # Create a pool of unique farm IDs
 id_pool <- paste0("FARM_", formatC(seq_len(n), width = nchar(n) + 1, flag = "0"))
@@ -173,16 +141,16 @@ rica_fict <- lapply(rica_fict, function(df) {
     # One row per farm (e.g., rica table) → assign all IDs
     df[["IDENT"]] <- id_pool
   } else if (nrows > n) {
-    # Multiple rows per farm (e.g., veg, ani, pan) → sample with replacement
-    df[["IDENT"]] <- sample(id_pool, size = nrows, replace = TRUE)
+    # Multiple rows per farm (e.g., veg, ani, pan) → every farm appears at
+    # least once, remaining rows sampled with replacement
+    df[["IDENT"]] <- c(id_pool, sample(id_pool, size = nrows - n, replace = TRUE))
   } else {
     # Fewer rows than farms → sample without replacement
     df[["IDENT"]] <- sample(id_pool, size = nrows, replace = FALSE)
   }
 
   # Move ID to first column
-  df <- df[, c("IDENT", setdiff(names(df), "IDENT"))]
-
+  df[, c("IDENT", setdiff(names(df), "IDENT"))]
 })
 
 
@@ -194,11 +162,22 @@ library(readxl)
 file_path = "inst/ext_data/EU_FADN_2016_2018_desc_stats.xlsx"
 
 sheets <- excel_sheets(file_path)
-data_list <- lapply(sheets, function(s) read_excel(file_path, sheet = s))
+data_list <- lapply(sheets, function(s) suppressMessages(read_excel(file_path, sheet = s)))
 names(data_list) <- sheets
 
 # choose a sample size
 n <- 5000
+
+# The EU sheets only report mean/sd/min/max (no quartiles), so distributions
+# are moment-matched (gamma for non-negative variables) within each
+# TF8 x COUNTRY group. Groups are weighted by their number of real farms.
+group_cols <- c("TF8", "COUNTRY")
+group_weights <- data_list$categorical_vars |>
+  dplyr::group_by(variable, TF8, COUNTRY) |>
+  dplyr::summarise(n = sum(count), .groups = "drop") |>
+  dplyr::group_by(TF8, COUNTRY) |>
+  dplyr::summarise(weight = max(n), .groups = "drop") |>
+  as.data.frame()
 
 ## Generate mock data ----
 fadn_fict <- h_generate_mock_data(
@@ -206,7 +185,8 @@ fadn_fict <- h_generate_mock_data(
   seed = 42,
   continuous_stats = data_list$continuous_vars,
   categorical_stats = data_list$categorical_vars,
-  group_cols    = c("TF8", "COUNTRY")
+  group_cols    = group_cols,
+  group_weights = group_weights
 ) |>
   # add identifier
   dplyr::mutate(

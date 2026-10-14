@@ -110,48 +110,83 @@ table_size <- function(cat_df) {
                 na.rm = TRUE)
 }
 
-n_farms <- 500
+n_farms <- 1000
+fr_years <- 2018:2020
 tables <- c(rica = "rica20", veg = "veg20", ani = "ani20", pan = "pan20")
+target_pass_rate <- 0.9
 
 # Each table keeps its real size relative to the farm table (e.g. several
 # crop rows per farm in `veg`)
 size_rica <- table_size(data_list$rica20_cat)
 
-rica_fict <- lapply(tables, function(tb) {
-  h_generate_mock_data(
-    n = round(n_farms * table_size(data_list[[paste0(tb, "_cat")]]) / size_rica),
-    seed = 42,
-    continuous_stats  = prep_cont(data_list[[paste0(tb, "_cont")]]),
-    categorical_stats = prep_cat(data_list[[paste0(tb, "_cat")]])
+make_french_year <- function(year, seed) {
+  tabs <- lapply(tables, function(tb) {
+    h_generate_mock_data(
+      n = round(n_farms * table_size(data_list[[paste0(tb, "_cat")]]) / size_rica),
+      seed = seed,
+      continuous_stats  = prep_cont(data_list[[paste0(tb, "_cont")]]),
+      categorical_stats = prep_cat(data_list[[paste0(tb, "_cat")]])
+    )
+  })
+
+  # add common identifier
+  set.seed(seed)
+  n <- nrow(tabs$rica)
+  id_pool <- paste0("FARM_", year, "_", formatC(seq_len(n), width = nchar(n) + 1, flag = "0"))
+
+  tabs <- lapply(tabs, function(df) {
+    nrows <- nrow(df)
+    if (nrows == n) {
+      df[["IDENT"]] <- id_pool
+    } else if (nrows > n) {
+      # every farm appears at least once, remaining rows sampled with replacement
+      df[["IDENT"]] <- c(id_pool, sample(id_pool, size = nrows - n, replace = TRUE))
+    } else {
+      df[["IDENT"]] <- sample(id_pool, size = nrows, replace = FALSE)
+    }
+    df[, c("IDENT", setdiff(names(df), "IDENT"))]
+  })
+
+  # Use the A2 conversion + infer_practices() as the source of truth for
+  # eligibility, then keep all valid farms and enough invalid ones to reach
+  # the target pass rate.
+  dict_conv <- h_read_dictionary("vignettes/dictionary_conversion_filled_FRA.xlsx")
+  converted <- h_pivot_national_fadn(
+    raw_tables = h_stack_yearly_tables(stats::setNames(list(tabs), year), year_col = "YEAR"),
+    dict_conversion = dict_conv,
+    id_cols = c("IDENT", "YEAR"),
+    table_config = list(
+      CROPS = list(table = "veg", code_col = "CODE3"),
+      LIVESTOCK = list(table = "ani", code_col = "CODE6"),
+      `ANIMAL PRODUCTS AND SERVICES` = list(table = "pan", code_col = "CODE7")
+    )
   )
-})
+  converted$COUNTRY <- "FRA"
+  ready <- data_4FADN2Footprint(converted, var_dict = dict_FADN,
+                                id_cols = c("ID", "YEAR", "COUNTRY")) |>
+    infer_practices(overwrite = TRUE)
 
-# add common identifier
-set.seed(42)
-
-n <- nrow(rica_fict$rica)
-
-# Create a pool of unique farm IDs
-id_pool <- paste0("FARM_", formatC(seq_len(n), width = nchar(n) + 1, flag = "0"))
-
-rica_fict <- lapply(rica_fict, function(df) {
-  nrows <- nrow(df)
-
-  if (nrows == n) {
-    # One row per farm (e.g., rica table) → assign all IDs
-    df[["IDENT"]] <- id_pool
-  } else if (nrows > n) {
-    # Multiple rows per farm (e.g., veg, ani, pan) → every farm appears at
-    # least once, remaining rows sampled with replacement
-    df[["IDENT"]] <- c(id_pool, sample(id_pool, size = nrows - n, replace = TRUE))
-  } else {
-    # Fewer rows than farms → sample without replacement
-    df[["IDENT"]] <- sample(id_pool, size = nrows, replace = FALSE)
+  valid <- unique(as.character(ready@farm$ID))
+  invalid <- unique(as.character(ready@traceability$discarded_farms$ID))
+  n_invalid_to_keep <- round(length(valid) * (1 - target_pass_rate) / target_pass_rate)
+  if (length(invalid) < n_invalid_to_keep) {
+    stop("Not enough invalid candidate French farms to produce a 90% pass rate.")
   }
+  set.seed(seed)
+  keep <- c(valid, sample(invalid, n_invalid_to_keep))
+  message(year, ": ", length(keep), " French mock farms retained; ",
+          length(valid), " (", round(100 * length(valid) / length(keep), 1),
+          "%) pass infer_practices().")
 
-  # Move ID to first column
-  df[, c("IDENT", setdiff(names(df), "IDENT"))]
+  lapply(tabs, function(df) df[df$IDENT %in% keep, , drop = FALSE])
+}
+
+data("dict_FADN", package = "FADN2Footprint")
+rica_fict_years <- lapply(seq_along(fr_years), function(i) {
+  make_french_year(fr_years[i], seed = 42 + i)
 })
+names(rica_fict_years) <- fr_years
+rica_fict <- rica_fict_years[[as.character(max(fr_years))]]
 
 
 
@@ -192,7 +227,7 @@ fadn_fict <- h_generate_mock_data(
   # add identifier
   dplyr::mutate(
     ID = paste0("FARM_", formatC(seq_len(n), width = nchar(n) + 1, flag = "0")),
-    YEAR = 2020)
+    YEAR = sample(2018:2020, n, replace = TRUE))
 
 # Independent sampling of every crop variable can create crop records with
 # production but no area, as well as crop types without practice references.
@@ -286,3 +321,28 @@ mock_data <- list(
 )
 
 usethis::use_data(mock_data, overwrite = T)
+
+## Excel files ----
+# EU set: one file per country and year, all in one folder
+eu_dir <- "inst/ext_data/mock_FADN_EU"
+unlink(eu_dir, recursive = TRUE)
+dir.create(eu_dir, recursive = TRUE)
+for (cty in unique(fadn_fict$COUNTRY)) {
+  for (yr in unique(fadn_fict$YEAR[fadn_fict$COUNTRY == cty])) {
+    openxlsx::write.xlsx(
+      fadn_fict[fadn_fict$COUNTRY == cty & fadn_fict$YEAR == yr, , drop = FALSE],
+      file.path(eu_dir, paste0("FADN_", cty, "_", yr, ".xlsx"))
+    )
+  }
+}
+
+# French set: one subfolder per year, one file per table
+fr_dir <- "inst/ext_data/mock_FADN_FRA"
+unlink(fr_dir, recursive = TRUE)
+for (yr in names(rica_fict_years)) {
+  dir.create(file.path(fr_dir, yr), recursive = TRUE)
+  for (tb in names(rica_fict_years[[yr]])) {
+    openxlsx::write.xlsx(rica_fict_years[[yr]][[tb]],
+                         file.path(fr_dir, yr, paste0(tb, ".xlsx")))
+  }
+}

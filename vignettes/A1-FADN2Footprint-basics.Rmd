@@ -26,6 +26,7 @@ library(readxl)
 library(gt)
 
 pak::pak("sarah-huet/FADN2Footprint")
+Y
 library(FADN2Footprint)
 
 options(tibble.width = Inf)
@@ -198,32 +199,31 @@ To build a `FADN2Footprint` object you need:
   compute landscape-related indicators and footprints.
 
 ```{r load_data}
-# These are illustrative example objects.
-# Replace them with your real data.
-data("mock_data", package = "FADN2Footprint")
+# Mock EU FADN data: one Excel file per country and year
+mock_dir <- system.file("ext_data", "mock_FADN_EU", package = "FADN2Footprint")
+if (mock_dir == "") mock_dir <- "inst/ext_data/mock_FADN_EU"
+
+fadn_fict <- list.files(mock_dir, pattern = "\\.xlsx$", full.names = TRUE) |>
+  lapply(readxl::read_excel) |>
+  dplyr::bind_rows()
+
 data("dict_FADN", package = "FADN2Footprint")
 
 ```
 
 ```{r excerpt_mock_data}
 
-head(mock_data$fadn_fict) |> gt()
+head(fadn_fict) |> gt()
 
 ```
 
 ## Build from a FADN dataset already matching the internal dictionary
 
-XX moi je fournirai plutôt le mock data sous format excel, comme tu le
-fais pour les tables de conversion en A2. C'est ce que les utilisateurs
-auront, donc ça leur permet de s'y retrouver. J'y laisserai notamment la
-description des variables, et je limiterais aux variables effectivement
-utilisées par le package.
-
 ```{r dict_built_in}
 
 
 my_object <- FADN2Footprint::data_4FADN2Footprint(
-  df       = mock_data$fadn_fict,
+  df       = fadn_fict,
   var_dict = dict_FADN,
   id_cols  = c("ID", "YEAR", "COUNTRY")
 )

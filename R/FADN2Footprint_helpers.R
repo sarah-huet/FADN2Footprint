@@ -975,6 +975,92 @@ h_stack_country_tables <- function(country_data, country_col = "COUNTRY") {
 # Mock data ----
 
 
+#' Simulate one continuous variable from descriptive statistics
+#'
+#' When the three quartiles are available, values are drawn by piecewise
+#' interpolation through the quantile ladder
+#' \code{(0, .25, .5, .75, 1) -> (min, p25, p50, p75, max)} (inverse-CDF
+#' sampling). The positive part is interpolated in log space (locally
+#' log-normal) because farm-level variables are strongly right-skewed. Exact
+#' zero shares implied by the quartiles are preserved. If only mean, sd, min
+#' and max are available, a moment-matched gamma (non-negative variables) or a
+#' normal distribution is used. In all cases positive values are finally
+#' rescaled so that the sample mean matches \code{mean}, then clipped to
+#' \code{[min, max]}.
+#'
+#' @param n Number of values to draw.
+#' @param mean,sd,min,max Reported descriptive statistics (same unit as the
+#'   variable).
+#' @param p25,p50,p75 Reported quartiles (same unit), or \code{NA}.
+#' @return Numeric vector of length \code{n}.
+#' @noRd
+.h_sim_continuous <- function(n, mean, sd, min, max,
+                              p25 = NA_real_, p50 = NA_real_, p75 = NA_real_) {
+  if (n == 0) return(numeric(0))
+  if (!is.finite(mean) || !is.finite(min) || !is.finite(max)) return(rep(NA_real_, n))
+  if (!is.finite(sd) || sd <= 0 || max <= min) {
+    return(rep(min(max(mean, min), max), n))
+  }
+
+  u <- runif(n)
+
+  if (all(is.finite(c(p25, p50, p75)))) {
+    probs  <- c(0, 0.25, 0.5, 0.75, 1)
+    values <- cummax(c(min, p25, p50, p75, max))
+    pos    <- values > 0
+
+    if (min >= 0 && sum(pos) >= 2) {
+      first_pos <- which(pos)[1]
+      out <- numeric(n)
+      below <- rep(FALSE, n)
+      if (first_pos > 1) {
+        below <- u <= probs[first_pos]
+        if (any(below)) {
+          out[below] <- approx(probs[seq_len(first_pos)], values[seq_len(first_pos)],
+                               xout = u[below], rule = 2)$y
+        }
+      }
+      if (any(!below)) {
+        out[!below] <- exp(approx(probs[pos], log(values[pos]),
+                                  xout = u[!below], rule = 2)$y)
+      }
+    } else if (min >= 0 && sum(pos) == 1 && mean > 0) {
+      # Zero-inflated: exponential tail above the last zero quantile
+      z <- max(probs[!pos])
+      f <- 1 - z
+      out <- numeric(n)
+      tail_idx <- u > z
+      if (any(tail_idx)) {
+        v <- (u[tail_idx] - z) / f
+        out[tail_idx] <- -(mean / f) * log(1 - pmin(v, 1 - 1e-9))
+      }
+    } else {
+      out <- approx(probs, values, xout = u, rule = 2)$y
+    }
+  } else if (min >= 0 && mean > min) {
+    m <- mean - min
+    out <- min + rgamma(n, shape = (m / sd)^2, scale = sd^2 / m)
+  } else {
+    out <- rnorm(n, mean = mean, sd = sd)
+  }
+
+  # Match the reported mean, then enforce the reported range. With quartiles,
+  # only the upper tail (above p75) is rescaled so the quartiles are preserved.
+  cur <- base::mean(out)
+  if (all(is.finite(c(p25, p50, p75))) && min >= 0 && any(out > p75)) {
+    tail_idx <- out > p75
+    excess <- sum(out[tail_idx] - p75)
+    k <- (mean * n - sum(out[!tail_idx]) - sum(tail_idx) * p75) / excess
+    out[tail_idx] <- p75 + max(k, 0) * (out[tail_idx] - p75)
+  } else if (min >= 0) {
+    if (cur > 0 && mean > 0) out <- out * (mean / cur)
+  } else {
+    out <- out + (mean - cur)
+  }
+  pmin(pmax(out, min), max)
+}
+
+
 #' Generate mock FADN data from descriptive statistics
 #'
 #' Handles three cases:
@@ -984,7 +1070,9 @@ h_stack_country_tables <- function(country_data, country_col = "COUNTRY") {
 #'
 #' @param n Total number of rows to generate.
 #' @param continuous_stats Data.frame with columns: variable, mean, sd, min, max,
-#'   and optionally grouping columns (e.g., farm_type, country).
+#'   optionally the quartiles p25, p50, p75 (used to reproduce the shape and
+#'   the zero share of the distribution), and optionally grouping columns
+#'   (e.g., farm_type, country).
 #' @param categorical_stats Data.frame with columns: variable, level, count,
 #'   and optionally the same grouping columns.
 #' @param group_cols Character vector of column names used for grouping
@@ -1011,17 +1099,16 @@ h_generate_mock_data <- function(n = 500,
     # Continuous variables
     if (!is.null(cont_stats) && nrow(cont_stats) > 0) {
       for (i in seq_len(nrow(cont_stats))) {
-        v      <- cont_stats$variable[i]
-        values <- rnorm(n_block,
-                        mean = as.numeric(cont_stats$mean[i]),
-                        sd   = as.numeric(cont_stats$sd[i]))
-        if ("min" %in% names(cont_stats)) {
-          values <- pmax(values, as.numeric(cont_stats$min[i]))
+        v   <- cont_stats$variable[i]
+        get <- function(col, default = NA_real_) {
+          if (col %in% names(cont_stats)) as.numeric(cont_stats[[col]][i]) else default
         }
-        if ("max" %in% names(cont_stats)) {
-          values <- pmin(values, as.numeric(cont_stats$max[i]))
-        }
-        block[[v]] <- values
+        block[[v]] <- .h_sim_continuous(
+          n_block,
+          mean = get("mean"), sd = get("sd"),
+          min = get("min", -Inf), max = get("max", Inf),
+          p25 = get("p25"), p50 = get("p50"), p75 = get("p75")
+        )
       }
     }
 
@@ -1066,10 +1153,10 @@ h_generate_mock_data <- function(n = 500,
 
   } else if (is.data.frame(group_weights)) {
     # Merge weights onto groups_df
-    gw <- merge(groups_df, group_weights, by = group_cols, all.x = TRUE)
-    weight_col <- intersect(c("count", "weight", "n"), names(gw))
+    weight_col <- intersect(c("count", "weight", "n"), names(group_weights))
     if (length(weight_col) == 0) stop("group_weights must have a 'weight', 'count', or 'n' column.")
-    w <- as.numeric(gw[[weight_col[1]]])
+    key <- function(d) do.call(paste, c(unname(as.list(d[group_cols])), sep = "\r"))
+    w <- as.numeric(group_weights[[weight_col[1]]])[match(key(groups_df), key(group_weights))]
     w[is.na(w)] <- 0
     group_ns <- round(w / sum(w) * n)
     # Adjust rounding to hit exactly n
@@ -1087,6 +1174,8 @@ h_generate_mock_data <- function(n = 500,
   blocks <- vector("list", n_groups)
 
   for (g in seq_len(n_groups)) {
+
+    if (group_ns[g] <= 0) next
 
     # Build filter mask for this group
     grp_vals <- groups_df[g, , drop = FALSE]

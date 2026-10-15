@@ -13,6 +13,7 @@ tmp*.csv
 
 # User-specific files
 .Ruserdata
+.vscode/
 
 # R Environment Variables
 .Renviron
@@ -73,7 +74,7 @@ inst/ext_data/EUROSTAT_prices/
 inst/ext_data/ref_fuel/
 inst/ext_data/UNFCCC_ghg_inventories/
 
-# Agent-generated reports (regenerable, not source of truth)
+# Agents and Agent-generated reports (regenerable, not source of truth)
 AI_agents/
 *.report.txt
 *.agent-output.*
@@ -82,6 +83,7 @@ ARCHITECTURE.md
 CONTRIBUTING.md
 ISSUES_FOUND.md
 STATUS.md
+.github/agents/*.md
 
 # Temporary files
 tmp*

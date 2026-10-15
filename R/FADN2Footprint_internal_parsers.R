@@ -812,15 +812,37 @@
       by = c('FADN_code_letter', 'Country_ISO_3166_1_A3', 'YEAR')
     ) |>
     ## fallback: average per FADN_code_letter and country
+        dplyr::left_join(
+      EUROSTAT_slaughter |>
+        dplyr::select(FADN_code_letter, Country_ISO_3166_1_A3, YEAR, share_SSN, share_SRN) |>
+        ## fallback: average per FADN_code_letter and country
+        dplyr::summarise(
+          share_SSN_cat_country = mean(share_SSN, na.rm = TRUE),
+          share_SRN_cat_country = mean(share_SRN, na.rm = TRUE),
+          .by = c(FADN_code_letter, Country_ISO_3166_1_A3)
+        ),
+      by = c('FADN_code_letter', 'Country_ISO_3166_1_A3')
+    ) |>
     dplyr::mutate(
-      share_SSN = dplyr::coalesce(share_SSN, mean(share_SSN, na.rm = TRUE)),
-      share_SRN = dplyr::coalesce(share_SRN, mean(share_SRN, na.rm = TRUE)),
+      share_SSN = dplyr::coalesce(share_SSN, share_SSN_cat_country),
+      share_SRN = dplyr::coalesce(share_SRN, share_SRN_cat_country),
       .by = c(FADN_code_letter, Country_ISO_3166_1_A3)
     ) |>
     ## fallback: average per FADN_code_letter
+        dplyr::left_join(
+      EUROSTAT_slaughter |>
+        dplyr::select(FADN_code_letter, Country_ISO_3166_1_A3, YEAR, share_SSN, share_SRN) |>
+        ## fallback: average per FADN_code_letter,
+        dplyr::summarise(
+          share_SSN_cat =  mean(share_SSN, na.rm = TRUE),
+          share_SRN_cat =  mean(share_SRN, na.rm = TRUE),
+          .by = c(FADN_code_letter)
+        ),
+      by = c('FADN_code_letter')
+    ) |>
     dplyr::mutate(
-      share_SSN = dplyr::coalesce(share_SSN, mean(share_SSN, na.rm = TRUE)),
-      share_SRN = dplyr::coalesce(share_SRN, mean(share_SRN, na.rm = TRUE)),
+      share_SSN = dplyr::coalesce(share_SSN, share_SSN_cat),
+      share_SRN = dplyr::coalesce(share_SRN, share_SRN_cat),
       .by = c(FADN_code_letter)
     ) |>
     # version: average NUTS2
@@ -864,13 +886,13 @@
                    SN * share_SSN),
       SRN = ifelse(complete_sales,
                    dplyr::coalesce(SRN, 0),
-                   SN * share_SRN),
+                   SN * (1 - share_SSN)),
       SSV = ifelse(complete_sales,
                    dplyr::coalesce(SSV, 0),
                    SV * share_SSN),
       SRV = ifelse(complete_sales,
                    dplyr::coalesce(SRV, 0),
-                   SV * share_SRN)
+                   SV * (1 - share_SSN))
     ) #|>
   # version: default SSN
   #dplyr::mutate(

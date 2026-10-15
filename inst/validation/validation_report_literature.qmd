@@ -33,7 +33,9 @@ library(gt)
 
 library(ggplot2)
 
-devtools::load_all("../../")
+wd_path <- "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint"
+
+devtools::load_all(wd_path)
 #library(FADN2Footprint)
 
 ```
@@ -56,7 +58,7 @@ below a per-indicator threshold, or **out of range** otherwise.
 #source("validation_FADN_data_offline.R")
 ## 
 #load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
-load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+load(file.path(wd_path, "data_raw/FADN_FRA_2018_2021_obj_GHGE.RData"))
 #my_object_GHGE <- m_prune_farms(my_object_GHGE,
 #                                YEAR %in% c("2018", "2019", "2020"))
 
@@ -99,7 +101,7 @@ object@footprints$GHGE$GHGE_crops |>
 # TOTAL GHGE ----
 
 lit_GHGE_total <- readxl::read_excel(
-  "../../inst/validation/validation_references.xlsx",
+  file.path(wd_path, "inst/validation/validation_references.xlsx"),
   sheet = "summary_total_GHGE",
   col_types = c("text", "numeric", "numeric", "text", "text")
 ) |>
@@ -120,7 +122,7 @@ lit_GHGE_total <- readxl::read_excel(
 # COMPONENTS OF GHGE ----
 
 lit_GHGE_components <- readxl::read_excel(
-  "../../inst/validation/validation_references.xlsx",
+  file.path(wd_path, "inst/validation/validation_references.xlsx"),
   sheet = "summary_share_components"
 ) |>
   # filter for crops, meat and milk 
@@ -148,7 +150,7 @@ cat("Literature (total GHGE) loaded:", nrow(lit_GHGE_total), "rows\n")
 cat("Literature (components of GHGE) loaded:", nrow(lit_GHGE_components), "rows\n")
 
 lit_agri_pract <- readxl::read_excel(
-  "../../inst/validation/validation_references.xlsx",
+  file.path(wd_path, "inst/validation/validation_references.xlsx"),
   sheet = "summary_agri_practices"
 )
 
@@ -229,7 +231,7 @@ lit_table = dplyr::bind_rows(
 ```{r ademe_data}
 
 # add global GHGE at farm scale from ADEME data base of carbon diagnosis
-ADEME_desc_stat_TF <- read.csv("ADEME_desc_stat_TF.csv")
+ADEME_desc_stat_TF <- read.csv((file.path(wd_path, "inst/validation/ADEME_desc_stat_TF.csv")))
 
 lit_table <- dplyr::bind_rows(
   lit_table,

@@ -4,11 +4,11 @@ Title: Infer agricultural practices and compute environmental footprints from FA
 Version: 1.1.0
 Authors@R: c(person("Sarah", "Huet",
                     email = "huetsarah49@live.fr",
-                    comment = c(ORCID = "0000-0002-5449-6959"))
+                    comment = c(ORCID = "0000-0002-5449-6959")),
                     role = c("aut", "cre")),
              person("Valentin", "Bellassen", 
                     email = "valentin.bellassen@inrae.fr",
-                    comment = c(ORCID = "0000-0001-8581-2814"))
+                    comment = c(ORCID = "0000-0001-8581-2814"),
                     role = c("aut")),
              person("INRAE", role = "cph"))
 URL: https://sarah-huet.github.io/FADN2Footprint/, https://github.com/sarah-huet/FADN2Footprint

@@ -10,6 +10,8 @@
 
 FADN2Footprint - DEVELOPMENT VERSION
 
+![CC-license](by-nc-sa.png)
+
 =================================================================
 
 This package has been validated ONLY for:

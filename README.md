@@ -75,8 +75,7 @@ Huet S., Thomas L., Braquaval X., Rincon-Ariza F., Ayouba K., Bellassen V. (in p
 ## Other resources {#other-resources}
 
 The FADN2Footprint project also has a number of supporting online
-resources, most of which can by found at [the FADN2Footprint home
-page](https://sarah-huet.github.io/fadn2footprint.html).
+resources, all described in the vignettes.
 
 To post feature requests or ask for help, try [the FADN2Footprint Issue
 Tracker](https://github.com/sarah-huet/FADN2Footprint/issues).

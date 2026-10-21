@@ -198,7 +198,7 @@ h_average_practices <- function(data,
 #'   \code{output}, each containing columns \code{FADN_code_letter} and the
 #'   column named by \code{national_code_col}.
 #' @param national_code_col Character. Column name in \code{data_extra} tables
-#'   that holds the national product codes.
+#'   that holds the national product codes. Multiple codes are pipe-delimited.
 #' @param overwrite Logical. Overwrite existing file? Default \code{FALSE}.
 #'
 #' @return Invisibly returns the output path.
@@ -294,7 +294,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
       if (is.null(tbl)) return(NULL)
       tbl %>%
         dplyr::select(FADN_code_letter, FADN_code_description, national_code = !!rlang::sym(national_code_col)) %>%
-        tidyr::separate_longer_delim(national_code, ";") %>%
+        tidyr::separate_longer_delim(national_code, "|") %>%
         dplyr::mutate(
           Group = group_map[[nm]],
           allocation_key = NA_real_
@@ -1218,4 +1218,3 @@ h_generate_mock_data <- function(n = 500,
 
   return(result)
 }
-

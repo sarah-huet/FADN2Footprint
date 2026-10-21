@@ -35,7 +35,7 @@ f_feed_theo_ration <- function(object){
   ## assign average ratio by livestock code
   AROPAJ_ref_ration <- data_extra$livestock |>
     dplyr::select(FADN_code_letter,AROPAJ) |>
-    tidyr::separate_longer_delim(AROPAJ,";") |>
+    tidyr::separate_longer_delim(AROPAJ,"|") |>
     # add AROPAJ values in ton of Dry Matter per livestock unit per year
     dplyr::left_join(AROPAJ,
                      by = c('AROPAJ')) |>

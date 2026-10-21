@@ -71,15 +71,14 @@
 #'
 #'
 
-f_n_ferti <- function(object,
-                      overwrite = FALSE){
+f_n_ferti <- function(object, overwrite = FALSE) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
-  if (!is.null(object@practices$crops$N_ferti)&& !overwrite) {
+  if (!is.null(object@practices$crops$N_ferti) && !overwrite) {
     message("Using cached values stored in object@practices$crops$N_ferti.")
-    return(object@practices$crops$N_ferti)  # use cached value
+    return(object@practices$crops$N_ferti) # use cached value
   }
 
   # here we considered that fertilizers are applied both on crops and grasslands
@@ -89,21 +88,22 @@ f_n_ferti <- function(object,
 
   # assign averages by crop codes (60 different crops)
   EPK_avrg <- data_extra$crops |>
-    dplyr::select(FADN_code_letter,land_use_type,EPK_ferti_crop_name) |>
+    dplyr::select(FADN_code_letter, land_use_type, EPK_ferti_crop_name) |>
     # select crop code and name
     dplyr::filter(FADN_code_letter %in% unique(object@crop$FADN_code_letter)) |>
     # add fertilization data from EPK 2017
-    tidyr::separate_longer_delim(EPK_ferti_crop_name,";") |>
-    dplyr::left_join(EPK_Nferti,
-              by = join_by(EPK_ferti_crop_name),
-              relationship = "many-to-many" # each crop has both an organic and a conventional value
+    tidyr::separate_longer_delim(EPK_ferti_crop_name, "|") |>
+    dplyr::left_join(
+      EPK_Nferti,
+      by = join_by(EPK_ferti_crop_name),
+      relationship = "many-to-many" # each crop has both an organic and a conventional value
     ) |>
     # average by crop and organic certification
     dplyr::filter(!is.na(EPK_ferti_crop_name)) |>
     dplyr::summarise(
       EPK_Nmin = mean(N_min, na.rm = T),
       EPK_Norg = mean(N_org, na.rm = T),
-      .by = c(FADN_code_letter,ORGANIC)
+      .by = c(FADN_code_letter, ORGANIC)
     ) |>
     # add zero for organic mineral nitrogen fertilization
     dplyr::mutate(
@@ -117,50 +117,53 @@ f_n_ferti <- function(object,
 
   # assign threshold by crop codes (60 different crops)
   EPK_thrhld <- data_extra$crops |>
-    dplyr::select(FADN_code_letter,land_use_type,EPK_ferti_crop_name) |>
+    dplyr::select(FADN_code_letter, land_use_type, EPK_ferti_crop_name) |>
     # select crop code and name
     dplyr::filter(FADN_code_letter %in% unique(object@crop$FADN_code_letter)) |>
     # add fertilization data from EPK 2017
-    tidyr::separate_longer_delim(EPK_ferti_crop_name,";") |>
-    dplyr::left_join(EPK_Norg,
-              by = join_by(EPK_ferti_crop_name),
-              relationship = "many-to-many" # each crop has both an organic and a conventional value
+    tidyr::separate_longer_delim(EPK_ferti_crop_name, "|") |>
+    dplyr::left_join(
+      EPK_Norg,
+      by = join_by(EPK_ferti_crop_name),
+      relationship = "many-to-many" # each crop has both an organic and a conventional value
     ) |>
     # average by crop and organic certification
     dplyr::filter(!is.na(EPK_ferti_crop_name)) |>
     dplyr::summarise(
       Norg_thrhld_min = min(Norg_thrhld_min, na.rm = T),
       Norg_thrhld_max = max(Norg_thrhld_max, na.rm = T),
-      .by = c(FADN_code_letter,ORGANIC)
+      .by = c(FADN_code_letter, ORGANIC)
     )
 
   # Combine EPK reference values ---------------------------------------------------------------------------------------------------------------------
 
   # select threshold as the minimum or maximum between average standard value CI 95% limit
-  EPK_ref <- dplyr::left_join(EPK_avrg,EPK_thrhld,
-                       by = join_by(FADN_code_letter, ORGANIC)) |>
+  EPK_ref <- dplyr::left_join(
+    EPK_avrg,
+    EPK_thrhld,
+    by = join_by(FADN_code_letter, ORGANIC)
+  ) |>
     dplyr::mutate(
       Norg_thrhld_min = pmin(EPK_Norg, Norg_thrhld_min, na.rm = T),
       Norg_thrhld_max = pmax(EPK_Norg, Norg_thrhld_max, na.rm = T),
     ) |>
     # encode organic farming
     dplyr::mutate(
-      ORGANIC = ifelse(ORGANIC == 1,"T","F")
+      ORGANIC = ifelse(ORGANIC == 1, "T", "F")
     )
-
 
   # add missing FADN crop codes
   # For crops without specific reference average, we used values of same species crops or, when no value for the crop species, the overall average
   EPK_missing <- data_extra$crops |>
-    dplyr::select(FADN_code_letter,land_use_type,EPK_ferti_crop_name) |>
+    dplyr::select(FADN_code_letter, land_use_type, EPK_ferti_crop_name) |>
     dplyr::filter(is.na(EPK_ferti_crop_name)) |>
     # add organic for each
     dplyr::mutate(ORGANIC = "T;F") |>
-    tidyr::separate_longer_delim(ORGANIC,";") |>
+    tidyr::separate_longer_delim(ORGANIC, ";") |>
     # add species
     dplyr::left_join(
       data_extra$crops |>
-        dplyr::select(FADN_code_letter,species),
+        dplyr::select(FADN_code_letter, species),
       by = join_by(FADN_code_letter)
     ) |>
     # add reference value by species
@@ -168,56 +171,73 @@ f_n_ferti <- function(object,
       EPK_ref |>
         dplyr::left_join(
           data_extra$crops |>
-            dplyr::select(FADN_code_letter,species),
+            dplyr::select(FADN_code_letter, species),
           by = join_by(FADN_code_letter)
         ) |>
         dplyr::summarise(
-          EPK_Nmin = mean(EPK_Nmin,na.rm = T),
-          EPK_Norg = mean(EPK_Norg,na.rm = T),
+          EPK_Nmin = mean(EPK_Nmin, na.rm = T),
+          EPK_Norg = mean(EPK_Norg, na.rm = T),
           Norg_thrhld_min = min(Norg_thrhld_min, na.rm = T),
           Norg_thrhld_max = max(Norg_thrhld_max, na.rm = T),
-          .by = c(species,ORGANIC)),
-      by = join_by(species,ORGANIC),
+          .by = c(species, ORGANIC)
+        ),
+      by = join_by(species, ORGANIC),
       relationship = "many-to-many"
     ) |>
     # for species without reference value, we assign overall average by organic certification
     group_by(ORGANIC) |>
     dplyr::mutate(
-      EPK_Nmin = ifelse(is.na(EPK_Nmin), mean(EPK_Nmin,na.rm = T), EPK_Nmin),
-      EPK_Norg = ifelse(is.na(EPK_Norg), mean(EPK_Norg,na.rm = T), EPK_Norg),
-      Norg_thrhld_min = ifelse(is.na(Norg_thrhld_min), mean(Norg_thrhld_min,na.rm = T), Norg_thrhld_min),
-      Norg_thrhld_max = ifelse(is.na(Norg_thrhld_max), mean(Norg_thrhld_max,na.rm = T), Norg_thrhld_max)
-    ) |> ungroup()
+      EPK_Nmin = ifelse(is.na(EPK_Nmin), mean(EPK_Nmin, na.rm = T), EPK_Nmin),
+      EPK_Norg = ifelse(is.na(EPK_Norg), mean(EPK_Norg, na.rm = T), EPK_Norg),
+      Norg_thrhld_min = ifelse(
+        is.na(Norg_thrhld_min),
+        mean(Norg_thrhld_min, na.rm = T),
+        Norg_thrhld_min
+      ),
+      Norg_thrhld_max = ifelse(
+        is.na(Norg_thrhld_max),
+        mean(Norg_thrhld_max, na.rm = T),
+        Norg_thrhld_max
+      )
+    ) |>
+    ungroup()
 
-  EPK_ref <- rbind(EPK_ref,EPK_missing |> dplyr::select(colnames(EPK_ref))) |>
+  EPK_ref <- rbind(EPK_ref, EPK_missing |> dplyr::select(colnames(EPK_ref))) |>
     dplyr::mutate(ORGANIC = as.logical(ORGANIC))
 
   # Estimate N excretion from livestock --------------------------------------------------------------------------------------------------------------------------------------
 
   N_excr <- f_n_excr(object, overwrite = overwrite)
-  N_excr = Reduce(f = bind_rows, x = N_excr)
+  N_excr <- Reduce(f = bind_rows, x = N_excr)
   # Total amount of N excreted is in kg N yr-1
 
   # Join data --------------------------------------------------------------------------------------------------------------------------------------
 
   input_data <- object@crop |>
     # crop data
-    dplyr::select(tidyselect::all_of(object@traceability$id_cols),FADN_code_letter,area_ha) |>
+    dplyr::select(
+      tidyselect::all_of(object@traceability$id_cols),
+      FADN_code_letter,
+      area_ha
+    ) |>
     #filter(!is.na(area_ha)) |>
     # input data
     dplyr::left_join(
       object@input |>
-        dplyr::select(tidyselect::all_of(object@traceability$id_cols),
-                      N_min_ferti_Q),
-      by = object@traceability$id_cols) |>
+        dplyr::select(
+          tidyselect::all_of(object@traceability$id_cols),
+          N_min_ferti_Q
+        ),
+      by = object@traceability$id_cols
+    ) |>
     # Convert Quantity of N used in mineral fertilizers from tons to kg
     dplyr::mutate(N_min_ferti_Q = N_min_ferti_Q * 10^3) |>
     # organic certification
     dplyr::left_join(
       object@farm |>
-        dplyr::select(tidyselect::all_of(object@traceability$id_cols),
-                      ORGANIC),
-      by = object@traceability$id_cols) |>
+        dplyr::select(tidyselect::all_of(object@traceability$id_cols), ORGANIC),
+      by = object@traceability$id_cols
+    ) |>
     # add N averages and thresholds
     dplyr::left_join(
       EPK_ref,
@@ -226,9 +246,12 @@ f_n_ferti <- function(object,
     # add N excreted from livestock
     dplyr::left_join(
       N_excr |>
-        dplyr::summarise(Nex_kgN_farm = sum(Nex_kgN_livcat_y,na.rm = T),
-                  .by = object@traceability$id_cols),
-      by = object@traceability$id_cols)
+        dplyr::summarise(
+          Nex_kgN_farm = sum(Nex_kgN_livcat_y, na.rm = T),
+          .by = object@traceability$id_cols
+        ),
+      by = object@traceability$id_cols
+    )
 
   # Estimate parameter -----------------------------------------------------------------------------------------------------------------------------
   N_ferti <- input_data |>
@@ -246,28 +269,32 @@ f_n_ferti <- function(object,
     ) |>
     # calculate N fertilization for each crop in each farm
     dplyr::mutate(
-
       ## mineral N fertilizer
       ## still zero for organic farms
       N_ferti_min = case_when(
         ORGANIC == T ~ 0,
         N_min_ferti_Q == 0 ~ 0,
-        .default = (N_min_ferti_Q * (Nmin_th/sum_Nmin_th)) / area_ha
+        .default = (N_min_ferti_Q * (Nmin_th / sum_Nmin_th)) / area_ha
       ),
 
       ## organic N fertilizer
       ### estimate if there is N excretion from livestock in the farm
       livestock = case_when(
-        Nex_kgN_farm >0 ~ T,
-        .default = F),
+        Nex_kgN_farm > 0 ~ T,
+        .default = F
+      ),
       ### estimate if enough livestock
       livestock_enough = case_when(
-        Nex_kgN_farm >0 & ((Nex_kgN_farm * (Norg_th/sum_Norg_th)) / area_ha) > Norg_thrhld_min  ~ T,
+        Nex_kgN_farm > 0 &
+          ((Nex_kgN_farm * (Norg_th / sum_Norg_th)) / area_ha) >
+            Norg_thrhld_min ~ T,
         .default = F
       ),
       ### estimate if too much livestock
       livestock_toomuch = case_when(
-        Nex_kgN_farm >0 & ((Nex_kgN_farm * (Norg_th/sum_Norg_th)) / area_ha) > Norg_thrhld_max  ~ T,
+        Nex_kgN_farm > 0 &
+          ((Nex_kgN_farm * (Norg_th / sum_Norg_th)) / area_ha) >
+            Norg_thrhld_max ~ T,
         .default = F
       ),
 
@@ -276,53 +303,87 @@ f_n_ferti <- function(object,
         ### if no livestock
         livestock == F ~ EPK_Norg,
         ### if livestock: N excreted from livestock
-        livestock == T & livestock_enough == T & livestock_toomuch == F ~ (Nex_kgN_farm * (Norg_th/sum_Norg_th)) / area_ha,
+        livestock == T &
+          livestock_enough == T &
+          livestock_toomuch == F ~ (Nex_kgN_farm * (Norg_th / sum_Norg_th)) /
+          area_ha,
         ### if not enough livestock: organic fertilizer minimum threshold
-        livestock == T & livestock_enough == F & livestock_toomuch == F ~ Norg_thrhld_min,
+        livestock == T &
+          livestock_enough == F &
+          livestock_toomuch == F ~ Norg_thrhld_min,
         ### if too much livestock: organic fertilizer maximum threshold
-        livestock == T & livestock_enough == T & livestock_toomuch == T ~ Norg_thrhld_max
+        livestock == T &
+          livestock_enough == T &
+          livestock_toomuch == T ~ Norg_thrhld_max
       ),
       # Total nitrogen fertilization, t N ha-1
       N_ferti = N_ferti_min + N_ferti_org
-    ) |> ungroup()
+    ) |>
+    ungroup()
 
-  message(nrow(N_ferti |> dplyr::filter(livestock == F) |> dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |> distinct()),
-          " observations have no livestock. They receive the average national value as a standard value (see Methods)."
+  message(
+    nrow(
+      N_ferti |>
+        dplyr::filter(livestock == F) |>
+        dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |>
+        distinct()
+    ),
+    " observations have no livestock. They receive the average national value as a standard value (see Methods)."
   )
-  message(nrow(N_ferti |> dplyr::filter(livestock == T & livestock_enough == F) |> dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |> distinct()),
-          " observations have not enough N excretion from their livestock. They receive the minimum organic N threshold as a standard value (see Methods)."
+  message(
+    nrow(
+      N_ferti |>
+        dplyr::filter(livestock == T & livestock_enough == F) |>
+        dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |>
+        distinct()
+    ),
+    " observations have not enough N excretion from their livestock. They receive the minimum organic N threshold as a standard value (see Methods)."
   )
 
-  message(nrow(N_ferti |> dplyr::filter(livestock == T & livestock_toomuch == T) |> dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |> distinct()),
-          " observations have too much N excretion from their livestock. They receive the maximum organic N threshold as a standard value (see Methods)."
+  message(
+    nrow(
+      N_ferti |>
+        dplyr::filter(livestock == T & livestock_toomuch == T) |>
+        dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |>
+        distinct()
+    ),
+    " observations have too much N excretion from their livestock. They receive the maximum organic N threshold as a standard value (see Methods)."
   )
 
-  message(nrow(N_ferti |> dplyr::filter(livestock == T & livestock_enough == T & livestock_toomuch == F) |> dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |> distinct()),
-          " observations have enough and not too much N excretion from their livestock. They spread the total N excreted from their livestock on-farm (see Methods)."
+  message(
+    nrow(
+      N_ferti |>
+        dplyr::filter(
+          livestock == T & livestock_enough == T & livestock_toomuch == F
+        ) |>
+        dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |>
+        distinct()
+    ),
+    " observations have enough and not too much N excretion from their livestock. They spread the total N excreted from their livestock on-farm (see Methods)."
   )
 
   # Output ------------------------------------------------------------------------------------------------------------------------------------------------------
-  N_ferti = N_ferti |>
-    dplyr::select(tidyselect::all_of(object@traceability$id_cols),ORGANIC,
-                  FADN_code_letter,area_ha,N_min_ferti_Q,
-                  N_ferti,N_ferti_min,N_ferti_org)
+  N_ferti <- N_ferti |>
+    dplyr::select(
+      tidyselect::all_of(object@traceability$id_cols),
+      ORGANIC,
+      FADN_code_letter,
+      area_ha,
+      N_min_ferti_Q,
+      N_ferti,
+      N_ferti_min,
+      N_ferti_org
+    )
 
   message("\nNitrogen fertilization variables are in ton of N ha-1.")
 
   #object@practices$crops$N_ferti <- N_ferti
 
   return(N_ferti)
-
 }
-
-
 
 #tmp_check = N_ferti |>
 #  summarise(raw_data = unique(N_min_ferti_Q),
 #            model_output = sum(N_ferti_min*area_ha,na.rm = T),
 #            .by = object@traceability$id_cols)
 #plot(tmp_check$raw_data,tmp_check$model_output)
-
-
-
-

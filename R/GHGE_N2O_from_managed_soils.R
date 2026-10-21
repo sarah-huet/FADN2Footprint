@@ -184,12 +184,12 @@ f_GHGE_n2o_msoils <- function(object,
     dplyr::select(FADN_code_letter,land_use_type,species,IPCC_default_values) |>
     dplyr::mutate(
       condition_species = dplyr::case_when(
-        is.na(IPCC_default_values) & grepl("cereal|oilseeds|legumes",species)  ~ "Generic Grains;Grains",
+        is.na(IPCC_default_values) & grepl("cereal|oilseeds|legumes",species)  ~ "Generic Grains|Grains",
         is.na(IPCC_default_values) ~ "Generic value for crops not indicated below",
         .default = IPCC_default_values
       )
     ) |>
-    tidyr::separate_longer_delim(condition_species,";") |>
+    tidyr::separate_longer_delim(condition_species,"|") |>
     # add IPCC data
     dplyr::left_join(
       data_extra$IPCC_default_values |>
@@ -427,9 +427,6 @@ f_GHGE_n2o_msoils <- function(object,
   return(N2O_MS)
 
 }
-
-
-
 
 
 

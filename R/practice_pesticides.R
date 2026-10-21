@@ -44,7 +44,7 @@ f_plant_prot <- function(object,
     # select crop code and name
     dplyr::filter(FADN_code_letter %in% unique(object@crop$FADN_code_letter)) |>
     # add pesticide use data from EPK
-    separate_longer_delim(TFI_crop_name,";") |>
+    separate_longer_delim(TFI_crop_name,"|") |>
     left_join(EPK_TFI_avrg,
               by = join_by(TFI_crop_name == lib_ift),
               relationship = "many-to-many" # each crop has both an organic and a conventional value
@@ -153,9 +153,6 @@ f_plant_prot <- function(object,
 
 utils::globalVariables(c('TFI_ha', 'pesticides_v', 'TFI', 'TFI_th', 'TFI_crop_name', 'ifttref', 'TFI_th', 'sum_TFI_th'))
 # this is to avoid a note in check package (the issue is from the use of dplyr)
-
-
-
 
 
 

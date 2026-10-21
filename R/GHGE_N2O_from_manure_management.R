@@ -233,7 +233,7 @@ f_GHGE_n2o_manure <- function(object,
         dplyr::rename(MMS = condition_tech,
                       species = condition_species,
                       default_EF3 = value) |>
-        tidyr::separate_longer_delim(species,";"),
+        tidyr::separate_longer_delim(species,"|"),
       by = c('species', 'MMS'),
       relationship = "many-to-many"
     ) |>

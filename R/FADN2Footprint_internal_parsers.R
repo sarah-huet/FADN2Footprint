@@ -1147,6 +1147,7 @@
       feed_purch_concent_pigs = "IPIGFEDPUR_V", # Purchased feedstuffs for pigs Value	in EUR
       feed_purch_concent_poultry = "IPLTRFEDPUR_V", # Purchased feedstuffs for poultry and other small animals Value	in EUR
       N_min_ferti_Q = "INUSE_Q", # Quantity of N used in mineral fertilisers Quantity	in tonnes
+      N_min_ferti_V = "SE295", # SE295	Purchased fertilisers and soil improvers (excluding those used for forests).
       pesticides_v = "IPROT_V", # Crop protection products Value	in EUR
       diesel_v = "IFULS_V", # Motor fuels and lubricants Value	in EUR
       heating_fuels_v = "IHFULS_V", # Heating fuels Value	in EUR
@@ -1169,9 +1170,34 @@
       } else {
         NA_real_
       })
+    ) |>
+    # fertilisers use quantity where not collected before 2017
+    # estimate N_min_ferti_Q using N_min_ferti_V / ratio if quantity not available
+    ## add EUROSTAT N fertiliser ratios for estimation of quantity when missing
+    dplyr::left_join(
+      EUROSTAT_ferti_use_ratio |>
+        dplyr::mutate(YEAR = as.character(time_period)) |>
+        dplyr::select(country_FADN, YEAR, n_ratio),
+      by = c("COUNTRY" = "country_FADN", "YEAR")
+    ) |>
+    dplyr::mutate(
+      N_min_ferti_Q_estim_EUROSTAT =
+        N_min_ferti_V * n_ratio
+    ) |>
+    dplyr::mutate(
+      N_min_ferti_Q = dplyr::case_when(
+        as.numeric(YEAR) < 2017 ~ N_min_ferti_Q_estim_EUROSTAT,
+        .default = N_min_ferti_Q
+      )
     )
 
-  # 2. Filter Zero Rows -----------------------------------------------------
+#  df_base |>
+#    dplyr::mutate(ratio = N_min_ferti_Q / N_min_ferti_V) |>
+#    ggplot2::ggplot() +
+#    ggplot2::geom_boxplot(ggplot2::aes(x = YEAR, y = ratio)) +
+#    ggplot2::scale_y_log10()
+
+    # 2. Filter Zero Rows -----------------------------------------------------
   # Remove rows where all numeric value variables are zero/NA.
   # We do this before the expensive join.
   # Note: logic excludes IDs.

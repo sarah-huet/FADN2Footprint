@@ -3,11 +3,12 @@ devtools::load_all("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/")
 load("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/R/sysdata.rda")
 
 source(
-  "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/data_extra.R"
+  "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/EUROSTAT_ferti_use_ratio.R"
 )
 
 usethis::use_data(
   data_extra,
+  EUROSTAT_ferti_use_ratio,
   dict_FADN,
   FADN_averages,
   EF_electricity,

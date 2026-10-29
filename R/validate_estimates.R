@@ -30,6 +30,7 @@ validate_against_literature <- function(
     comp$in_lit_range       ~ "\U2705 in range",
     comp$within_tolerance       ~ "\U2705 in range",
     #comp$within_tolerance   ~ "\U26A0\UFE0F within tolerance",
+    comp$estimate == 0 & comp$lit_midpoint == 0 ~ "\U2705 in range",
     TRUE                    ~ "\U274C out of range"
   )
 

@@ -1,0 +1,20 @@
+"FADN_code_letter","FADN_code_number","FADN_code_description","RICA_code_number","RICA_QPROD7_unit","species","output","from_livestock_category"
+"PANIMPRDOTH",900,"Other animal products",NA,NA,NA,NA,NA
+"PANIMSERVOTH",1200,"Other animal services",NA,NA,NA,NA,NA
+"PCNTRANIMOTH",1190,"Other animals under contract",NA,NA,NA,NA,NA
+"PCNTRCATL",1120,"Cattle under contract",NA,NA,NA,NA,NA
+"PCNTRPIG",1140,"Pigs under contract",NA,NA,NA,NA,NA
+"PCNTRPLTR",1150,"Poultry under contract",NA,NA,NA,NA,NA
+"PCNTRRG",1100,"Contract rearing",NA,NA,NA,NA,NA
+"PCNTRSHEPGOAT",1130,"Sheep and/or goats under contract",NA,NA,NA,NA,NA
+"PEGGC",531,"Eggs for human consumption (all poultry)",76,1000,"poultry","eggs","LHENSLAY"
+"PEGGH",532,"Eggs for hatching (all poultry)",76,1000,"poultry","eggs","LHENSLAY"
+"PEGGHENS_X",NA,"Hens’ eggs",NA,NA,NA,NA,NA
+"PHONEY",700,"Honey and products of bee-keeping",90,100,"others","honey","LBEES"
+"PMAN",800,"Manure sales",NA,NA,NA,NA,NA
+"PMLKBUF",262,"Buffalo's cows' milk",NA,100,"cattle","milk","LBUFDAIRPRS"
+"PMLKCOW",261,"Cows' milk",21,100,"cattle","milk","LCOWDAIR"
+"PMLKCOWBUF_X",NA,"Cows' milk",NA,NA,NA,NA,NA
+"PMLKGOAT",321,"Goat’s milk",51,100,"goats","milk","LGOATBRE;LGOATBREED"
+"PMLKSHEP",311,"Sheep's milk",41,100,"sheep","milk","LEWEBRE;LSHEEPEWE"
+"PWOOL",330,"Wool",43,100,"sheep","wool",NA

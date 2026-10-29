@@ -92,6 +92,74 @@ fadn_data = FADN_16_18
 # TODO: recalculate averages using SYS02 variable
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# --- Crop yields ----
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+crop_raw <- fadn_data |>
+  dplyr::select(ID, YEAR, COUNTRY, NUTS2, SYS02,
+                dplyr::matches("_A$|_TA$|_AA$|_PRQ$") & dplyr::matches("^C"))
+
+crop_raw_long0 <- crop_raw |>
+  tidyr::pivot_longer(
+    cols = dplyr::matches("_A$|_TA$|_AA$|_PRQ$")
+  ) |>
+  dplyr::filter(value >0) |>
+  dplyr::mutate(
+    FADN_code_letter = gsub("_A$|_TA$|_AA$|_PRQ$","",name),
+    var = stringr::str_extract(name,"A$|TA$|AA$|PRQ$")
+  ) |>
+  tidyr::pivot_wider(
+    id_cols = c('ID', 'YEAR', 'COUNTRY', 'NUTS2', 'SYS02', 'FADN_code_letter'),
+    names_from = 'var',
+    values_from = 'value'
+  ) |>
+  # Add missing columns with NA
+  dplyr::bind_rows(tibble::tibble(A = numeric(), TA = numeric(), AA = numeric())) |>
+  dplyr::mutate(
+    area_ha = pmax(A, TA, AA, na.rm = TRUE),
+    prod_t = PRQ
+  )
+crop_raw_long <- crop_raw_long0 |>
+  # keep complete data
+  dplyr::filter(area_ha >0 & prod_t >0) |>
+  # estimate yields
+  dplyr::mutate(
+    avrg_FADN_yield = prod_t / area_ha
+  )
+
+# Missing NUTS2 x livestock category
+missing_cat <- dplyr::anti_join(
+  crop_raw_long0 |>
+    dplyr::select(NUTS2, FADN_code_letter) |>
+    dplyr::distinct(),
+  crop_raw_long |>
+    dplyr::select(NUTS2, FADN_code_letter) |>
+    dplyr::distinct(),
+  by = c('NUTS2', 'FADN_code_letter')
+)
+
+# --- Sum up at NUTS2 level using h_average_practices ---
+# primary_grp  : NUTS2 (the level we want results at)
+# secondary_grp: COUNTRY (fallback if NUTS2 has missing values)
+# weight_var   : farm extrapolation coefficient (e.g., "SYS02" in FADN)
+
+crop_yields <- h_average_practices(
+  data          = crop_raw_long |>
+    dplyr::bind_rows(missing_cat),
+  target_vars   = c("avrg_FADN_yield"),
+  primary_grp   = c('FADN_code_letter', "NUTS2"),
+  secondary_grp = c('FADN_code_letter'),
+  weight_var    = "SYS02"            # adjust to actual weight column name
+)
+
+View(crop_yields)
+
+
+
+
+
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # --- Share of rearing vs slaughter sales by livestock category ----
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -100,7 +168,7 @@ fadn_data = FADN_16_18
 # Share = SSN / SN and SRN / SN for each livestock category
 
 sales_raw <- fadn_data |>
-  dplyr::select(ID, YEAR, COUNTRY, NUTS2, SYS02,
+  dplyr::select(ID, YEAR, COUNTRY, NUTS2, SYS02, TF14,
                 dplyr::matches("_SN$|_SSN$|_SRN$"))
 
 sales_raw_long <- sales_raw |>
@@ -113,7 +181,7 @@ sales_raw_long <- sales_raw |>
     var = stringr::str_extract(name,"SN$|SSN$|SRN$")
   ) |>
   tidyr::pivot_wider(
-    id_cols = c('ID', 'YEAR', 'COUNTRY', 'NUTS2', 'SYS02', 'FADN_code_letter'),
+    id_cols = c('ID', 'YEAR', 'COUNTRY', 'NUTS2', 'TF14', 'SYS02', 'FADN_code_letter'),
     names_from = 'var',
     values_from = 'value',
     values_fill = 0
@@ -134,13 +202,13 @@ sales_shares_raw <- sales_raw_long |>
     share_SSN = SSN / SN
   )
 
-# Missing NUTS2 x livestock category
+# Missing NUTS2 x livestock category x type of farming
 missing_cat <- dplyr::anti_join(
   sales_raw_long |>
-    dplyr::select(NUTS2, FADN_code_letter) |>
+    dplyr::select(NUTS2, TF14, FADN_code_letter) |>
     dplyr::distinct(),
   sales_shares_raw |>
-    dplyr::select(NUTS2, FADN_code_letter) |>
+    dplyr::select(NUTS2, TF14, FADN_code_letter) |>
     dplyr::distinct(),
   by = c('NUTS2', 'FADN_code_letter')
 )
@@ -148,13 +216,13 @@ missing_cat <- dplyr::anti_join(
 # --- Summarise shares at NUTS2 level using h_average_practices ---
 # primary_grp  : NUTS2 (the level we want results at)
 # secondary_grp: COUNTRY (fallback if NUTS2 has missing values)
-# weight_var   : farm weight (e.g., "WF" in FADN)
+# weight_var   : farm extrapolation coefficient (e.g., "SYS02" in FADN)
 
 sales_shares <- h_average_practices(
   data          = sales_shares_raw |>
     dplyr::bind_rows(missing_cat),
   target_vars   = c("share_SRN", "share_SSN"),
-  primary_grp   = c('FADN_code_letter', "NUTS2"),
+  primary_grp   = c('FADN_code_letter', "NUTS2", "TF14"),
   secondary_grp = c('FADN_code_letter'),
   weight_var    = "SYS02"            # adjust to actual weight column name
 )
@@ -260,6 +328,7 @@ View(tmp_mean_GE)
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 FADN_averages = list(
+  crop_yields = crop_yields,
   sales_shares = sales_shares,
   feed_yield = feed_yield,
   GE_MJ_anim_day = tmp_mean_GE

@@ -1,0 +1,66 @@
+---
+title: "FADN2Footprint — Validation Report"
+subtitle: "Comparison of package estimates with carbon diagnosis"
+author: "Sarah HUET & Valentin BELLASSEN"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    embed-resources: true        
+  pdf:
+    toc: true
+execute:
+  echo: true
+  warning: false
+editor: 
+  markdown: 
+    wrap: 150
+bibliography: ../../vignettes/references.bib
+link-citations: true
+---
+
+# Purpose
+
+This document validates the R package `FADN2Footprint` against the ADEME
+Carbon Diagnostic database.
+
+# Setup
+
+```{r setup}
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(gt)
+
+library(ggplot2)
+
+devtools::load_all()
+#library(FADN2Footprint)
+
+```
+
+# ADEME Carbon Diagnostic database
+
+# Produce package estimates
+
+```{r load_data, echo=FALSE, message=TRUE, warning=FALSE}
+
+## Load raw data and run model
+#source("validation_FADN_data.R")
+#source("validation_FADN_data_offline.R")
+## 
+#load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
+load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+#my_object_GHGE <- m_prune_farms(my_object_GHGE,
+#                                YEAR %in% c("2018", "2019", "2020"))
+
+cat("FADN dataset loaded:", nrow(my_object_GHGE@farm), "farm-year observations\n")
+cat("Countries covered:", paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "), "\n")
+cat("Years covered:", paste(sort(unique(my_object_GHGE@farm$YEAR)), collapse = ", "), "\n")
+
+```
+
+# Pair ADEME data with package output

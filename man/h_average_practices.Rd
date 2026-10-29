@@ -10,7 +10,8 @@ h_average_practices(
   target_vars,
   primary_grp,
   secondary_grp,
-  weight_var = NULL
+  weight_var = NULL,
+  min_obs = 15
 )
 }
 \arguments{
@@ -23,6 +24,10 @@ h_average_practices(
 \item{secondary_grp}{A character vector of column names for the coarse-scale grouping (e.g., c("COUNTRY", "ORGANIC")).}
 
 \item{weight_var}{(Optional) Character string of the weighting variable (e.g., "SYS02"). If NULL, simple mean is used.}
+
+\item{min_obs}{(Optional) Minimum number of valid (non-NA) observations required within a primary group
+for the average to be computed. If the count is not strictly greater than \code{min_obs}, the primary
+average is set to \code{NA} (and later imputed from the secondary level, if available). Default is 15.}
 }
 \value{
 A data frame containing the primary grouping columns and the imputed average practices.
@@ -31,5 +36,11 @@ A data frame containing the primary grouping columns and the imputed average pra
 Calculates weighted averages of crop practices at a primary grouping level (e.g., NUTS2 & Organic).
 If data is missing (NA) or insufficient at that level, it imputes values from a secondary,
 coarser grouping level (e.g., Country & Organic).
+}
+\details{
+At the primary level, an average is only computed if the number of valid (non-NA)
+observations exceeds \code{min_obs}; otherwise it is set to \code{NA} and, if possible,
+replaced by the corresponding secondary-level (fallback) average, which is not subject
+to this minimum observation filter.
 }
 \concept{utils}

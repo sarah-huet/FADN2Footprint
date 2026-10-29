@@ -4,18 +4,17 @@
 \alias{f_feed_onfarm}
 \title{Estimate on‑farm produced livestock feed quantities and qualities}
 \usage{
-f_feed_onfarm(object, overwrite = FALSE)
+f_feed_onfarm(object, overwrite = FALSE, ...)
 }
 \arguments{
-\item{object}{An S4 object of class "FADN2Footprint". The object must
-contain standard slots used by the package (for example:
-object@crop, object@traceability$id_cols) and be prepared by the package
-workflow so that helper functions (f_feed_theo_ration) work correctly.}
+\item{object}{An object of class \code{\link{FADN2Footprint}}.}
 
 \item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
 the function returns
 the cached object and no recomputation is performed. If TRUE, existing
 cached GHGE results are ignored and computations are re-run.}
+
+\item{...}{Additional arguments.}
 }
 \value{
 A tibble/data.frame with one or more rows per traceable farm and

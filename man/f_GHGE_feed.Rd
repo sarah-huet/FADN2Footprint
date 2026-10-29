@@ -9,7 +9,12 @@ f_GHGE_feed(object, overwrite = FALSE, ...)
 \arguments{
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}
 
-\item{...}{Additional arguments reserved for future use.}
+\item{overwrite}{Logical (default FALSE). If FALSE and cached results exist,
+the function returns
+the cached object and no recomputation is performed. If TRUE, existing
+cached GHGE results are ignored and computations are re-run.}
+
+\item{...}{Additional arguments.}
 }
 \value{
 A named \code{list} with two elements:
@@ -146,8 +151,8 @@ Ecoalim (v9). LCA database for animal feed ingredients.
 INRAE, France. \url{https://ecoalim.inrae.fr}
 }
 \seealso{
-\code{\link{f_GHGE_crops}}, \code{\link{infer_practices}},
-\code{\link{f_feed_onfarm}}, \code{\link{f_feed_offfarm}},
-\code{\link{h_average_practices}}, \code{\link{FADN2Footprint-class}}
+\code{\link{f_GHGE_crops()}}, \code{\link{infer_practices()}},
+\code{\link{f_feed_onfarm()}}, \code{\link{f_feed_offfarm()}},
+\code{\link{h_average_practices()}}, \code{\link{FADN2Footprint-class}}
 }
 \concept{footprint-ghge}

@@ -112,20 +112,26 @@ f_herd_rearing_param_swine <- function(object){
     rt_LPIGFAT = LPIGFAT_Qobs / ((LPIGFAT_Fin+LPIGFAT_Fout)/2),
     rt_LPIGLET = LPIGLET_Qobs / ((LPIGLET_Fin + LPIGLET_Fout)/2),
     offspring_LSOWBRE = (LPIGLET_Fin-LPIGLET_PN) / LSOWBRE_Qobs
-  ) # |>
+  ) |>
+    # replace Inf per NAs
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::matches("rt_|t_1st|offspring"),
+      ~ ifelse(!is.finite(.x), NA_real_, .x)
+    ))
   # remove columns with only zeros or NAs
   #dplyr::select(where(~ !is.numeric(.) || is.na(sum(., na.rm = TRUE)) || sum(., na.rm = TRUE) != 0))
 
   # how many NAs per columns => only in residence time columns
   #View(tmp_df |> summarise(dplyr::across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
-  ## Replace outliers with reference values ----
-
+  ## replace outliers per percentiles ----
   herd_swine_process_clean <- herd_swine_process_init |>
-    # add NUTS2
+    # add NUTS2 and SYS02
     dplyr::left_join(object@farm |>
-                       dplyr::select(tidyselect::all_of(object@traceability$id_cols),NUTS2),
+                       dplyr::select(tidyselect::all_of(object@traceability$id_cols), NUTS2, SYS02),
                      by = object@traceability$id_cols)
+
   for (var in colnames(herd_swine_process_clean)[grepl("rt_|offspring",colnames(herd_swine_process_clean))]) {
 
     v <- rlang::sym(var)
@@ -171,6 +177,33 @@ f_herd_rearing_param_swine <- function(object){
       dplyr::select(-c(median_NUTS2,median_all,ref_val,threshold_down,threshold_up))
   }
 
+  ## Replace NAs with fallback averages ----
+
+  # identify target variables dynamically
+  target_vars_swine <- colnames(herd_swine_process_clean)[grepl("rt_|offspring", colnames(herd_swine_process_clean))]
+
+  tmp_avrg_rearing_param <- h_average_practices(data = herd_swine_process_clean,
+                                                target_vars = target_vars_swine,
+                                                primary_grp = c('YEAR', 'COUNTRY', 'NUTS2'),
+                                                secondary_grp = c('COUNTRY'),
+                                                weight_var = 'SYS02') |>
+    dplyr::rename_with(~ paste0("avrg_", .x),
+                       .cols = dplyr::all_of(target_vars_swine))
+
+  ## add fallback averages
+  herd_swine_process_clean <- herd_swine_process_clean |>
+    dplyr::left_join(tmp_avrg_rearing_param,
+                     by = c('YEAR', 'COUNTRY', 'NUTS2')) |>
+    # replace NAs with fallback, for each target variable
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(target_vars_swine),
+        ~ ifelse(is.na(.x), get(paste0("avrg_", dplyr::cur_column())), .x)
+      )
+    ) |>
+    # remove fallback variables
+    dplyr::select(-dplyr::matches("^avrg_|SYS02"))
+
   # View(herd_swine_process_clean |> summarise(dplyr::across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
   ## 2.3. MIXED CATEGORIES
@@ -184,7 +217,4 @@ f_herd_rearing_param_swine <- function(object){
   return(herd_rearing_param_swine)
 
 }
-
-utils::globalVariables(c('land_use_type', 'sales_t', 'sales_kg','GE_MJ_kg', 'QVENT3'))
-# this is to avoid a note in check package (the issue is from the use of dplyr)
 

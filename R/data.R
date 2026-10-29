@@ -214,7 +214,8 @@
 #'
 #'   \item{\code{crops}}{
 #'     Crop mapping table used to harmonise crop codes and attach attributes
-#'     needed for footprint calculations and reporting.
+#'     needed for footprint calculations and reporting. Multiple values in
+#'     mapping columns are pipe-delimited (\code{|}).
 #'     }
 #'
 #'   \item{\code{PKGC_N_ferti}}{
@@ -239,7 +240,8 @@
 #'
 #'   \item{\code{livestock}}{
 #'     Livestock mapping table and parameters used to harmonise livestock
-#'     categories and connect them to IPCC reporting categories.
+#'     categories and connect them to IPCC reporting categories. Multiple
+#'     values in mapping columns are pipe-delimited (\code{|}).
 #'     }
 #'
 #'   \item{\code{yield_SAA_Agreste_2020}}{
@@ -809,5 +811,4 @@
 #' str(ref_fuel_wob)
 #' head(ref_fuel_wob)
 "ref_fuel_wob"
-
 

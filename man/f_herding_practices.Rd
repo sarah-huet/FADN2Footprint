@@ -56,7 +56,7 @@ The indicators produced include (non-exhaustive):
 \item ha_temp_grassland_pha_ps, ha_temp_grassland_pha: temporary grassland share
 \item protein_crop_ha_pha_ps, protein_crop_ha_pha: legumes / protein crops share
 \item feed_autonomy: produced feed / total feed (t DM)
-\item t_DM_panim_fod_maize: t DM of forage maize per cow
+\item t_DM_fod_maize: t DM of forage maize per cow
 \item share_soybean: share of purchased soybean meal (t / total feed t)
 \item share_concent: share of concentrates (t / total feed t)
 }

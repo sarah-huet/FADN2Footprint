@@ -17,7 +17,8 @@ Source: Corre, T., Pomeon, T., Regolo, J. (2023). \emph{Méthode de sirétisatio
 
 \item{\code{crops}}{
 Crop mapping table used to harmonise crop codes and attach attributes
-needed for footprint calculations and reporting.
+needed for footprint calculations and reporting. Multiple values in
+mapping columns are pipe-delimited (\code{|}).
 }
 
 \item{\code{PKGC_N_ferti}}{
@@ -42,7 +43,8 @@ les grandes cultures - 2017}. \doi{10.34724/CASD.56.3033.V1}
 
 \item{\code{livestock}}{
 Livestock mapping table and parameters used to harmonise livestock
-categories and connect them to IPCC reporting categories.
+categories and connect them to IPCC reporting categories. Multiple
+values in mapping columns are pipe-delimited (\code{|}).
 }
 
 \item{\code{yield_SAA_Agreste_2020}}{

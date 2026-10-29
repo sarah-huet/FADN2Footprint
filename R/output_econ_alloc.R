@@ -21,24 +21,16 @@
 #' environmental burdens of a multi-output process are partitioned among
 #' co-products proportionally to their economic value.
 #'
-#' @param object An object of class \code{FADN2Footprint}. Must contain at
-#'   least the following slots:
-#'   \describe{
-#'     \item{\code{output$crop}}{A data frame of crop outputs with at least
-#'       \code{sales_e} (sales in EUR) and \code{FADN_code_letter} columns.}
-#'     \item{\code{output$meat}}{A data frame of meat outputs with at least
-#'       \code{sales_e}, \code{output}, \code{FADN_code_letter}, and
-#'       \code{species} columns.}
-#'     \item{\code{output$other_herd_products}}{A data frame of other herd
-#'       product outputs (milk, eggs, wool, etc.) with the same columns as
-#'       \code{output$meat}.}
-#'     \item{\code{practices$herding$feed$feed_produced}}{A data frame of
-#'       on-farm feed production with \code{FADN_code_feed} (crop code) and
-#'       \code{DM_t_livcat} (dry matter tonnes per livestock category) columns,
-#'       used to impute the economic value of feed crops.}
-#'     \item{\code{traceability$id_cols}}{A character vector of column names
-#'       used as farm/year identifiers for grouping operations.}
-#'   }
+#' @param object An object of class \code{\link{FADN2Footprint}}.
+#' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
+#'   the function returns
+#'   the cached object and no recomputation is performed. If TRUE, existing
+#'   cached GHGE results are ignored and computations are re-run.
+#' @param account_pseudoherd Logical, default FALSE. When TRUE, pseudo-herd
+#'   animals (inferred from feed flows rather than directly observed) are
+#'   included in the emission calculation. Currently reserved for future
+#'   implementation.
+#' @param ... Additional arguments.
 #'
 #' @return A named list with three data frames:
 #'   \describe{
@@ -139,6 +131,7 @@
 
 f_output_econ_alloc <- function(object,
                                 account_pseudoherd = FALSE,
+                                overwrite = FALSE,
                                 ...) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
@@ -151,13 +144,11 @@ f_output_econ_alloc <- function(object,
   ##    b. Across CROP outputs only
   ##    c. Across HERD outputs only
 
-  # TODO: account for pseudoherd output
-
   id_cols <- object@traceability$id_cols
 
   # 1. Aggregate outputs -------------------------------------------------------------------
 
-  ## 1a. Herd outputs
+  ## 1a. Herd outputs ----
   herd_output <- Reduce(bind_rows, list(
     #object@output@living_animals,
     object@output$meat,
@@ -166,6 +157,7 @@ f_output_econ_alloc <- function(object,
     dplyr::mutate(
       activity = dplyr::case_when(
         FADN_code_letter == "LCOWDAIR"   ~ "milk",
+        species == "goats" ~ "milk",
         grepl("milk", output)       ~ "milk",
         grepl("meat", output)       ~ "meat",
         grepl("egg", output)       ~ "eggs",
@@ -177,16 +169,19 @@ f_output_econ_alloc <- function(object,
       TO_e = dplyr::coalesce(sales_e,0)
     )
 
-  ## 1b. Crop outputs
+  ## 1b. Crop outputs ----
 
-  ### Retrieve cash crop value
+  ### Retrieve cash crop value ----
   cash_crops <- object@output$crop |>
     dplyr::mutate(
       activity = "crop"
     )
 
-  ### Estimate feed crop value
-  fodder_crops <- object@practices$herding$feed$feed_produced |>
+
+  ### Estimate feed crop value ----
+  feed_produced = f_feed_onfarm(object, overwrite = overwrite)
+
+  fodder_crops <- feed_produced |>
     # total DM_t per crop
     dplyr::summarise(
       feed_t_DM = sum(DM_t_livcat),
@@ -198,16 +193,16 @@ f_output_econ_alloc <- function(object,
     # add herd product total output per farm
     dplyr::left_join(
       herd_output |>
-        dplyr::summarise(feed_TO = sum(sales_e,na.rm = T),
+        dplyr::summarise(feed_herd_prod_sales_e = sum(sales_e,na.rm = T),
                          .by = dplyr::all_of(id_cols)),
       by = id_cols
     )|>
     # estimate farm use value
     dplyr::mutate(
-      farm_use_e = feed_TO * (feed_t_DM / farm_t_DM)
+      farm_use_e = feed_herd_prod_sales_e * (feed_t_DM / farm_t_DM)
     )
 
-  ### Combine cash crop and feed crop value
+  ### Combine cash crop and feed crop value ----
 
   crop_output <- cash_crops |>
     dplyr::left_join(
@@ -219,10 +214,7 @@ f_output_econ_alloc <- function(object,
     dplyr::mutate(
       TO_e = dplyr::coalesce(sales_e,0) + dplyr::coalesce(farm_use_e, 0))
 
-
-
-
-  ## 1c. All outputs combined
+  ## 1c. All outputs combined ----
   all_output <- dplyr::bind_rows(crop_output, herd_output)
 
   # 2. Economic allocation -----------------------------------------------------------------
@@ -232,6 +224,7 @@ f_output_econ_alloc <- function(object,
   all_output_econ_alloc <- all_output |>
     dplyr::mutate(
       sum_sales_e_farm = sum(sales_e, na.rm = TRUE),
+      sum_output_e_farm = sum(output_e, na.rm = TRUE),
       .by = dplyr::all_of(id_cols)
     ) |>
     dplyr::mutate(
@@ -274,7 +267,7 @@ f_output_econ_alloc <- function(object,
     dplyr::mutate(
       econ_alloc_ratio_herd_activity = sales_e / sum_sales_e_activity,
       econ_alloc_ratio_herd = sales_e / sum_sales_e_farm
-      )
+    )
 
   # 3. Return results ----------------------------------------------------------------------
 

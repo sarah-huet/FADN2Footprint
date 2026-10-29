@@ -1,9 +1,16 @@
 Package: FADN2Footprint
 Type: Package
-Title: Infer agricultural practices and compute environmental footprints from FADN data.
-Version: 1.0.0
-Authors@R: person("Sarah", "Huet", email = "sarah.huet@inrae.fr",
-                  role = c("aut", "cre"))
+Title: Infer agricultural practices and compute environmental footprints from FADN data
+Version: 1.1.0
+Authors@R: c(person("Sarah", "Huet",
+                    email = "huetsarah49@live.fr",
+                    comment = c(ORCID = "0000-0002-5449-6959"),
+                    role = c("aut", "cre")),
+             person("Valentin", "Bellassen", 
+                    email = "valentin.bellassen@inrae.fr",
+                    comment = c(ORCID = "0000-0001-8581-2814"),
+                    role = c("aut")),
+             person("INRAE", role = "cph"))
 URL: https://sarah-huet.github.io/FADN2Footprint/, https://github.com/sarah-huet/FADN2Footprint
 BugReports: https://github.com/sarah-huet/FADN2Footprint/issues
 Description: Infers agricultural practices and computes environmental footprints
@@ -79,6 +86,14 @@ Collate:
     'GHGE_fuels.R'
     'GHGE_herd.R'
     'GHGE_herd_products.R'
+    'GHGE_herd_products_cattle.R'
+    'GHGE_herd_products_poultry.R'
+    'GHGE_herd_products_swine.R'
+    'GHGE_pseudoherd.R'
+    'GHGE_pseudoherd_products.R'
+    'GHGE_pseudoherd_products_cattle.R'
+    'GHGE_pseudoherd_products_poultry.R'
+    'GHGE_pseudoherd_products_swine.R'
     'compute_footprint_biodiv.R'
     'compute_footprint_ghg.R'
     'data.R'
@@ -86,11 +101,13 @@ Collate:
     'feed_onfarm.R'
     'feed_theoretical_ration.R'
     'feed_value.R'
+    'globals.R'
     'herd_activities.R'
     'herd_feed.R'
     'herd_n_excretion.R'
     'herd_rearing_param_cattle.R'
     'herd_rearing_param_poultry.R'
+    'herd_rearing_param_sheep.R'
     'herd_rearing_param_swine.R'
     'infer_practices.R'
     'output_econ_alloc.R'
@@ -104,10 +121,12 @@ Collate:
     'practice_pesticides.R'
     'practice_share_ferti.R'
     'practice_tillage.R'
-    'pseudoherd.R'
+    'pseudoherd_animals.R'
     'pseudoherd_cattle.R'
-    'pseudoherd_output_econ_alloc.R'
+    'pseudoherd_goat.R'
+    'pseudoherd_output_off_farm.R'
     'pseudoherd_poultry.R'
+    'pseudoherd_sheep.R'
     'pseudoherd_swine.R'
     'validate_estimates.R'
     'zzz.R'
@@ -116,3 +135,4 @@ Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
 Depends: 
     R (>= 3.5)
+Config/testthat/edition: 3

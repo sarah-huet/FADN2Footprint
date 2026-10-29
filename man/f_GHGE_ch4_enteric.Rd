@@ -4,7 +4,7 @@
 \alias{f_GHGE_ch4_enteric}
 \title{Calculate CH4 Emissions from Enteric Fermentation}
 \usage{
-f_GHGE_ch4_enteric(object, overwrite = F, ...)
+f_GHGE_ch4_enteric(object, overwrite = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}
@@ -13,6 +13,8 @@ f_GHGE_ch4_enteric(object, overwrite = F, ...)
 the function returns
 the cached object and no recomputation is performed. If TRUE, existing
 cached GHGE results are ignored and computations are re-run.}
+
+\item{...}{Additional arguments.}
 }
 \value{
 A \code{\link[tibble]{tibble}} containing one row per farm-livestock
@@ -111,7 +113,7 @@ Ngarize, S., Osako, A., Pyrozhenko, Y., Shermanau, P. and Federici, S. (eds).
 IPCC, Switzerland.
 }
 \seealso{
-\code{\link{f_feed_onfarm}}, \code{\link{f_feed_offfarm}},
+\code{\link{f_feed_onfarm()}}, \code{\link{f_feed_offfarm()}},
 \code{\link{GWP}}, \code{\link{FADN2Footprint-class}}
 }
 \concept{footprint-ghge}

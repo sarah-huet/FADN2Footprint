@@ -2,29 +2,79 @@
 % Please edit documentation in R/pseudoherd_poultry.R
 \name{f_pseudoherd_poultry}
 \alias{f_pseudoherd_poultry}
-\title{Function to estimate off-farm animals of the poultry herd based on FADN data
-\code{f_pseudoherd_poultry} Estimate off-farm animals of the poultry herd}
+\title{Estimate pseudo-herd for poultry based on egg and meat workshops}
 \usage{
 f_pseudoherd_poultry(object)
 }
 \arguments{
-\item{object}{a FADN2Footprint object}
+\item{object}{An S4 object of class "FADN2Footprint" prepared by the
+package workflow, providing object@traceability$id_cols and all data
+required by f_herd_rearing_param_poultry.}
 }
 \value{
-A tibble with, for each livestock category:
-\itemize{
-\item Q_obs: the number of animals observed in the farm (in number of heads)
-\item Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
+A list with two elements:
+\describe{
+\item{rearing_param}{A tibble with one row per farm containing the
+traceability id columns and rearing parameters (turnover rates,
+time to first stage, and offspring rate) for poultry categories.}
+\item{pseudoherd}{A tibble in long format combining egg and meat
+workshops, with one row per farm × FADN_code_letter, containing
+columns Qeq_eggs (for laying hens) and Qeq_meat (for other poultry
+categories, e.g. broilers).}
 }
 }
 \description{
-Function to estimate off-farm animals of the poultry herd based on FADN data
-\code{f_pseudoherd_poultry} Estimate off-farm animals of the poultry herd
+f_pseudoherd_poultry estimates a "pseudo-herd" of poultry animals for the
+egg and meat production workshops. Unlike cattle and swine, poultry
+rearing stages other than laying hens (broiler breeders, laying hen
+juveniles) are considered negligible, so equilibrium quantities are set
+equal to observed quantities for all categories.
+}
+\details{
+The function proceeds in two main steps:
+
+\strong{1. Model farm rearing process:}
+f_herd_rearing_param_poultry is called to derive rearing parameters
+(turnover rates, time to first stage, offspring rate) and observed animal
+counts for each poultry FADN livestock category on the farm.
+
+\strong{2. Estimate pseudo-herd:}
+\itemize{
+\item \strong{Eggs workshop}:
+\itemize{
+\item \emph{2.1 Differentiate farm workshops}: only laying hens (LHENSLAY) are
+considered part of the egg production workshop.
+\item \emph{2.2 Balance number of animals}: since juveniles and breeders
+contributing to laying hens are considered negligible, the
+equilibrium quantity (Qeq_eggs) is set equal to the observed quantity
+(Qobs) for LHENSLAY, without further balancing across rearing stages.
+}
+\item \strong{Meat workshop}:
+\itemize{
+\item \emph{3.1 Differentiate farm workshops}: all poultry categories except
+laying hens (e.g. broilers) are considered part of the meat
+production workshop.
+\item \emph{3.2 Balance number of animals}: as for eggs, breeder and juvenile
+stages are considered negligible, so the equilibrium quantity
+(Qeq_meat) is set equal to the observed quantity (Qobs) for each
+relevant FADN livestock category.
+}
+}
+
+Both pseudo-herd tables are pivoted to long format (one row per farm ×
+FADN_code_letter) and combined into a single output table.
 }
 \examples{
-data(fadn_fict)
-fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-f_pseudoherd_poultry(object = fadn_fict_obj)
+\dontrun{
+# f is a prepared FADN2Footprint object
+pseudoherd_poultry <- f_pseudoherd_poultry(f)
+head(pseudoherd_poultry$pseudoherd)
+head(pseudoherd_poultry$rearing_param)
+}
 
+}
+\seealso{
+f_herd_rearing_param_poultry, f_pseudoherd_cattle,
+f_pseudoherd_swine, f_pseudoherd_animals
 }
 \concept{practice-pseudoherd}

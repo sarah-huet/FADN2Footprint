@@ -104,6 +104,11 @@
 #' }
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
+#' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
+#'   the function returns
+#'   the cached object and no recomputation is performed. If TRUE, existing
+#'   cached GHGE results are ignored and computations are re-run.
+#' @param ... Additional arguments.
 #'
 #' @return A \code{\link[tibble]{tibble}} with one row per farm observation ×
 #' crop category, containing:
@@ -137,8 +142,8 @@
 #' Federici, S. (eds). IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_n_ferti}}, \code{\link{f_n_excr}},
-#' \code{\link{GHGE_n2o_manure}}, \code{\link{UNFCCC_data}},
+#' \code{\link{f_n_ferti()}}, \code{\link{f_n_excr()}},
+#' \code{\link{f_GHGE_n2o_manure()}}, \code{\link{UNFCCC_data}},
 #' \code{\link{data_extra}}, \code{\link{GWP}},
 #' \code{\link{FADN2Footprint-class}}
 #'
@@ -150,7 +155,8 @@
 #'
 
 f_GHGE_n2o_msoils <- function(object,
-                            overwrite = FALSE){
+                              overwrite = FALSE,
+                              ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -178,12 +184,12 @@ f_GHGE_n2o_msoils <- function(object,
     dplyr::select(FADN_code_letter,land_use_type,species,IPCC_default_values) |>
     dplyr::mutate(
       condition_species = dplyr::case_when(
-        is.na(IPCC_default_values) & grepl("cereal|oilseeds|legumes",species)  ~ "Generic Grains;Grains",
+        is.na(IPCC_default_values) & grepl("cereal|oilseeds|legumes",species)  ~ "Generic Grains|Grains",
         is.na(IPCC_default_values) ~ "Generic value for crops not indicated below",
         .default = IPCC_default_values
       )
     ) |>
-    tidyr::separate_longer_delim(condition_species,";") |>
+    tidyr::separate_longer_delim(condition_species,"|") |>
     # add IPCC data
     dplyr::left_join(
       data_extra$IPCC_default_values |>
@@ -235,8 +241,10 @@ f_GHGE_n2o_msoils <- function(object,
     ) |>
     # add EF from UNFCCC data
     dplyr::left_join(
-      UNFCCC_data$EF_managed_soils,
-      by = c('Country_ISO_3166_1_A3', 'YEAR')
+      UNFCCC_data$EF_managed_soils |>
+        dplyr::select(-YEAR),
+      by = c('Country_ISO_3166_1_A3')
+      #TODO: by = c('Country_ISO_3166_1_A3', 'YEAR')
     ) |>
     ## replace NAs by EF mean
     dplyr::mutate(
@@ -260,8 +268,9 @@ f_GHGE_n2o_msoils <- function(object,
       ### EQUATION 11.3
       ## F_ON = annual amount of animal manure, compost, sewage sludge and other organic N additions applied to soils (Note: If including sewage sludge, cross-check with Waste Sector to ensure there is no double counting of N2O emissions from the N in sewage sludge), kg N yr-1
       F_ON = dplyr::case_when(
-        land_use_type == "arable" ~ N_ferti_org *area_ha,
-        land_use_type == "grassland" ~ 0
+        land_use_type == "grassland" ~ 0,
+        #land_use_type == "arable" ~ N_ferti_org *area_ha
+        .default = N_ferti_org * area_ha
       ),
 
       ### EQUATION 11.5
@@ -269,7 +278,8 @@ f_GHGE_n2o_msoils <- function(object,
       ### TODO: should I use AWMS to estimate fraction of manure deposited on pasture?
       F_PRP = dplyr::case_when(
         land_use_type == "arable" ~ 0,
-        land_use_type == "grassland" ~ N_ferti_org*area_ha
+        #land_use_type == "grassland" ~ N_ferti_org*area_ha
+        .default = N_ferti_org * area_ha
       ),
 
       ### EQUATION 11.6
@@ -417,9 +427,6 @@ f_GHGE_n2o_msoils <- function(object,
   return(N2O_MS)
 
 }
-
-
-
 
 
 

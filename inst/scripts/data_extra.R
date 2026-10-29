@@ -167,25 +167,39 @@
 library(readxl)
 library(dplyr)
 
-# Path to your Excel file
-file_path <- "inst/ext_data/data_extra_FADN.xlsx"
+# Directory containing the CSV files
+data_extra_dir <- "inst/ext_data/"
 
-# Get sheet names
-sheets <- readxl::excel_sheets(file_path)
+# Find all CSV files whose names start with "data_extra"
+csv_files <- list.files(
+     path = data_extra_dir,
+     pattern = "^data_extra.*\\.csv$",
+     full.names = TRUE,
+     ignore.case = TRUE
+)
 
-# Read all sheets into a named list
-data_extra <- lapply(sheets, function(sheet) {
- readxl::read_excel(path = file_path, sheet = sheet)
+# Read all CSV files into a named list
+data_extra <- lapply(csv_files, function(file) {
+     read.csv(
+          file,
+          stringsAsFactors = FALSE,
+          check.names = FALSE
+     )
 })
 
-# Name the list elements with the sheet names
-names(data_extra) <- sheets
+# Use file names without the extension as list element names
+names(data_extra) <- gsub("inst/ext_data/data_extra_|.csv","",csv_files)
 
-rm(file_path,sheets)
+# Convert RICA_var_code to character in French_FQS
+if ("French_FQS" %in% names(data_extra)) {
+     data_extra$French_FQS <- data_extra$French_FQS %>%
+          dplyr::mutate(
+               RICA_var_code = as.character(RICA_var_code)
+          )
+}
 
-# mutate variable type
-data_extra$French_FQS <- data_extra$French_FQS %>%
-  dplyr::mutate(RICA_var_code = as.character(RICA_var_code))
+# Remove temporary objects
+rm(data_extra_dir, csv_files)
 
 # export data
 usethis::use_data(data_extra, overwrite = T)

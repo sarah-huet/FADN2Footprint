@@ -89,7 +89,8 @@
 
 
 f_feed_offfarm <- function(object,
-                           overwrite = FALSE){
+                           overwrite = FALSE
+){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -98,6 +99,7 @@ f_feed_offfarm <- function(object,
     return(object@practices$herding$feed$feed_purchased)  # use cached value
   }
 
+  id_cols = object@traceability$id_cols
 
   # Estimate theoretical livestock feed ration and value ---------------------------------------------------------------------------------
   th_feed <- f_feed_theo_ration(object)
@@ -108,18 +110,18 @@ f_feed_offfarm <- function(object,
   ## 2. Add theoretical feed values estimated through f_feed_theo_ration(object)
   ## 3. Estimate share of purchased feed value per livestock category and per crop
   ## 4. Convert estimated feed value in ton
-  feed_purchased_qty <- object@input |>
+  feed_purchased_qty0 <- object@input |>
     # Retrieve farm purchases values for concentrate and rough feed
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
+    dplyr::select(dplyr::all_of(id_cols),
                   dplyr::matches("feed_purch")) |>
     ## Purchased concentrated feedstuffs for grazing stock (equines, ruminants) Value in EUR
-    ##feed_purch_concent_graz = IGRFEDCNCTRPUR_V,
+    ## feed_purch_concent_graz = IGRFEDCNCTRPUR_V,
     ## Purchased coarse fodder for grazing stock (equines, ruminants) Value in EUR
-    ##feed_purch_rough_graz = IGRFEDCRSPUR_V,
+    ## feed_purch_rough_graz = IGRFEDCRSPUR_V,
     ## Purchased feedstuffs for pigs Value in EUR
-    ##feed_purch_concent_pigs = IPIGFEDPUR_V,
+    ## feed_purch_concent_pigs = IPIGFEDPUR_V,
     ## Purchased feedstuffs for poultry and other small animals Value in EUR
-    ##feed_purch_concent_poultry = IPLTRFEDPUR_V,
+    ## feed_purch_concent_poultry = IPLTRFEDPUR_V,
     tidyr::pivot_longer(cols = tidyselect::matches("feed_purch"),
                         names_to = "feed_var",
                         values_to = "feed_purch_value") |>
@@ -138,11 +140,12 @@ f_feed_offfarm <- function(object,
     #filter(feed_purch_value >0) |> # keep null purchases for traceability
     # Add theoretical values
     dplyr::left_join(th_feed$th_feed_value |>
-                       dplyr::select(dplyr::all_of(object@traceability$id_cols),
+                       dplyr::filter(th_crop_value_p100_feed_type >0) |>
+                       dplyr::select(dplyr::all_of(id_cols),
                                      species, FADN_code_letter,
                                      feed_type, Sailley_feed,
                                      th_crop_value_p100_feed_type, euros_t),
-                     by = c(object@traceability$id_cols,"feed_type","species")) |>
+                     by = c(id_cols, "feed_type", "species")) |>
     # Estimate share of purchased feed value per livestock category and per crop
     dplyr::mutate(
       feed_purch_value_share = feed_purch_value * th_crop_value_p100_feed_type
@@ -153,6 +156,35 @@ f_feed_offfarm <- function(object,
     )
 
 
+  ## Estimate average yields
+  Sailley_feed_yield <- data_extra$Sailley_2021_feed_flows |>
+    dplyr::select(Sailley_feed, FADN_code_feed) |>
+    tidyr::separate_longer_delim(FADN_code_feed,";") |>
+    dplyr::filter(!is.na(FADN_code_feed)) |>
+    ## add average yields
+    dplyr::left_join(
+      FADN_averages$crop_yields |>
+        dplyr::summarise(
+          avrg_FADN_yield = mean(avrg_FADN_yield, na.rm = TRUE),
+          .by = FADN_code_letter
+        ),
+      by = dplyr::join_by(FADN_code_feed == FADN_code_letter)
+    ) |>
+    # average
+    dplyr::summarise(
+      yield = mean(avrg_FADN_yield, na.rm = TRUE),
+      .by = c(Sailley_feed)
+    )
+
+  feed_purchased_qty <- feed_purchased_qty0 |>
+    # add average yields
+    dplyr::left_join(
+      Sailley_feed_yield,
+      by = 'Sailley_feed') |>
+  # NB: some farms have NAs because they had purchased feed without any livestock corresponding to the feed
+    ## we filter these rows out
+    dplyr::filter(!is.na(th_crop_value_p100_feed_type))
+
 
   # Estimate Feed quality ------------------------------------------------------
   ## For each feed, we assign an average dry matter (DM), crude protein content (CP) in DM, gross energy (GE) in DM and ash (Ash) in DM based on the INRA-CIRAD-AFZ feed tables
@@ -160,12 +192,18 @@ f_feed_offfarm <- function(object,
   # average crop quality
   ## average GE, DM & CP (DM is not estimated as it is always 100%)
   Sailley_crop_qlty <- data_extra$Sailley_2021_feed_flows |>
-    dplyr::select(Sailley_feed,feed_tables) |>
+    dplyr::select(Sailley_feed, feed_tables, NZ_feed_DE) |>
     tidyr::separate_longer_delim(feed_tables,";") |>
-    # add feed quality
+    tidyr::separate_longer_delim(NZ_feed_DE,";") |>
+    # add feed nutritional values
     dplyr::left_join(
       data_extra$feed_table_all_as_DM,
       by = 'feed_tables'
+    ) |>
+    # add feed digestibility
+    dplyr::left_join(
+      data_extra$NZ_feed_DE,
+      by = dplyr::join_by(NZ_feed_DE == Feed_Description)
     ) |>
     # summarise by Sailley crop name
     dplyr::summarise(
@@ -173,19 +211,20 @@ f_feed_offfarm <- function(object,
       GE_kcal_kg = mean(`GE kcal/kg`,na.rm = T),
       CP_pc = mean(`CP %`,na.rm = T),
       Ash_pc = mean(`Ash %`,na.rm = T),
+      DE_pc = mean(Dry_Matter_Digestibility_pct, na.rm = T),
       .by = 'Sailley_feed'
     )
 
   ## Total GE, DM & CP
   feed_purchased_qlty <- feed_purchased_qty |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
+    dplyr::select(dplyr::all_of(id_cols),
                   FADN_code_letter,
                   feed_type,Sailley_feed,
-                  feed_purch_t_livcat) |>
+                  feed_purch_t_livcat, yield) |>
     # add average feed quality
     dplyr::left_join(
       Sailley_crop_qlty,
-      by = join_by(Sailley_feed)
+      by = c('Sailley_feed')
     ) |>
     # convert
     dplyr::mutate(
@@ -198,10 +237,10 @@ f_feed_offfarm <- function(object,
 
   # Output ---------------------------------------------------------------------
   feed_purchased <- feed_purchased_qlty |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
+    dplyr::select(dplyr::all_of(id_cols),
                   FADN_code_letter,
-                  feed_type,Sailley_feed,
-                  GE_MJ_livcat,GE_kcal_livcat,DM_t_livcat,CP_t_livcat,Ash_t_livcat) |>
+                  feed_type, Sailley_feed,
+                  yield, DM_t_livcat, GE_MJ_livcat, GE_kcal_livcat, CP_t_livcat, Ash_t_livcat, DE_pc) |>
     dplyr::filter(DM_t_livcat >0)
 
 

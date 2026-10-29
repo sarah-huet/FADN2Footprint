@@ -5,13 +5,23 @@
 #' If data is missing (NA) or insufficient at that level, it imputes values from a secondary,
 #' coarser grouping level (e.g., Country & Organic).
 #'
+#' At the primary level, an average is only computed if the number of valid (non-NA)
+#' observations exceeds \code{min_obs}; otherwise it is set to \code{NA} and, if possible,
+#' replaced by the corresponding secondary-level (fallback) average, which is not subject
+#' to this minimum observation filter.
+#'
 #' @param data A data.frame or tibble containing the FADN/Practice data.
 #' @param target_vars A character vector of column names to calculate averages for (e.g., c("fertilizer_n", "yield")).
 #' @param primary_grp A character vector of column names for the fine-scale grouping (e.g., c("NUTS2", "ORGANIC")).
 #' @param secondary_grp A character vector of column names for the coarse-scale grouping (e.g., c("COUNTRY", "ORGANIC")).
 #' @param weight_var (Optional) Character string of the weighting variable (e.g., "SYS02"). If NULL, simple mean is used.
+#' @param min_obs (Optional) Minimum number of valid (non-NA) observations required within a primary group
+#' for the average to be computed. If the count is not strictly greater than \code{min_obs}, the primary
+#' average is set to \code{NA} (and later imputed from the secondary level, if available). Default is 15.
 #'
-#' @return A data frame containing the primary grouping columns and the imputed average practices.
+#' @return A \code{\link[tibble]{tibble}} containing the primary grouping columns and the imputed average practices.
+#' The tibble includes columns for each of the \code{target_vars} and the grouping columns specified in \code{primary_grp}.
+#' 
 #' @import dplyr
 #'
 #' @concept utils
@@ -21,24 +31,69 @@ h_average_practices <- function(data,
                                 target_vars,
                                 primary_grp,
                                 secondary_grp,
-                                weight_var = NULL) {
+                                weight_var = NULL,
+                                min_obs = 15) {
 
   require(dplyr)
 
   # Check that target variables are in the data set
-  target_vars_checked = intersect(target_vars,names(data))
 
-  if (length(target_vars) != length(target_vars_checked)) {
-    print(paste0(setdiff(target_vars,target_vars_checked), collapse = ", "),
-          " variables are not present in the data set and will not be used.")
+  # Capture target_vars as a quosure BEFORE any other operation touches it
+  target_vars_quo <- rlang::enquo(target_vars)
+  # Resolve target_vars using tidyselect (works whether target_vars is a
+  # character vector, a tidyselect helper like dplyr::matches(), or
+  # a bare/quoted selection expression)
+  target_vars_checked <- names(
+    tidyselect::eval_select(target_vars_quo, data = data)
+  )
+
+  if (length(target_vars_checked) == 0) {
+    stop("No variables matched 'target_vars' in the data set.")
   }
 
-  # Keep only variable of interest
-  data <- data |>
-    dplyr::select(dplyr::all_of(c(target_vars_checked,
-                                  primary_grp,
-                                  secondary_grp,
-                                  weight_var)))
+  # Check grouping variables
+  grouping_vars <- unique(c(primary_grp, secondary_grp))
+  missing_grouping_vars <- setdiff(grouping_vars, names(data))
+
+  if (length(missing_grouping_vars) > 0L) {
+    stop(
+      "Missing grouping variables: ",
+      paste(missing_grouping_vars, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  # Check weight variable
+  if (!is.null(weight_var) && !weight_var %in% names(data)) {
+    stop(
+      "Weight variable `", weight_var, "` is missing from `data`.",
+      call. = FALSE
+    )
+  }
+
+  # Secondary grouping variables must be available at primary level
+  missing_secondary_keys <- setdiff(secondary_grp, primary_grp)
+
+  if (length(missing_secondary_keys) > 0L) {
+    stop(
+      "`secondary_grp` must be a subset of `primary_grp`. Missing from ",
+      "`primary_grp`: ",
+      paste(missing_secondary_keys, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  # Keep only required variables
+  vars_to_keep <- unique(c(
+    primary_grp,
+    secondary_grp,
+    target_vars_checked,
+    weight_var
+  ))
+
+  data_selected <- data |>
+    dplyr::select(dplyr::all_of(vars_to_keep))
+
 
   # 1. Helper function for Weighted Mean
   calc_mean <- function(x, w) {
@@ -51,6 +106,18 @@ h_average_practices <- function(data,
       }
       weighted.mean(x, w, na.rm = TRUE)
     }
+  }
+
+  # 1bis. Helper function for Weighted Mean at Primary level,
+  # with a minimum number of valid (non-NA) observations required
+  calc_mean_primary <- function(x, w, min_n = min_obs) {
+    n_valid <- sum(!is.na(x))
+
+    if (n_valid <= min_n) {
+      return(NA_real_)
+    }
+
+    calc_mean(x, w)
   }
 
   # 2. Create the Hierarchy Map
@@ -66,7 +133,7 @@ h_average_practices <- function(data,
     dplyr::group_by(dplyr::across(dplyr::all_of(primary_grp))) %>%
     dplyr::summarise(dplyr::across(
       dplyr::all_of(target_vars_checked),
-      ~ calc_mean(., if(!is.null(weight_var)) .data[[weight_var]] else NULL)
+      ~ calc_mean_primary(., if(!is.null(weight_var)) .data[[weight_var]] else NULL)
     ), .groups = "drop")
 
   # 4. Calculate Secondary Level Averages
@@ -93,13 +160,15 @@ h_average_practices <- function(data,
     fallback_col <- paste0(var, "_fallback")
 
     # Overwrite the original column: if NA, take the fallback
-    result[[var]] <- coalesce(result[[var]], result[[fallback_col]])
+    result[[var]] <- dplyr::coalesce(result[[var]], result[[fallback_col]])
   }
 
   # 6. Cleanup
   # Remove the fallback columns and return just the Primary keys + Calculated vars
-  final_output <- result %>%
-    select(all_of(primary_grp), all_of(target_vars_checked))
+  final_output <- result |>
+    dplyr::select(dplyr::all_of(primary_grp),
+                  dplyr::all_of(target_vars_checked)) |>
+    dplyr::select(-dplyr::matches("SYS02"))
 
   return(final_output)
 }
@@ -129,7 +198,7 @@ h_average_practices <- function(data,
 #'   \code{output}, each containing columns \code{FADN_code_letter} and the
 #'   column named by \code{national_code_col}.
 #' @param national_code_col Character. Column name in \code{data_extra} tables
-#'   that holds the national product codes.
+#'   that holds the national product codes. Multiple codes are pipe-delimited.
 #' @param overwrite Logical. Overwrite existing file? Default \code{FALSE}.
 #'
 #' @return Invisibly returns the output path.
@@ -225,7 +294,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
       if (is.null(tbl)) return(NULL)
       tbl %>%
         dplyr::select(FADN_code_letter, FADN_code_description, national_code = !!rlang::sym(national_code_col)) %>%
-        tidyr::separate_longer_delim(national_code, ";") %>%
+        tidyr::separate_longer_delim(national_code, "|") %>%
         dplyr::mutate(
           Group = group_map[[nm]],
           allocation_key = NA_real_
@@ -391,6 +460,7 @@ h_read_dictionary <- function(dictionary_path) {
 #'
 #' @param dictionary_path Path to the filled Excel workbook.
 #' @param raw_tables Named list of raw national FADN data frames.
+#' @param id_cols Identifier variables (e.g., ID, YEAR, COUNTRY)
 #' @param table_config Named list mapping product groups to table/code_col.
 #' @param verbose Logical. Print report? Default \code{TRUE}.
 #'
@@ -905,6 +975,92 @@ h_stack_country_tables <- function(country_data, country_col = "COUNTRY") {
 # Mock data ----
 
 
+#' Simulate one continuous variable from descriptive statistics
+#'
+#' When the three quartiles are available, values are drawn by piecewise
+#' interpolation through the quantile ladder
+#' \code{(0, .25, .5, .75, 1) -> (min, p25, p50, p75, max)} (inverse-CDF
+#' sampling). The positive part is interpolated in log space (locally
+#' log-normal) because farm-level variables are strongly right-skewed. Exact
+#' zero shares implied by the quartiles are preserved. If only mean, sd, min
+#' and max are available, a moment-matched gamma (non-negative variables) or a
+#' normal distribution is used. In all cases positive values are finally
+#' rescaled so that the sample mean matches \code{mean}, then clipped to
+#' \code{[min, max]}.
+#'
+#' @param n Number of values to draw.
+#' @param mean,sd,min,max Reported descriptive statistics (same unit as the
+#'   variable).
+#' @param p25,p50,p75 Reported quartiles (same unit), or \code{NA}.
+#' @return Numeric vector of length \code{n}.
+#' @noRd
+.h_sim_continuous <- function(n, mean, sd, min, max,
+                              p25 = NA_real_, p50 = NA_real_, p75 = NA_real_) {
+  if (n == 0) return(numeric(0))
+  if (!is.finite(mean) || !is.finite(min) || !is.finite(max)) return(rep(NA_real_, n))
+  if (!is.finite(sd) || sd <= 0 || max <= min) {
+    return(rep(min(max(mean, min), max), n))
+  }
+
+  u <- runif(n)
+
+  if (all(is.finite(c(p25, p50, p75)))) {
+    probs  <- c(0, 0.25, 0.5, 0.75, 1)
+    values <- cummax(c(min, p25, p50, p75, max))
+    pos    <- values > 0
+
+    if (min >= 0 && sum(pos) >= 2) {
+      first_pos <- which(pos)[1]
+      out <- numeric(n)
+      below <- rep(FALSE, n)
+      if (first_pos > 1) {
+        below <- u <= probs[first_pos]
+        if (any(below)) {
+          out[below] <- approx(probs[seq_len(first_pos)], values[seq_len(first_pos)],
+                               xout = u[below], rule = 2)$y
+        }
+      }
+      if (any(!below)) {
+        out[!below] <- exp(approx(probs[pos], log(values[pos]),
+                                  xout = u[!below], rule = 2)$y)
+      }
+    } else if (min >= 0 && sum(pos) == 1 && mean > 0) {
+      # Zero-inflated: exponential tail above the last zero quantile
+      z <- max(probs[!pos])
+      f <- 1 - z
+      out <- numeric(n)
+      tail_idx <- u > z
+      if (any(tail_idx)) {
+        v <- (u[tail_idx] - z) / f
+        out[tail_idx] <- -(mean / f) * log(1 - pmin(v, 1 - 1e-9))
+      }
+    } else {
+      out <- approx(probs, values, xout = u, rule = 2)$y
+    }
+  } else if (min >= 0 && mean > min) {
+    m <- mean - min
+    out <- min + rgamma(n, shape = (m / sd)^2, scale = sd^2 / m)
+  } else {
+    out <- rnorm(n, mean = mean, sd = sd)
+  }
+
+  # Match the reported mean, then enforce the reported range. With quartiles,
+  # only the upper tail (above p75) is rescaled so the quartiles are preserved.
+  cur <- base::mean(out)
+  if (all(is.finite(c(p25, p50, p75))) && min >= 0 && any(out > p75)) {
+    tail_idx <- out > p75
+    excess <- sum(out[tail_idx] - p75)
+    k <- (mean * n - sum(out[!tail_idx]) - sum(tail_idx) * p75) / excess
+    out[tail_idx] <- p75 + max(k, 0) * (out[tail_idx] - p75)
+  } else if (min >= 0) {
+    if (cur > 0 && mean > 0) out <- out * (mean / cur)
+  } else {
+    out <- out + (mean - cur)
+  }
+  pmin(pmax(out, min), max)
+}
+
+
 #' Generate mock FADN data from descriptive statistics
 #'
 #' Handles three cases:
@@ -914,7 +1070,9 @@ h_stack_country_tables <- function(country_data, country_col = "COUNTRY") {
 #'
 #' @param n Total number of rows to generate.
 #' @param continuous_stats Data.frame with columns: variable, mean, sd, min, max,
-#'   and optionally grouping columns (e.g., farm_type, country).
+#'   optionally the quartiles p25, p50, p75 (used to reproduce the shape and
+#'   the zero share of the distribution), and optionally grouping columns
+#'   (e.g., farm_type, country).
 #' @param categorical_stats Data.frame with columns: variable, level, count,
 #'   and optionally the same grouping columns.
 #' @param group_cols Character vector of column names used for grouping
@@ -941,17 +1099,16 @@ h_generate_mock_data <- function(n = 500,
     # Continuous variables
     if (!is.null(cont_stats) && nrow(cont_stats) > 0) {
       for (i in seq_len(nrow(cont_stats))) {
-        v      <- cont_stats$variable[i]
-        values <- rnorm(n_block,
-                        mean = as.numeric(cont_stats$mean[i]),
-                        sd   = as.numeric(cont_stats$sd[i]))
-        if ("min" %in% names(cont_stats)) {
-          values <- pmax(values, as.numeric(cont_stats$min[i]))
+        v   <- cont_stats$variable[i]
+        get <- function(col, default = NA_real_) {
+          if (col %in% names(cont_stats)) as.numeric(cont_stats[[col]][i]) else default
         }
-        if ("max" %in% names(cont_stats)) {
-          values <- pmin(values, as.numeric(cont_stats$max[i]))
-        }
-        block[[v]] <- values
+        block[[v]] <- .h_sim_continuous(
+          n_block,
+          mean = get("mean"), sd = get("sd"),
+          min = get("min", -Inf), max = get("max", Inf),
+          p25 = get("p25"), p50 = get("p50"), p75 = get("p75")
+        )
       }
     }
 
@@ -996,10 +1153,10 @@ h_generate_mock_data <- function(n = 500,
 
   } else if (is.data.frame(group_weights)) {
     # Merge weights onto groups_df
-    gw <- merge(groups_df, group_weights, by = group_cols, all.x = TRUE)
-    weight_col <- intersect(c("count", "weight", "n"), names(gw))
+    weight_col <- intersect(c("count", "weight", "n"), names(group_weights))
     if (length(weight_col) == 0) stop("group_weights must have a 'weight', 'count', or 'n' column.")
-    w <- as.numeric(gw[[weight_col[1]]])
+    key <- function(d) do.call(paste, c(unname(as.list(d[group_cols])), sep = "\r"))
+    w <- as.numeric(group_weights[[weight_col[1]]])[match(key(groups_df), key(group_weights))]
     w[is.na(w)] <- 0
     group_ns <- round(w / sum(w) * n)
     # Adjust rounding to hit exactly n
@@ -1017,6 +1174,8 @@ h_generate_mock_data <- function(n = 500,
   blocks <- vector("list", n_groups)
 
   for (g in seq_len(n_groups)) {
+
+    if (group_ns[g] <= 0) next
 
     # Build filter mask for this group
     grp_vals <- groups_df[g, , drop = FALSE]
@@ -1059,4 +1218,3 @@ h_generate_mock_data <- function(n = 500,
 
   return(result)
 }
-

@@ -99,7 +99,7 @@
 #' farm_ghge3 <- f_GHGE_farm(f, overwrite = TRUE)
 #' }
 #'
-#' @seealso f_GHGE_crops, f_GHGE_herd, f_GHGE_herd_output, compute_footprint_ghg
+#' @seealso f_GHGE_crops(), f_GHGE_herd(), f_GHGE_herd_output(), compute_footprint_ghg()
 #'
 #' @export
 #' @concept footprint-ghge

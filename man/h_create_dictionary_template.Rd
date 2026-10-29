@@ -34,7 +34,7 @@ holding the product code).}
 column named by \code{national_code_col}.}
 
 \item{national_code_col}{Character. Column name in \code{data_extra} tables
-that holds the national product codes.}
+that holds the national product codes. Multiple codes are pipe-delimited.}
 
 \item{overwrite}{Logical. Overwrite existing file? Default \code{FALSE}.}
 }

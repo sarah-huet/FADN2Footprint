@@ -76,6 +76,11 @@
 #'   the function returns
 #'   the cached object and no recomputation is performed. If TRUE, existing
 #'   cached GHGE results are ignored and computations are re-run.
+#' @param account_pseudoherd Logical, default FALSE. When TRUE, pseudo-herd
+#'   animals (inferred from feed flows rather than directly observed) are
+#'   included in the emission calculation. Currently reserved for future
+#'   implementation.
+#' @param ... Additional arguments.
 #'
 #' @return A \code{\link[tibble]{tibble}} containing one row per farm-crop
 #' combination, with the following columns:
@@ -119,9 +124,9 @@
 #' IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_GHGE_n2o_msoils}}, \code{\link{f_GHGE_ferti_prod}},
-#' \code{\link{f_GHGE_fuels}}, \code{\link{f_GHGE_elec}},
-#' \code{\link{f_GHGE_livestock}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_GHGE_n2o_msoils()}}, \code{\link{f_GHGE_ferti_prod()}},
+#' \code{\link{f_GHGE_fuels()}}, \code{\link{f_GHGE_elec()}},
+#' \code{\link{f_GHGE_herd()}}, \code{\link{FADN2Footprint-class}}
 #'
 #' @importFrom dplyr left_join select mutate across all_of
 #' @importFrom purrr reduce
@@ -218,7 +223,7 @@ f_GHGE_crops <- function(object,
     dplyr::mutate(
       dplyr::across(dplyr::all_of(co2_cols),
                     list(per_ha = ~ .x / area_ha,
-                         per_t  = ~ .x / prod_t),
+                         per_t  = ~ ifelse(prod_t >0, .x / prod_t, NA_real_)),
                     .names = "{.col}_{.fn}")
     )
 

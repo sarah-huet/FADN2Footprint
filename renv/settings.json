@@ -24,5 +24,11 @@
     "--no-site-file",
     "--no-init-file",
     "--no-environ"
-  ]
+  ],
+"r.rterm.windows": "C:\\Users\\srhuet\\AppData\\Roaming\\Python\\Python314\\Scripts\\radian.exe",
+"r.bracketedPaste": true,
+"r.plot.useHttpgd": true,
+"r.sessionWatcher": true,
+"editor.formatOnSave": true,
+"r.alwaysUseActiveTerminal": true
 }

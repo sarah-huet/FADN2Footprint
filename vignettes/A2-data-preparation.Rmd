@@ -27,6 +27,7 @@ library(gt)
 # Install package
 require("pak")
 pak::pak("sarah-huet/FADN2Footprint")
+Y
 library(FADN2Footprint)
 
 
@@ -112,7 +113,7 @@ pan table.
 ```{r variable-pattern-preview, echo=FALSE, eval=TRUE}
 
 # Load pre-filled dictionary
-dict_conversion <- h_read_dictionary("dictionary_conversion_filled_FRA.xlsx")
+dict_conversion <- h_read_dictionary("vignettes/dictionary_conversion_filled_FRA.xlsx")
 
 head(dict_conversion$variable_pattern) |> gt()
 
@@ -216,28 +217,19 @@ We gather the table in one list per year with the following structure:
 
 ```{r load-raw}
 
-data("mock_data")
+# Mock RICA data: one subfolder per year, one Excel file per table
+mock_dir <- system.file("ext_data", "mock_FADN_FRA", package = "FADN2Footprint")
+if (mock_dir == "") mock_dir <- "inst/ext_data/mock_FADN_FRA"
 
-RICA_20_raw <- list(
-  rica = mock_data$rica_fict$rica,
-  veg  = mock_data$rica_fict$veg,
-  ani  = mock_data$rica_fict$ani,
-  pan  = mock_data$rica_fict$pan
-)
+read_rica_year <- function(year) {
+  tabs <- c("rica", "veg", "ani", "pan")
+  files <- file.path(mock_dir, year, paste0(tabs, ".xlsx"))
+  stats::setNames(lapply(files, readxl::read_excel), tabs)
+}
 
-RICA_19_raw <- list(
-  rica = mock_data$rica_fict$rica,
-  veg  = mock_data$rica_fict$veg,
-  ani  = mock_data$rica_fict$ani,
-  pan  = mock_data$rica_fict$pan
-)
-
-RICA_18_raw <- list(
-  rica = mock_data$rica_fict$rica,
-  veg  = mock_data$rica_fict$veg,
-  ani  = mock_data$rica_fict$ani,
-  pan  = mock_data$rica_fict$pan
-)
+RICA_20_raw <- read_rica_year("2020")
+RICA_19_raw <- read_rica_year("2019")
+RICA_18_raw <- read_rica_year("2018")
 
 ```
 
@@ -314,7 +306,7 @@ We strongly recommend to use this pre-filled dictionary for RICA.
 
 ```{r french-dict}
 # Load
-dict_conversion <- h_read_dictionary("dictionary_conversion_filled_FRA.xlsx")
+dict_conversion <- h_read_dictionary("vignettes/dictionary_conversion_filled_FRA.xlsx")
 
 ```
 
@@ -409,7 +401,7 @@ column to use for each EU FADN variable group:
 ```{r validate}
 
 issues <- h_validate_dictionary(
-  dictionary_path = "dictionary_conversion_filled_FRA.xlsx",
+  dictionary_path = "vignettes/dictionary_conversion_filled_FRA.xlsx",
   raw_tables      = raw_tables,
   id_cols = "IDENT",
   table_config    = list(
@@ -427,7 +419,7 @@ issues <- h_validate_dictionary(
 ```{r convert}
 
 # Load dictionary
-dict_conversion <- h_read_dictionary("dictionary_conversion_filled_FRA.xlsx")
+dict_conversion <- h_read_dictionary("vignettes/dictionary_conversion_filled_FRA.xlsx")
 
 # Convert (pivot + rename + aggregate + unit conversion)
 RICA_2020 <- h_pivot_national_fadn(
@@ -465,6 +457,22 @@ my_object <- data_4FADN2Footprint(
   var_dict = dict_FADN,
   id_cols  = c("ID", "YEAR", "COUNTRY")
 )
+
+```
+
+Before computing footprints we first need to infer practices.
+
+```{r infer_practices}
+
+my_object_w_practices = FADN2Footprint::infer_practices(my_object)
+
+```
+
+Once we inferred practices, we can compute environmental footprints.
+
+```{r estimate_GHGE}
+
+my_object_GHGE = FADN2Footprint::compute_footprint_ghg(my_object_w_practices)
 
 ```
 

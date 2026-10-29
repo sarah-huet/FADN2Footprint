@@ -1,6 +1,4 @@
-
 # Internal parsers
-
 
 # FARM CHARACTERISTICS ----
 
@@ -94,8 +92,7 @@
 #' @keywords internal
 
 .parse_farm_data <- function(df_harmonized, id_cols) {
-
-  country_ref_table = data_extra$country_names
+  country_ref_table <- data_extra$country_names
 
   # 1. Select and Clean variables --------------------------------------------------
   farm_data <- df_harmonized |>
@@ -111,7 +108,9 @@
       # Farm representativeness
       dplyr::matches("SYS02"),
       # Type of farming
-      "TF_SUBP4", "TF14", "TF8",
+      "TF_SUBP4",
+      "TF14",
+      "TF8",
       # Economic size class
       "SIZC",
       # SE131	Total output	in EUR	STANDARD RESULTS
@@ -120,6 +119,8 @@
       dplyr::matches("SE080"),
       # SE025	Total Utilised Agricultural Area	in ha	STANDARD RESULTS
       dplyr::matches("SE025"),
+      # Total area under glass
+      #dplyr::matches("CTOTUG"),
       # Farm certification
       # Note: PDO variable excluded due to poor registration (e.g., missing in FR 2016-2018)
       "ORGANIC"
@@ -128,7 +129,7 @@
       # Encode organic farming: TRUE if code is 2 (certified) or 4 (conversion)
       ORGANIC = ORGANIC %in% c(2, 4),
       # Makes sure NUTS and SIRET variables are character, if available
-      dplyr::across(dplyr::matches("SIRET|NUTS"),as.character)
+      dplyr::across(dplyr::matches("SIRET|NUTS"), as.character)
     )
 
   # 2. Harmonize Country Names --------------------------------------------------
@@ -137,8 +138,10 @@
 
   # Calculate intersection counts for each naming convention
   match_counts <- c(
-    country_eu  = sum(farm_data$COUNTRY %in% country_ref_table$country_eu),
-    Country_ISO_3166_1_A3 = sum(farm_data$COUNTRY %in% country_ref_table$Country_ISO_3166_1_A3),
+    country_eu = sum(farm_data$COUNTRY %in% country_ref_table$country_eu),
+    Country_ISO_3166_1_A3 = sum(
+      farm_data$COUNTRY %in% country_ref_table$Country_ISO_3166_1_A3
+    ),
     country_FADN = sum(farm_data$COUNTRY %in% country_ref_table$country_FADN)
   )
 
@@ -146,7 +149,9 @@
   best_match_col <- names(which.max(match_counts))
 
   if (length(best_match_col) == 0 || max(match_counts) == 0) {
-    warning("No matching country naming convention found in 'country_ref_table'. Join skipped.")
+    warning(
+      "No matching country naming convention found in 'country_ref_table'. Join skipped."
+    )
     return(farm_data)
   }
 
@@ -158,7 +163,13 @@
       by = best_match_col
     )
 
-  message("\n", paste0(dict_FADN |> filter(var_common %in% colnames(farm_data)) |> pull(DESCRIPTION), collapse = ", "))
+  #message("\n", paste0(dict_FADN |> filter(var_common %in% colnames(farm_data)) |> pull(DESCRIPTION), collapse = ", "))
+  message("Farm-level variables kept in object:")
+  print(
+    dict_FADN |>
+      dplyr::filter(var_common %in% colnames(farm_data)) |>
+      dplyr::select(var_common, DESCRIPTION, Comment, Group)
+  )
 
   return(farm_data)
 }
@@ -281,35 +292,41 @@
 #'
 #' @keywords internal
 
-.parse_crop_data <- function(df_harmonized,
-                             farm_data,
-                             id_cols
-) {
-
+.parse_crop_data <- function(df_harmonized, farm_data, id_cols) {
   # 1. Identify Crop Codes --------------------------------------------------
-  # Filter out codes ending in _X (aggregates) and sort by length (longest first)
   crop_codes <- data_extra$crops$FADN_code_letter |>
-    (\(x) x[!grepl("_X", x)])() |>
+    # Filter out codes
+    ## ending in _X (pre-2014 versions)
+    ## beginning with CTOT (aggregates)
+    (\(x) x[!grepl("_X$|^CTOT", x)])() |>
     unique() |>
     sort(decreasing = TRUE)
   # Create a regex pattern once
   crop_regex <- paste(crop_codes, collapse = "|")
 
-  message("Make sure that your area variables are in hectare and your production variables are in tonnes.")
-  message("Only variables for these crop codes are considered: ",
-          paste(crop_codes, collapse = ", "))
+  message(
+    "Make sure that your area variables are in hectare and your production variables are in tonnes.\n"
+  )
+  message(
+    "Only variables for these crop codes are considered: ",
+    paste(crop_codes, collapse = ", ")
+  )
 
   # 2. Main Crop Data Extraction --------------------------------------------
   crop_df <- df_harmonized |>
     # Select ID cols and any columns matching our crop codes
-    dplyr::select(dplyr::all_of(id_cols), dplyr::matches(crop_regex),-dplyr::matches("_X$")) |>
+    dplyr::select(
+      dplyr::all_of(id_cols),
+      dplyr::matches(crop_regex),
+      -dplyr::matches("_X$")
+    ) |>
     tidyr::pivot_longer(
       cols = -dplyr::all_of(id_cols),
       names_to = "raw_variable",
       values_to = "value"
     ) |>
     # Early filtering of zeros to reduce memory usage before string ops
-    dplyr::filter(value > 0) |>
+    #dplyr::filter(value > 0) |>
     # Create code variables
     # Regex explanation:
     # ^(crop_codes): Match the code at start (Group 1)
@@ -328,30 +345,42 @@
       names_from = variable,
       values_from = value
     ) |>
+    # Add missing columns with NA
+    dplyr::bind_rows(tibble::tibble(
+      A = numeric(),
+      TA = numeric(),
+      PRQ = numeric(),
+      SQ = numeric()
+    )) |>
     # area in hectares for each crop: A or TA
     # production quantity in kg for each crop: PRQ
     # sales quantity in kg for each crop: SQ
     # Ensure expected columns exist
-    (\(df) {
-      if (!"TA" %in% names(df)) df$TA <- NA_real_
-      if (!"A"  %in% names(df)) df$A  <- NA_real_
-      if (!"PRQ" %in% names(df)) df$PRQ <- NA_real_
-      if (!"SQ"  %in% names(df)) df$SQ  <- NA_real_
-      df
-    })() |>
+    #(\(df) {
+    #  if (!"TA" %in% names(df)) df$TA <- NA_real_
+    #  if (!"A"  %in% names(df)) df$A  <- NA_real_
+    #  if (!"PRQ" %in% names(df)) df$PRQ <- NA_real_
+    #  if (!"SQ"  %in% names(df)) df$SQ  <- NA_real_
+    #  df
+    #})() |>
     dplyr::mutate(
-      area_ha = pmax(as.numeric(TA), as.numeric(A), na.rm = T),
-      prod_t  = PRQ,
+      #area_ha = pmax(as.numeric(TA), as.numeric(A), na.rm = T),
+      area_ha = dplyr::coalesce(as.numeric(A), as.numeric(TA)),
+      prod_t = PRQ,
       sales_t = SQ
-    ) |>
-    dplyr::select(-dplyr::any_of(c("TA", "A", "PRQ", "SQ")))
-
+    ) #|>
+  #dplyr::select(-dplyr::any_of(c("TA", "A", "PRQ", "SQ")))
 
   # 3. Enhance with Metadata & Basic Yields ---------------------------------
   crop_df <- crop_df |>
     dplyr::left_join(
       data_extra$crops |>
-        dplyr::select(dplyr::any_of(c("FADN_code_letter", "land_use_type", "species", "SAA_Agreste_2020"))),
+        dplyr::select(dplyr::any_of(c(
+          "FADN_code_letter",
+          "land_use_type",
+          "species",
+          "SAA_Agreste_2020"
+        ))),
       by = "FADN_code_letter"
     ) |>
     dplyr::mutate(
@@ -361,7 +390,14 @@
     # Clean rows: remove entries with no valid numeric data or missing area
     dplyr::filter(
       !is.na(area_ha),
-      rowSums(dplyr::select(dplyr::pick(dplyr::where(is.numeric)), -dplyr::any_of(id_cols)), na.rm = TRUE) > 0
+      rowSums(
+        dplyr::select(
+          dplyr::pick(dplyr::where(is.numeric)),
+          -dplyr::any_of(id_cols)
+        ),
+        na.rm = TRUE
+      ) >
+        0
     )
 
   # 4. Prepare External Yields (SAA Agreste) --------------------------------
@@ -373,31 +409,37 @@
       Departement = dplyr::case_when(
         Departement == "971 - Guadeloupe" ~ "9A",
         Departement == "972 - Martinique" ~ "9B",
-        Departement == "973 - Guyane"     ~ "9C",
+        Departement == "973 - Guyane" ~ "9C",
         Departement == "974 - La Réunion" ~ "9D",
         TRUE ~ substr(Departement, 1, 2)
       ),
       # Calculate yield (t/ha) from production (100kg/cwt -> t) and area
       # formula: (Vol * 0.1) / Area
-      yield_SAA = (Production_seche_volume * 0.1) / Superficie_correspondante_hectare
+      yield_SAA = (Production_seche_volume * 0.1) /
+        Superficie_correspondante_hectare
     ) |>
     dplyr::rename(SAA_Agreste_2020 = Cultures_developpees_5) |>
     # Aggregate average yield by Crop Type and Dept
     dplyr::summarise(
       yield_SAA = mean(yield_SAA, na.rm = TRUE),
       .by = c(SAA_Agreste_2020, Departement)
+    ) |>
+    # fallback on global average
+    dplyr::mutate(
+      yield_SAA_country = mean(yield_SAA, na.rm = TRUE),
+      .by = SAA_Agreste_2020
     )
 
   # 5. Impute Forage Yields -------------------------------------------------
   # Strategy: Join NUTS3 and SAA yields to the main table.
   # Use coalesce() to fill gaps only where needed.
 
-  final_df <- crop_df |>
+  final_df0 <- crop_df |>
     # Attach NUTS3 region from farm_data (if available)
     dplyr::left_join(
       farm_data |>
-        dplyr::select(dplyr::all_of(id_cols), dplyr::any_of("NUTS3"))|>
-        dplyr::mutate(dplyr::across(dplyr::any_of("NUTS3"),as.character)),
+        dplyr::select(dplyr::all_of(id_cols), dplyr::matches("NUTS")) |>
+        dplyr::mutate(dplyr::across(dplyr::matches("NUTS"), as.character)),
       by = id_cols
     ) |>
     # Attach Reference Yields based on Crop Mapping + NUTS3 (or global average per crop)
@@ -409,29 +451,192 @@
           by = dplyr::join_by(SAA_Agreste_2020, NUTS3 == Departement)
         )
       } else {
-        # Compute global average reference yields per crop
-        ref_yields_avg <- ref_yields |>
-          dplyr::summarise(
-            yield_SAA = mean(yield_SAA, na.rm = TRUE),
-            .by = SAA_Agreste_2020
-          )
-
+        # Attach global average reference yields per crop
         dplyr::left_join(
           df,
-          ref_yields_avg,
-          by = "SAA_Agreste_2020"
+          ref_yields |>
+            dplyr::select(SAA_Agreste_2020, yield_SAA_country) |>
+            dplyr::distinct() |>
+            dplyr::mutate(yield_SAA = yield_SAA_country),
+          by = dplyr::join_by(SAA_Agreste_2020)
         )
-      } })() |>
+      }
+    })() |>
     dplyr::mutate(
       # Impute Yield: Keep existing yield, otherwise use SAA yield
+      default_forage_yield = ifelse(
+        !is.na(SAA_Agreste_2020) & (!is.finite(yield) | yield == 0),
+        TRUE,
+        FALSE
+      ),
       ## TODO: check for French FADN
-      yield = dplyr::coalesce(yield, yield_SAA),
+      #yield = dplyr::coalesce(yield, yield_SAA),
+      #yield = dplyr::case_when(
+      #  !is.na(SAA_Agreste_2020) & (!is.finite(yield) | yield ==0) ~ dplyr::coalesce(yield_SAA, yield_SAA_country),
+      #  .default = yield
+      #),
+      yield = ifelse(
+        default_forage_yield,
+        dplyr::coalesce(yield_SAA, yield_SAA_country),
+        yield
+      ),
 
       # Impute Production: Keep existing prod, otherwise calc Area * Yield
-      prod_t = dplyr::coalesce(prod_t, area_ha * yield)
+      default_forage_prod = ifelse(
+        !is.na(SAA_Agreste_2020) & (!is.finite(prod_t) | prod_t == 0),
+        TRUE,
+        FALSE
+      ),
+      #prod_t = dplyr::coalesce(prod_t, area_ha * yield)
+      #prod_t = dplyr::case_when(
+      #  !is.na(SAA_Agreste_2020) & (!is.finite(prod_t) | prod_t ==0) ~ area_ha * yield,
+      #  .default = prod_t
+      #)
+      prod_t = ifelse(default_forage_prod, area_ha * yield, prod_t)
     ) |>
     # Clean up temporary columns
-    dplyr::select(-yield_SAA, -SAA_Agreste_2020, -dplyr::any_of("NUTS3"))
+    dplyr::select(-dplyr::matches("yield_SAA"), -SAA_Agreste_2020)
+
+  # 6. Replace other missing yield ---------------------------------------------
+
+  # TODO: replace missing yields
+
+  final_df <- final_df0 |>
+    # Attach Reference Yields based on Crop Mapping + NUTS3 (or global average per crop)
+    dplyr::left_join(
+      FADN_averages$crop_yields,
+      by = c('FADN_code_letter', 'NUTS2')
+    ) |>
+    dplyr::mutate(
+      # Impute Yield: Keep existing yield, otherwise use average yield
+      default_crop_yield = ifelse(
+        (!is.finite(yield) | yield == 0),
+        TRUE,
+        FALSE
+      ),
+      ## TODO: check for French FADN
+      #yield = dplyr::coalesce(yield, yield_SAA),
+      #yield = dplyr::case_when(
+      #  (!is.finite(yield) | yield ==0) ~ avrg_FADN_yield,
+      #  .default = yield
+      #),
+      yield = ifelse(default_crop_yield, avrg_FADN_yield, yield),
+
+      # Impute Production: Keep existing prod, otherwise calc Area * Yield
+      ## if sales quantity > default, we set sales quantity as production
+      default_crop_prod = ifelse(
+        (!is.finite(prod_t) | prod_t == 0),
+        TRUE,
+        FALSE
+      ),
+      default_sales_to_prod = dplyr::case_when(
+        default_crop_prod &
+          is.finite(sales_t) &
+          sales_t > 0 &
+          (area_ha * yield) < sales_t ~ TRUE,
+        .default = FALSE
+      ),
+      #prod_t = dplyr::coalesce(prod_t, area_ha * yield)
+      #prod_t = dplyr::case_when(
+      #  (!is.finite(prod_t) | prod_t ==0) ~ area_ha * yield,
+      #  .default = prod_t
+      #)
+      #prod_t = ifelse(default_crop_prod, area_ha * yield, prod_t)
+      prod_t = dplyr::case_when(
+        default_sales_to_prod ~ sales_t,
+        default_crop_prod ~ (area_ha * yield),
+        .default = prod_t
+      )
+    ) |>
+    # Clean up temporary columns
+    dplyr::select(-avrg_FADN_yield) |>
+    # if some yields still missing, we average per crop
+    dplyr::mutate(
+      avrg_yield_crop = mean(yield, na.rm = TRUE),
+      .by = FADN_code_letter
+    ) |>
+    dplyr::mutate(
+      default_avrg_yield_crop = ifelse(is.na(prod_t), TRUE, FALSE),
+      yield = ifelse(default_avrg_yield_crop, avrg_yield_crop, yield),
+      prod_t = ifelse(default_avrg_yield_crop, (area_ha * yield), prod_t)
+    ) |>
+    dplyr::select(-avrg_yield_crop)
+
+  # for crop with zero production, average of similar crops
+  ## Average yield of other arable crops (code 10110 to 10690; see `data_extra$crops`)
+  arable_crops <- median(
+    final_df |>
+      dplyr::filter(
+        FADN_code_letter %in%
+          data_extra$crops$FADN_code_letter[
+            data_extra$crops$FADN_code_number %in%
+              seq(10110, 10690, 1)
+          ]
+      ) |>
+      dplyr::pull(yield),
+    na.rm = T
+  )
+  ## Average yield of other permanent crops (code 40111 to 40500; see `data_extra$crops`)
+  permanent_crops <- median(
+    final_df |>
+      dplyr::filter(
+        FADN_code_letter %in%
+          data_extra$crops$FADN_code_letter[
+            data_extra$crops$FADN_code_number %in%
+              seq(40111, 40500, 1)
+          ]
+      ) |>
+      dplyr::pull(yield),
+    na.rm = T
+  )
+  ## Average yield of other fiber crops (code 10609 and 10610; see `data_extra$crops`)
+  fiber_crops <- median(
+    final_df |>
+      dplyr::filter(
+        FADN_code_letter %in%
+          data_extra$crops$FADN_code_letter[
+            data_extra$crops$FADN_code_number %in%
+              seq(10609, 10610, 1)
+          ]
+      ) |>
+      dplyr::pull(yield),
+    na.rm = T
+  )
+
+  ## Average of vegetables (code 10711 to 10790; see `data_extra$crops`)
+  vegetables <- median(
+    final_df |>
+      dplyr::filter(
+        FADN_code_letter %in%
+          data_extra$crops$FADN_code_letter[
+            data_extra$crops$FADN_code_number %in%
+              seq(10711, 10790, 1)
+          ]
+      ) |>
+      dplyr::pull(yield),
+    na.rm = T
+  )
+
+  ## impute yields
+  final_df <- final_df |>
+    dplyr::mutate(
+      yield = dplyr::case_when(
+        FADN_code_letter == "CARAOTH" & is.na(yield) ~ arable_crops,
+        FADN_code_letter == "CCRPPERMOTH" & is.na(yield) ~ permanent_crops,
+        FADN_code_letter == "CPERMUG" & is.na(yield) ~ permanent_crops,
+        FADN_code_letter == "CFIBOTH" & is.na(yield) ~ fiber_crops,
+        FADN_code_letter == "CKGAR" & is.na(yield) ~ vegetables,
+        FADN_code_letter == "CFLW" & is.na(yield) ~ 0,
+        FADN_code_letter == "CFLWB" & is.na(yield) ~ 0,
+        FADN_code_letter == "CFLWCUT" & is.na(yield) ~ 0,
+        FADN_code_letter == "CFLWOUT" & is.na(yield) ~ 0,
+        FADN_code_letter == "CFLWUG" & is.na(yield) ~ 0,
+        FADN_code_letter == "CNURS" & is.na(yield) ~ 0,
+        FADN_code_letter == "CLNDOTH" & is.na(yield) ~ 0,
+        .default = yield
+      ),
+      prod_t = ifelse(is.na(prod_t), area_ha * yield, prod_t)
+    )
 
   return(final_df)
 }
@@ -558,7 +763,6 @@
 #' @keywords internal
 #'
 .parse_herd_data <- function(df_harmonized, id_cols) {
-
   # 1. Identify Herd Codes -------------------------------------------------------
 
   herd_codes <- data_extra$livestock |>
@@ -570,16 +774,22 @@
   herd_regex <- paste(herd_codes, collapse = "|")
 
   # User feedback
-  message("Make sure that your livestock variables are in the same units as those described in the dictionary (i.e., either livestock unit or number of animals).\n")
-  message("Only variables for these livestock codes are considered: ",
-          paste0(herd_codes,collapse = ", "))
+  message(
+    "Make sure that your livestock variables are in the same units as those described in the dictionary (i.e., either livestock unit or number of animals).\n"
+  )
+  message(
+    "Only variables for these livestock codes are considered: ",
+    paste0(herd_codes, collapse = ", ")
+  )
 
   # 2. Extraction & Pivoting ------------------------------------------------
   # Filter, Pivot Long, and Split Code/Variable in one pass using tidyr::extract
   long_data <- df_harmonized |>
-    dplyr::select(dplyr::all_of(id_cols),
-                  dplyr::matches(herd_regex),
-                  -dplyr::matches("_X$")) |>
+    dplyr::select(
+      dplyr::all_of(id_cols),
+      dplyr::matches(herd_regex),
+      -dplyr::matches("_X$")
+    ) |>
     # Pivot longer to handle all herd variables at once
     tidyr::pivot_longer(
       cols = -dplyr::all_of(id_cols),
@@ -608,48 +818,60 @@
     ) |>
     dplyr::left_join(
       data_extra$livestock |>
-        dplyr::select(FADN_code_letter,livestock_unit_coef,species),
-      by = "FADN_code_letter")
+        dplyr::select(FADN_code_letter, livestock_unit_coef, species),
+      by = "FADN_code_letter"
+    )
 
   # 5. Calculations & Imputations -------------------------------------------
   processed_data <- wide_data |>
     # Ensure ALU column exists (filled with NA if absent)
     (\(df) {
-      if (!"ALU" %in% names(df)) df$ALU <- NA_real_
+      if (!"ALU" %in% names(df)) {
+        df$ALU <- NA_real_
+      }
       df
     })() |>
     # Calculate ALU where missing
     dplyr::mutate(
-      ALU = dplyr::if_else(is.na(ALU) & !is.na(AN),
-                           AN * livestock_unit_coef,
-                           ALU)
+      ALU = dplyr::if_else(
+        is.na(ALU) & !is.na(AN),
+        AN * livestock_unit_coef,
+        ALU
+      )
     ) |>
     dplyr::mutate(
       temp_alu_calc = ALU / livestock_unit_coef
     ) |>
     # Ensure ON and CN columns exist (filled with AN if absent)
     (\(df) {
-      if (!"ON" %in% names(df)) df$ON <- df$AN
+      if (!"ON" %in% names(df)) {
+        df$ON <- df$AN
+      }
       df
     })() |>
     (\(df) {
-      if (!"CN" %in% names(df)) df$CN <- df$AN
+      if (!"CN" %in% names(df)) {
+        df$CN <- df$AN
+      }
       df
     })() |>
     # Calculate Qobs (Observed Quantity of animals in number of head)
     # Mean of Average Number, Computed ALU, Opening, and Closing Numbers
     dplyr::mutate(
       Qobs = rowMeans(
-        cbind(AN,temp_alu_calc, ON, CN),
+        #cbind(AN,temp_alu_calc, ON, CN),
+        cbind(AN, temp_alu_calc),
         na.rm = TRUE
-      )) |>
+      )
+    ) |>
     dplyr::select(-temp_alu_calc) |>
     # Filter out empty records (Qobs > 0)
     dplyr::filter(Qobs > 0)
 
   # 6. Final Imputations (Business Logic) -----------------------------------
-  # If sales variables are missing, assume all sales are for slaughter.
-  # We use check if columns exist, if not create them with NA, then coalesce.
+  ## Variables differentiating sales between slaughter and rearing are not always well registered in FADN.
+  ## Hence, when not properly register, we apply a default share estimated from our test data set
+  ## We use check if columns exist, if not create them with NA, then coalesce.
 
   # Ensure columns exist to avoid errors in coalesce
   cols_needed <- c("SSN", "SN", "SSV", "SV", "SRN", "SRV")
@@ -658,13 +880,143 @@
   }
 
   final_data <- processed_data |>
+    # add NUTS2 and TF14
+    dplyr::left_join(
+      df_harmonized |>
+        dplyr::select(dplyr::all_of(id_cols), NUTS2, TF14) |>
+        dplyr::mutate(NUTS2 = as.character(NUTS2)),
+      by = id_cols
+    ) |>
+    # add average share of SSN and SRN
+    #dplyr::left_join(
+    #  FADN_averages$sales_shares,
+    #  by = c('FADN_code_letter', 'NUTS2', 'TF14')
+    #) |>
+    # add country name
+    dplyr::left_join(
+      data_extra$country_names |>
+        dplyr::select(Country_ISO_3166_1_A3, country_FADN),
+      by = dplyr::join_by(COUNTRY == country_FADN)
+    ) |>
+    # add average share of SSN and SRN
+    dplyr::left_join(
+      EUROSTAT_slaughter |>
+        dplyr::select(
+          FADN_code_letter,
+          Country_ISO_3166_1_A3,
+          YEAR,
+          share_SSN,
+          share_SRN
+        ) |>
+        dplyr::mutate(YEAR = as.character(YEAR)),
+      by = c('FADN_code_letter', 'Country_ISO_3166_1_A3', 'YEAR')
+    ) |>
+    ## fallback: average per FADN_code_letter and country
+    dplyr::left_join(
+      EUROSTAT_slaughter |>
+        dplyr::select(
+          FADN_code_letter,
+          Country_ISO_3166_1_A3,
+          YEAR,
+          share_SSN,
+          share_SRN
+        ) |>
+        ## fallback: average per FADN_code_letter and country
+        dplyr::summarise(
+          share_SSN_cat_country = mean(share_SSN, na.rm = TRUE),
+          share_SRN_cat_country = mean(share_SRN, na.rm = TRUE),
+          .by = c(FADN_code_letter, Country_ISO_3166_1_A3)
+        ),
+      by = c('FADN_code_letter', 'Country_ISO_3166_1_A3')
+    ) |>
     dplyr::mutate(
-      SSN = dplyr::coalesce(SSN, SN), # If SSN missing, take SN
-      SSV = dplyr::coalesce(SSV, SV), # If SSV missing, take SV
-      SRN = dplyr::coalesce(SRN, 0),  # If SRN missing, assume 0
-      SRV = dplyr::coalesce(SRV, 0)   # If SRV missing, assume 0
-    )
-
+      share_SSN = dplyr::coalesce(share_SSN, share_SSN_cat_country),
+      share_SRN = dplyr::coalesce(share_SRN, share_SRN_cat_country),
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3)
+    ) |>
+    ## fallback: average per FADN_code_letter
+    dplyr::left_join(
+      EUROSTAT_slaughter |>
+        dplyr::select(
+          FADN_code_letter,
+          Country_ISO_3166_1_A3,
+          YEAR,
+          share_SSN,
+          share_SRN
+        ) |>
+        ## fallback: average per FADN_code_letter,
+        dplyr::summarise(
+          share_SSN_cat = mean(share_SSN, na.rm = TRUE),
+          share_SRN_cat = mean(share_SRN, na.rm = TRUE),
+          .by = c(FADN_code_letter)
+        ),
+      by = c('FADN_code_letter')
+    ) |>
+    dplyr::mutate(
+      share_SSN = dplyr::coalesce(share_SSN, share_SSN_cat),
+      share_SRN = dplyr::coalesce(share_SRN, share_SRN_cat),
+      .by = c(FADN_code_letter)
+    ) |>
+    # version: average NUTS2
+    # check if SN = SRN + SSN
+    #dplyr::mutate(
+    #  complete_sales = dplyr::coalesce(SN == (SRN + SSN), FALSE),
+    #  SSN = ifelse(complete_sales,
+    #               dplyr::coalesce(SSN, 0),
+    #               SN * share_SSN),
+    #  SRN = ifelse(complete_sales,
+    #               dplyr::coalesce(SRN, 0),
+    #               SN * share_SRN),
+    #  SSV = ifelse(complete_sales,
+    #               dplyr::coalesce(SSV, 0),
+    #               SV * share_SSN),
+    #  SRV = ifelse(complete_sales,
+    #               dplyr::coalesce(SRV, 0),
+    #               SV * share_SRN)
+    #) #|>
+    # version: average COUNTRY x YEAR x type of farming
+    # check if SN = SRN + SSN
+    #dplyr::mutate(
+    #  complete_sales = dplyr::coalesce(SN == (SRN + SSN), FALSE),
+    #  SSN = ifelse(complete_sales,
+    #               dplyr::coalesce(SSN, 0),
+    #               SN * share_SSN),
+    #  SRN = ifelse(complete_sales,
+    #               dplyr::coalesce(SRN, 0),
+    #               SN * share_SRN),
+    #  SSV = ifelse(complete_sales,
+    #               dplyr::coalesce(SSV, 0),
+    #               SV * share_SSN),
+    #  SRV = ifelse(complete_sales,
+    #               dplyr::coalesce(SRV, 0),
+    #               SV * share_SRN)
+    #) #|>
+    dplyr::mutate(
+      complete_sales = dplyr::coalesce(
+        dplyr::coalesce(SN, 0) ==
+          (dplyr::coalesce(SRN, 0) + dplyr::coalesce(SSN, 0)),
+        FALSE
+      ),
+      SSN = ifelse(complete_sales, dplyr::coalesce(SSN, 0), SN * share_SSN),
+      SRN = ifelse(
+        complete_sales,
+        dplyr::coalesce(SRN, 0),
+        SN * (1 - share_SSN)
+      ),
+      SSV = ifelse(complete_sales, dplyr::coalesce(SSV, 0), SV * share_SSN),
+      SRV = ifelse(
+        complete_sales,
+        dplyr::coalesce(SRV, 0),
+        SV * (1 - share_SSN)
+      )
+    ) #|>
+  # version: default SSN
+  #dplyr::mutate(
+  #  SSN = dplyr::coalesce(SSN, SN), # If SSN missing, take SN
+  #  SSV = dplyr::coalesce(SSV, SV), # If SSV missing, take SV
+  #  SRN = dplyr::coalesce(SRN, 0),  # If SRN missing, assume 0
+  #  SRV = dplyr::coalesce(SRV, 0)   # If SRV missing, assume 0
+  #)
 
   return(final_data)
 }
@@ -782,8 +1134,7 @@
 #' @keywords internal
 #'
 .parse_input_data <- function(df_harmonized, id_cols) {
-
-  ref_fuel_data = ref_fuel_wob
+  ref_fuel_data <- ref_fuel_wob
 
   # 1. Select and Rename Core Variables -------------------------------------
   # Using any_of for optional Quantity columns so the code doesn't break if they are missing
@@ -792,14 +1143,14 @@
       dplyr::all_of(id_cols),
       # Core Values
       feed_purch_concent_graz = "IGRFEDCNCTRPUR_V", # Purchased concentrated feedstuffs for grazing stock (equines, ruminants) Value	in EUR
-      feed_purch_rough_graz   = "IGRFEDCRSPUR_V", # Purchased coarse fodder for grazing stock (equines, ruminants) Value	in EUR
+      feed_purch_rough_graz = "IGRFEDCRSPUR_V", # Purchased coarse fodder for grazing stock (equines, ruminants) Value	in EUR
       feed_purch_concent_pigs = "IPIGFEDPUR_V", # Purchased feedstuffs for pigs Value	in EUR
       feed_purch_concent_poultry = "IPLTRFEDPUR_V", # Purchased feedstuffs for poultry and other small animals Value	in EUR
-      N_min_ferti_Q    = "INUSE_Q",   # Quantity of N used in mineral fertilisers Quantity	in tonnes
-      pesticides_v = "IPROT_V",   # Crop protection products Value	in EUR
-      diesel_v  = "IFULS_V",   # Motor fuels and lubricants Value	in EUR
+      N_min_ferti_Q = "INUSE_Q", # Quantity of N used in mineral fertilisers Quantity	in tonnes
+      pesticides_v = "IPROT_V", # Crop protection products Value	in EUR
+      diesel_v = "IFULS_V", # Motor fuels and lubricants Value	in EUR
       heating_fuels_v = "IHFULS_V", # Heating fuels Value	in EUR
-      elec_V    = "IELE_V",  # Farming overheads. Electricity. Value	in EUR
+      elec_V = "IELE_V", # Farming overheads. Electricity. Value	in EUR
       # Optional Quantities (may or may not exist in raw data)
       dplyr::any_of(c(
         diesel_l = "IFULS_Q",
@@ -808,8 +1159,17 @@
     ) |>
     ## create variable if they do not exist
     dplyr::mutate(
-      diesel_l = (if ("IFULS_Q" %in% names(df_harmonized)) diesel_l else NA_real_),
-      heating_fuels_l = (if ("IHFULS_Q" %in% names(df_harmonized)) heating_fuels_l else NA_real_))
+      diesel_l = (if ("IFULS_Q" %in% names(df_harmonized)) {
+        diesel_l
+      } else {
+        NA_real_
+      }),
+      heating_fuels_l = (if ("IHFULS_Q" %in% names(df_harmonized)) {
+        heating_fuels_l
+      } else {
+        NA_real_
+      })
+    )
 
   # 2. Filter Zero Rows -----------------------------------------------------
   # Remove rows where all numeric value variables are zero/NA.
@@ -823,7 +1183,8 @@
           -dplyr::any_of(id_cols)
         ),
         na.rm = TRUE
-      ) > 0
+      ) >
+        0
     )
 
   # 3. Fuel Price Preparation (WOB Data) ------------------------------------
@@ -838,7 +1199,8 @@
     dplyr::summarise(
       PFUEL_ROAD_EU = mean(PFUEL_ROAD, na.rm = T),
       PFUEL_HEAT_EU = mean(PFUEL_HEAT, na.rm = T),
-      .by = YEAR) |>
+      .by = YEAR
+    ) |>
     dplyr::mutate(YEAR = as.character(YEAR))
 
   # 4. Calculation and logic application ------------------------------------
@@ -856,7 +1218,10 @@
       # 1. If raw quantity (IFULS_Q) exists, use it.
       # 2. Else, calculate Value / Price.
       diesel_l = dplyr::coalesce(diesel_l, diesel_v / final_price_road),
-      heating_fuels_l = dplyr::coalesce(heating_fuels_l, heating_fuels_v / final_price_heat),
+      heating_fuels_l = dplyr::coalesce(
+        heating_fuels_l,
+        heating_fuels_v / final_price_heat
+      ),
 
       # C. Energy Content Conversion
       # 1 liter diesel = 37.9 MJ
@@ -1009,7 +1374,6 @@
 #' @keywords internal
 #'
 .parse_output_data <- function(df_harmonized, crop_data, herd_data, id_cols) {
-
   # 1. Setup Metadata -------------------------------------------------------
   # Extract valid output codes for animal products
   output_meta <- data_extra$output |>
@@ -1021,7 +1385,8 @@
   # Informative message (kept from original, but shorter)
   message(
     "Production variables must use dictionary units (EUR or tonnes).\n",
-    "Animal products considered: ", paste(output_codes, collapse = ", "),
+    "Animal products considered: ",
+    paste(output_codes, collapse = ", "),
     "\nCrop production and slaughtered animals are included."
   )
 
@@ -1034,15 +1399,25 @@
     ) |>
     dplyr::select(
       dplyr::all_of(id_cols),
-      FADN_code_letter, output, species,
-      prod_t, sales_t, sales_e, output_e, yield
+      FADN_code_letter,
+      output,
+      species,
+      prod_t,
+      sales_t,
+      sales_e,
+      output_e,
+      yield
     ) |>
     dplyr::filter(prod_t > 0 | sales_e > 0)
 
   # 3. Other Animal Products (Milk, Wool, Eggs) -----------------------------
   # Strategy: Pivot Long -> Clean Code -> Pivot Wide -> Join Meta -> Join Herd
   output_herd_products <- df_harmonized |>
-    dplyr::select(dplyr::all_of(id_cols), dplyr::matches(output_regex), -dplyr::matches("_X$")) |>
+    dplyr::select(
+      dplyr::all_of(id_cols),
+      dplyr::matches(output_regex),
+      -dplyr::matches("_X$")
+    ) |>
     tidyr::pivot_longer(
       cols = -dplyr::all_of(id_cols),
       names_to = "raw_var",
@@ -1079,7 +1454,7 @@
       output_e = TO
     ) |>
     # filter for production or sales
-    dplyr::filter(prod_t > 0 | sales_e > 0)|>
+    dplyr::filter(prod_t > 0 | sales_e > 0) |>
     # Prepare mapping for Producer Animals (One-to-Many handling)
     # Output codes (e.g., Milk) map to Livestock codes (e.g., Dairy Cows)
     (\(x) {
@@ -1087,14 +1462,14 @@
 
       # Prepare mapping table
       map_livestock <- output_meta |>
-        dplyr::select(FADN_code_letter,from_livestock_category) %>%
+        dplyr::select(FADN_code_letter, from_livestock_category) %>%
         dplyr::filter(!is.na(from_livestock_category)) %>%
-        tidyr::separate_longer_delim(from_livestock_category,";")
+        tidyr::separate_longer_delim(from_livestock_category, ";")
 
       # Prepare herd data for joining
       herd_subset <- herd_data |>
         dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, Qobs) |>
-        dplyr::rename(from_livestock_category = FADN_code_letter)|>
+        dplyr::rename(from_livestock_category = FADN_code_letter) |>
         dplyr::left_join(
           map_livestock,
           by = "from_livestock_category", # livestock code
@@ -1114,11 +1489,25 @@
     dplyr::select(
       dplyr::all_of(id_cols),
       FADN_code_letter_output = FADN_code_letter,
-      output, species, prod_t, sales_t, sales_e, output_e,
+      output,
+      species,
+      prod_t,
+      sales_t,
+      sales_e,
+      output_e,
       FADN_code_letter = from_livestock_category,
-      Qobs, yield
+      Qobs,
+      yield
     )
 
+  # Convert eggs from thousands to tonne
+  ## we consider that an egg weight 60g
+  ## https://oeuf-info.fr/les-chiffres-cles/
+  ## "Elle s’établit à 957 000 téoc (tonnes équivalent oeuf coquille), soit environ 15,9 milliards d’oeufs." ⇒ 6*10^-5 t / oeuf
+  output_herd_products <- output_herd_products |>
+    dplyr::mutate(
+      prod_t = ifelse(output == "eggs", prod_t * 1000 * 6 * 10^-5, prod_t)
+    )
 
   # 4. Meat Output ----------------------------------------------------------
 
@@ -1133,7 +1522,7 @@
         dplyr::filter(!is.na(UNFCCC_cat)) |>
         dplyr::summarise(
           live_weight_kg = mean(Weight, na.rm = TRUE),
-          .by = c(species,UNFCCC_cat,Country_ISO_3166_1_A3)
+          .by = c(species, UNFCCC_cat, Country_ISO_3166_1_A3)
         ),
       by = 'UNFCCC_cat',
       relationship = "many-to-many"
@@ -1151,16 +1540,17 @@
   # Animals sold for slaughter
   output_herd_meat <- herd_data |>
     # add country iso names
-    dplyr::left_join(
-      data_extra$country_names |>
-        select(COUNTRY = country_FADN,
-               Country_ISO_3166_1_A3),
-      by = 'COUNTRY'
-    ) |>
+    #dplyr::left_join(
+    #  data_extra$country_names |>
+    #    dplyr::select(COUNTRY = country_FADN,
+    #                  Country_ISO_3166_1_A3),
+    #  by = 'COUNTRY'
+    #) |>
     # add animal live weights
     dplyr::left_join(
       livestock_weights,
-      by = c("FADN_code_letter", 'species', 'Country_ISO_3166_1_A3')) |>
+      by = c("FADN_code_letter", 'species', 'Country_ISO_3166_1_A3')
+    ) |>
     # define output
     dplyr::mutate(
       # Categorize Output
@@ -1176,9 +1566,9 @@
       ## estimate number of animals sold for slaughter
       sales_nb = dplyr::coalesce(SSN, 0),
       ## estimate live weight meat quantity
-      prod_t   = sales_nb * (live_weight_kg / 1000), # kg to tonnes
-      sales_t  = prod_t,
-      sales_e  = dplyr::coalesce(SSV, 0),
+      prod_t = sales_nb * (live_weight_kg / 1000), # kg to tonnes
+      sales_t = prod_t,
+      sales_e = dplyr::coalesce(SSV, 0),
 
       # Handle Division by Zero for Output Value pro-rating
       # Logic: output_e = TO * (Sales_Value_Slaughter / Total_Sales_Value)
@@ -1190,19 +1580,27 @@
 
       # Yields
       yield_t_sales_nb = live_weight_kg / 1000,
-      prop_sales_Qobs  = dplyr::if_else(Qobs > 0, sales_nb / Qobs, 0),
-      yield_t_Qobs     = dplyr::if_else(Qobs > 0, sales_t / Qobs, 0),
-      yield_e_Qobs     = dplyr::if_else(Qobs > 0, sales_e / Qobs, 0)
+      prop_sales_Qobs = dplyr::if_else(Qobs > 0, sales_nb / Qobs, 0),
+      yield_t_Qobs = dplyr::if_else(Qobs > 0, sales_t / Qobs, 0),
+      yield_e_Qobs = dplyr::if_else(Qobs > 0, sales_e / Qobs, 0)
     ) |>
     # Clean
     dplyr::select(
       dplyr::all_of(id_cols),
-      FADN_code_letter, output, species,
-      sales_nb, prod_t, sales_t, sales_e, output_e,
-      yield_t_sales_nb, prop_sales_Qobs, yield_t_Qobs, yield_e_Qobs
+      FADN_code_letter,
+      output,
+      species,
+      sales_nb,
+      prod_t,
+      sales_t,
+      sales_e,
+      output_e,
+      yield_t_sales_nb,
+      prop_sales_Qobs,
+      yield_t_Qobs,
+      yield_e_Qobs
     ) |>
     dplyr::filter(prod_t > 0 | sales_e > 0)
-
 
   # 5. Living Animals (Rearing) ---------------------------------------------
   output_herd_animals <- herd_data |>
@@ -1220,11 +1618,15 @@
     ) |>
     dplyr::select(
       dplyr::all_of(id_cols),
-      FADN_code_letter, output, species,
-      prod_nb, sales_nb, sales_e, output_e
+      FADN_code_letter,
+      output,
+      species,
+      prod_nb,
+      sales_nb,
+      sales_e,
+      output_e
     ) |>
     dplyr::filter(prod_nb > 0 | sales_e > 0)
-
 
   # 6. Return List ----------------------------------------------------------
   list(
@@ -1234,4 +1636,3 @@
     other_herd_products = output_herd_products
   )
 }
-

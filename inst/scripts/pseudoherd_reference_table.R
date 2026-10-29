@@ -18,55 +18,57 @@
 # Reference data ----
 
 #____________________________
-load("C:/Users/srhuet/OneDrive/Research/GitHub/Organic_prod_in_Europe/data_raw/FADN_16_18_object.RData")
-ref_obj = FADN_16_18_object
+load("C:/Users/srhuet/OneDrive/Research/GitHub/Organic_prod_in_Europe/data/raw/FADN_16_18_GHGE.RData")
+ref_obj = FADN_16_18_GHGE
 #ref_obj = RICA_2020_obj
+
+n_obs_min = 15
 #_____________________________
 
 id_cols = c("ID","COUNTRY","YEAR","NUTS2")
 
-ref_data <- ref_obj@herd %>%
-  dplyr::select(dplyr::all_of(ref_obj@traceability$id_cols),FADN_code_letter,Qobs,ON,CN,PN,SN,SSN) %>%
+ref_data <- ref_obj@herd |>
+  dplyr::select(dplyr::all_of(ref_obj@traceability$id_cols),FADN_code_letter,Qobs,ON,CN,PN,SN,SSN, SRN) |>
   tidyr::pivot_wider(
     id_cols = dplyr::all_of(ref_obj@traceability$id_cols),
     names_from = FADN_code_letter,
-    values_from = c(Qobs,ON,CN,PN,SN,SSN),
+    values_from = c(Qobs,ON,CN,PN,SN,SSN, SRN),
     names_glue = "{FADN_code_letter}_{.value}"
-  ) %>%
+  ) |>
   # replace NAs by zeros
-  dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~tidyr::replace_na(., 0))) %>%
+  dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~tidyr::replace_na(., 0))) |>
   # add missing livestock categories to prevent errors
   cbind(
-    expand.grid(code = setdiff(data_extra$livestock %>%
+    expand.grid(code = setdiff(data_extra$livestock |>
                                  dplyr::pull(FADN_code_letter),
                                unique(ref_obj@herd$FADN_code_letter)),
-                suffix = c("Qobs","ON","CN","PN","SN","SSN")) %>%
-      dplyr::transmute(name = paste(code, suffix, sep = "_")) %>%
-      dplyr::mutate(value = 0) %>%
+                suffix = c("Qobs","ON","CN","PN","SN","SSN", "SRN")) |>
+      dplyr::transmute(name = paste(code, suffix, sep = "_")) |>
+      dplyr::mutate(value = 0) |>
       tidyr::pivot_wider(names_from = name,values_from = value)
-  ) %>%
+  ) |>
   # add needed id_cols
   dplyr::left_join(
-    ref_obj@farm %>%
+    ref_obj@farm |>
       dplyr::select(dplyr::all_of(id_cols)),
     by = ref_obj@traceability$id_cols
   )
 
-reference_rearing_param <- list(ref_per_NUTS2 = list(cattle = tibble(),swine = tibble(), poultry = tibble()),
-                                ref_overall = list(cattle = tibble(),swine = tibble(), poultry = tibble()))
+reference_rearing_param <- list(ref_per_NUTS2 = list(cattle = tibble(),swine = tibble(), poultry = tibble(), sheep = tibble()),
+                                ref_overall = list(cattle = tibble(),swine = tibble(), poultry = tibble(), sheep = tibble()))
 
 # CATTLE ----
 ## Estimate rearing parameters for cattle ----
 
 
-tmp_param_cattle <- ref_data %>%
+tmp_param_cattle <- ref_data |>
   # select cattle variables
   dplyr::select(dplyr::all_of(id_cols),
                 dplyr::matches(paste0(
                   unique(na.omit(data_extra$livestock$FADN_code_letter[data_extra$livestock$species == "cattle"])),
-                  collapse = "|"))) %>%
+                  collapse = "|")))  |>
   # remove farms with less than one animal
-  dplyr::filter(rowSums(dplyr::select(., dplyr::matches("Qobs"))) >= 1) %>%
+  dplyr::filter(rowSums(dplyr::across(dplyr::matches("Qobs"), ~ dplyr::coalesce(.x, 0))) >= 1) |>
   ### Flows ----
 ## see diagram in Annex 1 of COMMUNITY COMMITTEE FOR THE FARM ACCOUNTANCY DATA NETWORK, 2009. Typology Handbook of agricultural holdings and the standard output (SO) coefficient calculation. (No. RI/CC 1500 rev. 3), COMMUNITY COMMITTEE FOR THE FARM ACCOUNTANCY DATA NETWORK. European Commission, Brussels.
 dplyr::mutate(
@@ -99,9 +101,9 @@ dplyr::mutate(
   # Flow in LBOV1
   LBOV1_Fout = LBOV1_SN + (LBOV1_2F_Fin-LBOV1_2F_PN) + (LBOV1_2M_Fin-LBOV1_2M_PN),
   LBOV1_Fin = LBOV1_PN + LBOV1_CN - LBOV1_ON + LBOV1_Fout
-) %>%
+) |>
   # replace flow values below zero by zeros
-  dplyr::mutate(dplyr::across(dplyr::all_of(colnames(.)[grepl("Fin_|Fout_",colnames(.))]), ~ ifelse(. < 0, 0, .))) %>%
+  dplyr::mutate(dplyr::across(dplyr::matches("Fin_|Fout_"), ~ ifelse(.x < 0, 0, .x))) |>
   ### rearing parameters ----
 ## average number of animals = average livestock unit / livestock unit coefficient
 ## see Commission Regulation (EC) No 1200/2009 of 30 November 2009 implementing Regulation (EC) No 1166/2008 of the European Parliament and of the Council on farm structure surveys and the survey on agricultural production methods, as regards livestock unit coefficients and definitions of the characteristics (Text with EEA relevance), 2009. , OJ L.
@@ -121,27 +123,31 @@ dplyr::mutate(
   ## LHEIFBRE have at least 2 y.o.
   t_1st_calve_heiffers = ((2+rt_LHEIFBRE)*LHEIFBRE_Qobs) / LHEIFBRE_Qobs,
   offspring_cows = (LBOV1_Fin-LBOV1_PN) / ( LCOWDAIR_Qobs + LCOWOTH_Qobs )
-) %>%
+) |>
   ### Estimate values for mixed categories ----
 dplyr::mutate(
   ## Total number of animals in downward rearing stages
-  LBOV1_2F_total_downward =
-    coalesce(LHEIFFAT_Qobs/rt_LHEIFFAT,0)
-  + coalesce(LHEIFBRE_Qobs/rt_LHEIFBRE,0)
-  +  coalesce(LCOWDAIR_Qobs/rt_LCOWDAIR,0)
-  +  coalesce(LCOWOTH_Qobs/rt_LCOWOTH,0),
-  ## Total number of animals in downward fattening rearing stages
-  LBOV1_2F_total_downward_fattening =
-    coalesce(LHEIFFAT_Qobs/rt_LHEIFFAT,0),
-  ## Total number of animals in downward breeders rearing stages
-  LBOV1_2F_total_downward_breeders =
-    coalesce(LHEIFBRE_Qobs/rt_LHEIFBRE,0)
-  +  coalesce(LCOWDAIR_Qobs/rt_LCOWDAIR,0)
-  +  coalesce(LCOWOTH_Qobs/rt_LCOWOTH,0),
+      #LBOV1_2F_total_downward =
+      #  LHEIFFAT_Qobs/rt_LHEIFFAT
+      #+ LHEIFBRE_Qobs/rt_LHEIFBRE
+      #+ LCOWDAIR_Qobs/rt_LCOWDAIR
+      #+ LCOWOTH_Qobs/rt_LCOWOTH,
+      ### Total number of animals in downward fattening rearing stages
+      #LBOV1_2F_total_downward_fattening =
+      #  LHEIFFAT_Qobs/rt_LHEIFFAT,
+      ### Total number of animals in downward breeders rearing stages
+      #LBOV1_2F_total_downward_breeders =
+      #  LHEIFBRE_Qobs/rt_LHEIFBRE
+      #+ LCOWDAIR_Qobs/rt_LCOWDAIR
+      #+ LCOWOTH_Qobs/rt_LCOWOTH,
+      LBOV1_2F_total_downward = LBOV1_2F_Fout,
+      LBOV1_2F_total_downward_fattening = LBOV1_2F_SSN + (LHEIFFAT_Fin-LHEIFFAT_PN),
+      LBOV1_2F_total_downward_breeders = LBOV1_2F_Fout - LBOV1_2F_total_downward_fattening ,
+      
   ## proportion of fattening
-  LBOV1_2F_fattening_prop = coalesce(LBOV1_2F_total_downward_fattening / LBOV1_2F_total_downward,0),
+  LBOV1_2F_fattening_prop = ifelse(LBOV1_2F_total_downward > 0, LBOV1_2F_total_downward_fattening / LBOV1_2F_total_downward, 0),
   ## proportion of breeding
-  LBOV1_2F_breeders_prop = coalesce(LBOV1_2F_total_downward_breeders / LBOV1_2F_total_downward,0),
+  LBOV1_2F_breeders_prop = ifelse(LBOV1_2F_total_downward > 0, LBOV1_2F_total_downward_breeders / LBOV1_2F_total_downward, 0),
 
   ## Observed number of animals
   LBOV1_2F_fattening_Qobs = LBOV1_2F_Qobs * LBOV1_2F_fattening_prop,
@@ -157,18 +163,90 @@ dplyr::mutate(
   ## residence time
   rt_LBOV1_2F_fattening = LBOV1_2F_fattening_Qobs / ((LBOV1_2F_fattening_Fin+LBOV1_2F_fattening_Fout)/2),
   rt_LBOV1_2F_breeders = LBOV1_2F_breeders_Qobs  / ((LBOV1_2F_breeders_Fin+LBOV1_2F_breeders_Fout)/2)
-) %>%
+) |>
   # rearing parameter including mixed categories
   ## LBOV1_2F have at least 1 y.o., LHEIFBRE have at least 2 y.o.
   dplyr::mutate(
     t_1st_calve = ( (1+rt_LBOV1_2F_breeders)*LBOV1_2F_breeders_Qobs + ((2+rt_LHEIFBRE)*LHEIFBRE_Qobs) ) / ( LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs ),
     offspring_b = (LBOV1_Fin-LBOV1_PN) / ( LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs + LCOWDAIR_Qobs + LCOWOTH_Qobs )
-  ) %>%
+  ) |>
+  # LBOV1_2F_fattening
+    dplyr::mutate(
+      ## proportion of calves for slaughter
+      LBOV1_2F_fattening_slaughter_prop = ifelse(LBOV1_2F_SSN > 0 & LBOV1_2F_fattening_Fout > 0, LBOV1_2F_SSN / LBOV1_2F_fattening_Fout, 0),
+      ## proportion of calves for rearing
+      LBOV1_2F_fattening_rearing_prop = 1 - LBOV1_2F_fattening_slaughter_prop,
+      ## we consider that all calves are either reared or slaughtered, so the sum of the two proportions equals 1
+      ## if no sales is reported, we consider that all calves are reared, so the rearing proportion equals 1 and the slaughter proportion equals 0
+
+      ## Observed number of animals
+      LBOV1_2F_fattening_rearing_Qobs = LBOV1_2F_fattening_Qobs * LBOV1_2F_fattening_rearing_prop,
+      LBOV1_2F_fattening_slaughter_Qobs = LBOV1_2F_fattening_Qobs * LBOV1_2F_fattening_slaughter_prop,
+      ## Outflow
+      LBOV1_2F_fattening_rearing_Fout = LBOV1_2F_fattening_Fout * LBOV1_2F_fattening_rearing_prop,
+      LBOV1_2F_fattening_slaughter_Fout = LBOV1_2F_fattening_Fout * LBOV1_2F_fattening_slaughter_prop,
+      ## Inflow
+      LBOV1_2F_fattening_rearing_Fin = LBOV1_2F_fattening_Fin * LBOV1_2F_fattening_rearing_prop,
+      LBOV1_2F_fattening_slaughter_Fin = LBOV1_2F_fattening_Fin * LBOV1_2F_fattening_slaughter_prop,
+      ## residence time
+      rt_LBOV1_2F_fattening_rearing = LBOV1_2F_fattening_rearing_Qobs / ((LBOV1_2F_fattening_rearing_Fin + LBOV1_2F_fattening_rearing_Fout)/2),
+      rt_LBOV1_2F_fattening_slaughter = LBOV1_2F_fattening_slaughter_Qobs  / ((LBOV1_2F_fattening_slaughter_Fin + LBOV1_2F_fattening_slaughter_Fout)/2)
+    ) |>
+    # LBOV1_2M
+    dplyr::mutate(
+      ## proportion of calves for slaughter
+      LBOV1_2M_slaughter_prop = ifelse(LBOV1_2M_SSN > 0 & LBOV1_2M_Fout > 0, LBOV1_2M_SSN / LBOV1_2M_Fout, 0),
+      ## proportion of calves for rearing
+      LBOV1_2M_rearing_prop = 1 - LBOV1_2M_slaughter_prop,
+      ## we consider that all calves are either reared or slaughtered, so the sum of the two proportions equals 1
+      ## if no sales is reported, we consider that all calves are reared, so the rearing proportion equals 1 and the slaughter proportion equals 0
+
+      ## Observed number of animals
+      LBOV1_2M_rearing_Qobs = LBOV1_2M_Qobs * LBOV1_2M_rearing_prop,
+      LBOV1_2M_slaughter_Qobs = LBOV1_2M_Qobs * LBOV1_2M_slaughter_prop,
+      ## Outflow
+      LBOV1_2M_rearing_Fout = LBOV1_2M_Fout * LBOV1_2M_rearing_prop,
+      LBOV1_2M_slaughter_Fout = LBOV1_2M_Fout * LBOV1_2M_slaughter_prop,
+      ## Inflow
+      LBOV1_2M_rearing_Fin = LBOV1_2M_Fin * LBOV1_2M_rearing_prop,
+      LBOV1_2M_slaughter_Fin = LBOV1_2M_Fin * LBOV1_2M_slaughter_prop,
+      ## residence time
+      rt_LBOV1_2M_rearing = LBOV1_2M_rearing_Qobs / ((LBOV1_2M_rearing_Fin + LBOV1_2M_rearing_Fout)/2),
+      rt_LBOV1_2M_slaughter = LBOV1_2M_slaughter_Qobs  / ((LBOV1_2M_slaughter_Fin + LBOV1_2M_slaughter_Fout)/2)
+    ) |>
+    # LBOV1
+    dplyr::mutate(
+      ## proportion of calves for slaughter
+      LBOV1_slaughter_prop = ifelse(LBOV1_SSN > 0 & LBOV1_Fout > 0, LBOV1_SSN / LBOV1_Fout, 0),
+      ## proportion of calves for rearing
+      LBOV1_rearing_prop = 1 - LBOV1_slaughter_prop,
+      ## we consider that all calves are either reared or slaughtered, so the sum of the two proportions equals 1
+      ## if no sales is reported, we consider that all calves are reared, so the rearing proportion equals 1 and the slaughter proportion equals 0
+
+      ## Observed number of animals
+      LBOV1_rearing_Qobs = LBOV1_Qobs * LBOV1_rearing_prop,
+      LBOV1_slaughter_Qobs = LBOV1_Qobs * LBOV1_slaughter_prop,
+      ## Outflow
+      LBOV1_rearing_Fout = LBOV1_Fout * LBOV1_rearing_prop,
+      LBOV1_slaughter_Fout = LBOV1_Fout * LBOV1_slaughter_prop,
+      ## Inflow
+      LBOV1_rearing_Fin = LBOV1_Fin * LBOV1_rearing_prop,
+      LBOV1_slaughter_Fin = LBOV1_Fin * LBOV1_slaughter_prop,
+      ## residence time
+      rt_LBOV1_rearing = LBOV1_rearing_Qobs / ((LBOV1_rearing_Fin + LBOV1_rearing_Fout)/2),
+      rt_LBOV1_slaughter = LBOV1_slaughter_Qobs  / ((LBOV1_slaughter_Fin + LBOV1_slaughter_Fout)/2)
+    ) |>
+  # replace Inf per NAs
+  dplyr::mutate(
+    dplyr::across(
+      dplyr::matches("rt_|t_1st|offspring"),
+      ~ ifelse(!is.finite(.x), NA_real_, .x)
+    )) |>
   # estimate observed quantities and times for each rearing stage
   dplyr::mutate(
     # juveniles
-    Qobs_j = LBOV1_Qobs,
-    rt_j = rt_LBOV1,
+    Qobs_j = LBOV1_rearing_Qobs,
+    rt_j = rt_LBOV1_rearing,
     # fattening
     Qobs_f = LBOV1_2M_Qobs + LBOV2_Qobs + LBOV1_2F_fattening_Qobs + LHEIFFAT_Qobs,
     ## LBOV1_2M & LBOV1_2F have at least 1 y.o., LBOV2 & LHEIFFAT have at least 2 y.o.
@@ -179,8 +257,8 @@ dplyr::mutate(
                (2+rt_LHEIFBRE)*LHEIFBRE_Qobs +
                (2+rt_LCOWDAIR)*LCOWDAIR_Qobs) / Qobs_b ,
     offspring = offspring_b
-  ) %>%
-  dplyr::select(dplyr::all_of(id_cols),dplyr::matches("Qobs|rt_|_prop_|t_1st_calve|offspring")) %>%
+  ) |>
+  dplyr::select(dplyr::all_of(id_cols),dplyr::matches("Qobs|rt_|_prop_|t_1st_calve|offspring")) |>
   tidyr::pivot_longer(
     cols = -all_of(id_cols),
     names_to = "rearing_param",
@@ -190,11 +268,22 @@ dplyr::mutate(
 ## Reference values for cattle ----
 
 # Create reference values per NUTS2
-tmp_ref_NUTS2 <- tmp_param_cattle %>%
+tmp_ref_NUTS2 <- h_average_practices(data = tmp_param_cattle |>
+                                              dplyr::left_join(
+                                                ref_obj@farm |>
+                                                  dplyr::select(dplyr::all_of(id_cols), NUTS2, SYS02),
+                                                by = id_cols
+                                              ),
+                                     target_vars = "value",
+                                     primary_grp = c("COUNTRY", "YEAR", "NUTS2", "rearing_param"),
+                                     secondary_grp = c("COUNTRY", "rearing_param"),
+                                     weight_var = "SYS02")
+
+tmp_ref_NUTS2 <- tmp_param_cattle |>
   # remove unreliable values
   dplyr::filter(
     value >0 & is.finite(value)
-  ) %>%
+  ) |>
   # summarise
   dplyr::summarise(
     median= median(value,na.rm = T),
@@ -202,18 +291,18 @@ tmp_ref_NUTS2 <- tmp_param_cattle %>%
     sd = sd(value,na.rm = T),
     n = length(value),
     .by = c(NUTS2,rearing_param)
-  ) %>%
-  # remove NUTS2 with less than 3 farms
+  ) |>
+  # remove NUTS2 with less than n_obs_min farms
   ## 13 639 observations to 11 303
   # WIP: to validate
-  dplyr::filter(n >= 3)
+  dplyr::filter(n >= n_obs_min)
 
 # Create overall reference values
-tmp_ref_all <- tmp_param_cattle %>%
+tmp_ref_all <- tmp_param_cattle |>
   # remove unreliable values
   dplyr::filter(
     value >0 & is.finite(value)
-  ) %>%
+  ) |>
   dplyr::summarise(
     median = median(value,na.rm = T),
     q1 = as.numeric(quantile(value,0.25,na.rm = T)),
@@ -234,17 +323,16 @@ tmp_ref_all <- tmp_param_cattle %>%
 ## Threshold for cattle rearing parameters ----
 ## we define min and max for each rearing parameter regarding parameter distribution
 
-#tmp0 = unique(tmp_param_cattle$rearing_param)[30]
-#tmp1 = tmp_param_cattle %>% filter(rearing_param == tmp0 & is.finite(value) & value >0)
-#if (nrow(tmp1) >0) {
-#
-#hist(log(tmp1 %>% pull(value)),1000,main = tmp0)
+#tmp0 = unique(tmp_param_cattle$rearing_param)[29]
+#tmp1 = tmp_param_cattle |> filter(rearing_param == tmp0 & is.finite(value) & value >0)
+
+#hist(log(tmp1 |> pull(value)),1000,main = tmp0)
 #abline(v= c(log(tmp_ref_all$p01[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p99[tmp_ref_all$rearing_param == tmp0])), col = "blue")
 #abline(v= c(log(tmp_ref_all$p05[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p95[tmp_ref_all$rearing_param == tmp0])), col = "red")
 #abline(v= c(log(tmp_ref_all$p10[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p90[tmp_ref_all$rearing_param == tmp0])), col = "green")
-#}
+#
 
-tmp_ref_all <- tmp_ref_all %>%
+tmp_ref_all <- tmp_ref_all |>
   dplyr::mutate(
     threshold_down = case_when(
       rearing_param == "rt_LCOWDAIR" ~ p05,
@@ -257,10 +345,16 @@ tmp_ref_all <- tmp_ref_all %>%
       rearing_param == "rt_LBOV1" ~ p05,
       rearing_param == "t_1st_calve_heiffers" ~ p01,
       rearing_param == "offspring_cows" ~ p05,
-      rearing_param == "rt_LBOV1_2F_fattening" ~ p10,
-      rearing_param == "rt_LBOV1_2F_breeders" ~ p10,
+      rearing_param == "rt_LBOV1_2F_fattening" ~ p05,
+      rearing_param == "rt_LBOV1_2F_breeders" ~ p05,
       rearing_param == "t_1st_calve" ~ p05,
       rearing_param == "offspring_b" ~ p01,
+      rearing_param == "rt_LBOV1_2F_fattening_rearing" ~ p01,
+      rearing_param == "rt_LBOV1_2F_fattening_slaughter" ~ p01,
+      rearing_param == "rt_LBOV1_2M_rearing" ~ p01,
+      rearing_param == "rt_LBOV1_2M_slaughter" ~ p01,
+      rearing_param == "rt_LBOV1_rearing" ~ p01,
+      rearing_param == "rt_LBOV1_slaughter" ~ p01,
       rearing_param == "rt_j" ~ p05,
       rearing_param == "rt_f" ~ p01,
       rearing_param == "rt_b" ~ p10,
@@ -281,6 +375,12 @@ tmp_ref_all <- tmp_ref_all %>%
       rearing_param == "rt_LBOV1_2F_breeders" ~ 1,
       rearing_param == "t_1st_calve" ~ p95,
       rearing_param == "offspring_b" ~ p90,
+      rearing_param == "rt_LBOV1_2F_fattening_rearing" ~ 1,
+      rearing_param == "rt_LBOV1_2F_fattening_slaughter" ~ 1,
+      rearing_param == "rt_LBOV1_2M_rearing" ~ 1,
+      rearing_param == "rt_LBOV1_2M_slaughter" ~ p99,
+      rearing_param == "rt_LBOV1_rearing" ~ 1,
+      rearing_param == "rt_LBOV1_slaughter" ~ 1,
       rearing_param == "rt_j" ~ 1,
       rearing_param == "rt_f" ~ p90,
       rearing_param == "rt_b" ~ p95,
@@ -294,13 +394,13 @@ reference_rearing_param$ref_overall$cattle <- tmp_ref_all
 # SWINE ----
 ## Estimate rearing parameters for swine ----
 
-tmp_param_swine <- ref_data %>%
+tmp_param_swine <- ref_data |>
   # select swine variables
   dplyr::select(dplyr::all_of(id_cols),dplyr::matches(paste0(
     unique(na.omit(data_extra$livestock$FADN_code_letter[data_extra$livestock$species == "swine"])),
-    collapse = "|"))) %>%
+    collapse = "|"))) |>
   # remove farms with less than one animal
-  dplyr::filter(rowSums(dplyr::select(., dplyr::matches("Qobs"))) >= 1) %>%
+  dplyr::filter(rowSums(dplyr::across(dplyr::matches("Qobs"), ~ dplyr::coalesce(.x, 0))) >= 1) |>
   # Flows
   ## See Figure in package vignette
   dplyr::mutate(
@@ -316,9 +416,9 @@ tmp_param_swine <- ref_data %>%
     # Flow in LPIGLET
     Fout_LPIGLET = LPIGLET_SN + (Fin_LPIGFAT-LPIGFAT_PN) + (Fin_LSOWBRE-LSOWBRE_PN) + (Fin_LPIGOTH-LPIGOTH_PN),
     Fin_LPIGLET = LPIGLET_PN + LPIGLET_CN - LPIGLET_ON + Fout_LPIGLET
-  ) %>%
+  ) |>
   # replace flow values below zero by zeros
-  dplyr::mutate(dplyr::across(colnames(.)[grepl("Fin_|Fout_",colnames(.))], ~ ifelse(. < 0, 0, .))) %>%
+  dplyr::mutate(dplyr::across(dplyr::matches("Fin_|Fout_"), ~ ifelse(.x < 0, 0, .x))) |>
   # rearing parameters
   dplyr::mutate(
     rt_LSOWBRE = LSOWBRE_Qobs / ((Fin_LSOWBRE+Fout_LSOWBRE)/2),
@@ -326,20 +426,26 @@ tmp_param_swine <- ref_data %>%
     rt_LPIGFAT = LPIGFAT_Qobs / ((Fin_LPIGFAT+Fout_LPIGFAT)/2),
     rt_LPIGLET = LPIGLET_Qobs / ((Fin_LPIGLET + Fout_LPIGLET)/2),
     offspring_LSOWBRE = (Fin_LPIGLET-LPIGLET_PN) / LSOWBRE_Qobs
-  ) %>%
+  ) |>
   # estimate observed quantities and times for each production process step
   dplyr::mutate(
     # juveniles
     Qobs_j = LPIGLET_Qobs,
     rt_j = rt_LPIGLET,
     # fattening
-    Qobs_f = LPIGOTH_Qobs + LPIGFAT_Qobs,
-    rt_f = (rt_LPIGOTH*LPIGOTH_Qobs + rt_LPIGFAT*LPIGFAT_Qobs) / Qobs_f,
+    Qobs_f =  LPIGFAT_Qobs,
+    rt_f = rt_LPIGFAT,
     # breeders
-    Qobs_b = LSOWBRE_Qobs,
+    Qobs_b = LSOWBRE_Qobs + LPIGOTH_Qobs,
     offspring = offspring_LSOWBRE
-  ) %>%
-  dplyr::select(dplyr::all_of(id_cols),dplyr::matches("Qobs|rt_|offspring")) %>%
+  ) |>
+  # replace Inf per NAs
+  dplyr::mutate(
+    dplyr::across(
+      dplyr::matches("rt_|t_1st|offspring"),
+      ~ ifelse(!is.finite(.x), NA_real_, .x)
+    )) |>
+  dplyr::select(dplyr::all_of(id_cols),dplyr::matches("Qobs|rt_|offspring")) |>
   tidyr::pivot_longer(
     cols = -all_of(id_cols),
     names_to = "rearing_param",
@@ -349,11 +455,11 @@ tmp_param_swine <- ref_data %>%
 ## Reference values for swine ----
 
 # Create reference values per NUTS2
-tmp_ref_NUTS2 <- tmp_param_swine %>%
+tmp_ref_NUTS2 <- tmp_param_swine |>
   # remove unreliable values
   dplyr::filter(
     value >0 & is.finite(value)
-  ) %>%
+  ) |>
   # summarise
   dplyr::summarise(
     median= median(value,na.rm = T),
@@ -361,18 +467,18 @@ tmp_ref_NUTS2 <- tmp_param_swine %>%
     sd = sd(value,na.rm = T),
     n = length(value),
     .by = c(NUTS2,rearing_param)
-  ) %>%
-  # remove NUTS2 with less than 3 farms
+  ) |>
+  # remove NUTS2 with less than n_obs_min farms
   ## 2750 observations to 2470
   # WIP: to validate
-  dplyr::filter(n >= 3)
+  dplyr::filter(n >= n_obs_min)
 
 # Create overall reference values
-tmp_ref_all <- tmp_param_swine %>%
+tmp_ref_all <- tmp_param_swine |>
   # remove unreliable values
   dplyr::filter(
     value >0 & is.finite(value)
-  ) %>%
+  ) |>
   dplyr::summarise(
     median = median(value,na.rm = T),
     q1 = as.numeric(quantile(value,0.25,na.rm = T)),
@@ -393,16 +499,16 @@ tmp_ref_all <- tmp_param_swine %>%
 ## we define min and max for each rearing parameter regarding parameter distribution
 
 #tmp0 = "rt_f" # unique(tmp_param_swine$rearing_param)
-#tmp1 = tmp_param_swine %>% filter(rearing_param == tmp0 & is.finite(value) & value >0)
+#tmp1 = tmp_param_swine |> filter(rearing_param == tmp0 & is.finite(value) & value >0)
 #if (nrow(tmp1) >0) {
-#hist(log(tmp1 %>% pull(value)),1000,main = tmp0)
+#hist(log(tmp1 |> pull(value)),1000,main = tmp0)
 #abline(v= c(log(tmp_ref_all$p01[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p99[tmp_ref_all$rearing_param == tmp0])), col = "blue")
 #abline(v= c(log(tmp_ref_all$p05[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p95[tmp_ref_all$rearing_param == tmp0])), col = "red")
 #abline(v= c(log(tmp_ref_all$p10[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p90[tmp_ref_all$rearing_param == tmp0])), col = "green")
 #abline(v= c(log(tmp_ref_all$q1[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$q3[tmp_ref_all$rearing_param == tmp0])), col = "grey")
 #}
 
-tmp_ref_all <- tmp_ref_all %>%
+tmp_ref_all <- tmp_ref_all |>
   dplyr::mutate(
     threshold_down = case_when(
       rearing_param == "rt_LSOWBRE" ~ p05,
@@ -433,13 +539,13 @@ reference_rearing_param$ref_overall$swine <- tmp_ref_all
 
 ## Estimate rearing parameters for poultry ----
 
-tmp_param_poultry <- ref_data %>%
+tmp_param_poultry <- ref_data |>
   # select swine variables
   dplyr::select(dplyr::all_of(id_cols),dplyr::matches(paste0(
     unique(na.omit(data_extra$livestock$FADN_code_letter[data_extra$livestock$species == "poultry"])),
-    collapse = "|"))) %>%
+    collapse = "|"))) |>
   # remove farms with less than one animal
-  dplyr::filter(rowSums(dplyr::select(., dplyr::matches("Qobs"))) >= 1) %>%
+  dplyr::filter(rowSums(dplyr::across(dplyr::matches("Qobs"), ~ dplyr::coalesce(.x, 0))) >= 1) |>
   # Flows
   ## See Figure in package vignette
   dplyr::mutate(
@@ -452,16 +558,22 @@ tmp_param_poultry <- ref_data %>%
     # Flow in LPLTROTH
     Fout_LPLTROTH = LPLTROTH_SN,
     Fin_LPLTROTH = LPLTROTH_PN + LPLTROTH_CN - LPLTROTH_ON + Fout_LPLTROTH
-  ) %>%
+  ) |>
   # replace flow values below zero by zeros
-  dplyr::mutate(dplyr::across(colnames(.)[grepl("Fin_|Fout_",colnames(.))], ~ ifelse(. < 0, 0, .))) %>%
+  dplyr::mutate(dplyr::across(dplyr::matches("Fin_|Fout_"), ~ ifelse(.x < 0, 0, .x))) |>
   # rearing parameters
   dplyr::mutate(
     rt_LHENSLAY = LHENSLAY_Qobs / ((Fin_LHENSLAY+Fout_LHENSLAY)/2),
     rt_LPLTRBROYL = LPLTRBROYL_Qobs / ((Fin_LPLTRBROYL+Fout_LPLTRBROYL)/2),
     rt_LPLTROTH = LPLTROTH_Qobs / ((Fin_LPLTROTH+Fout_LPLTROTH)/2)
-  ) %>%
-  dplyr::select(dplyr::all_of(id_cols),dplyr::matches("Qobs|rt_")) %>%
+  )  |>
+  # replace Inf per NAs
+  dplyr::mutate(
+    dplyr::across(
+      dplyr::matches("rt_|t_1st|offspring"),
+      ~ ifelse(!is.finite(.x), NA_real_, .x)
+    )) |>
+  dplyr::select(dplyr::all_of(id_cols),dplyr::matches("Qobs|rt_")) |>
   tidyr::pivot_longer(
     cols = -all_of(id_cols),
     names_to = "rearing_param",
@@ -471,11 +583,11 @@ tmp_param_poultry <- ref_data %>%
 ## Reference values for poultry ----
 
 # Create reference values per NUTS2
-tmp_ref_NUTS2 <- tmp_param_poultry %>%
+tmp_ref_NUTS2 <- tmp_param_poultry |>
   # remove unreliable values
   dplyr::filter(
     value >0 & is.finite(value)
-  ) %>%
+  ) |>
   # summarise
   dplyr::summarise(
     median= median(value,na.rm = T),
@@ -483,18 +595,18 @@ tmp_ref_NUTS2 <- tmp_param_poultry %>%
     sd = sd(value,na.rm = T),
     n = length(value),
     .by = c(NUTS2,rearing_param)
-  ) %>%
-  # remove NUTS2 with less than 3 farms
+  ) |>
+  # remove NUTS2 with less than n_obs_min farms
   ## 2750 observations to 2470
   # WIP: to validate
-  dplyr::filter(n >= 3)
+  dplyr::filter(n >= n_obs_min)
 
 # Create overall reference values
-tmp_ref_all <- tmp_param_poultry %>%
+tmp_ref_all <- tmp_param_poultry |>
   # remove unreliable values
   dplyr::filter(
     value >0 & is.finite(value)
-  ) %>%
+  ) |>
   dplyr::summarise(
     median = median(value,na.rm = T),
     q1 = as.numeric(quantile(value,0.25,na.rm = T)),
@@ -515,16 +627,16 @@ tmp_ref_all <- tmp_param_poultry %>%
 ## we define min and max for each rearing parameter regarding parameter distribution
 
 #tmp0 = "rt_LPLTROTH" # unique(tmp_param_poultry$rearing_param)
-#tmp1 = tmp_param_poultry %>% filter(rearing_param == tmp0 & is.finite(value) & value >0)
+#tmp1 = tmp_param_poultry |> filter(rearing_param == tmp0 & is.finite(value) & value >0)
 #if (nrow(tmp1) >0) {
-#hist(log(tmp1 %>% pull(value)),1000,main = tmp0)
+#hist(log(tmp1 |> pull(value)),1000,main = tmp0)
 #abline(v= c(log(tmp_ref_all$p01[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p99[tmp_ref_all$rearing_param == tmp0])), col = "blue")
 #abline(v= c(log(tmp_ref_all$p05[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p95[tmp_ref_all$rearing_param == tmp0])), col = "red")
 #abline(v= c(log(tmp_ref_all$p10[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p90[tmp_ref_all$rearing_param == tmp0])), col = "green")
 #abline(v= c(log(tmp_ref_all$q1[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$q3[tmp_ref_all$rearing_param == tmp0])), col = "grey")
 #}
 
-tmp_ref_all <- tmp_ref_all %>%
+tmp_ref_all <- tmp_ref_all |>
   dplyr::mutate(
     threshold_down = case_when(
       rearing_param == "rt_LHENSLAY" ~ p05,
@@ -540,6 +652,155 @@ tmp_ref_all <- tmp_ref_all %>%
 
 reference_rearing_param$ref_per_NUTS2$poultry<- tmp_ref_NUTS2
 reference_rearing_param$ref_overall$poultry <- tmp_ref_all
+
+# SHEEP ----
+## Estimate rearing parameters for sheep ----
+
+tmp_param_sheep <- ref_data |>
+  # select sheep variables
+  dplyr::select(dplyr::all_of(id_cols),
+                dplyr::matches(paste0(
+                  unique(na.omit(data_extra$livestock$FADN_code_letter[data_extra$livestock$species == "sheep"])),
+                  collapse = "|"))) |>
+  # remove farms with less than one animal
+  dplyr::filter(rowSums(dplyr::across(dplyr::matches("Qobs"), ~ dplyr::coalesce(.x, 0))) >= 1) |>
+  ### Flows ----
+## see diagram in Annex 1 of COMMUNITY COMMITTEE FOR THE FARM ACCOUNTANCY DATA NETWORK, 2009. Typology Handbook of agricultural holdings and the standard output (SO) coefficient calculation. (No. RI/CC 1500 rev. 3), COMMUNITY COMMITTEE FOR THE FARM ACCOUNTANCY DATA NETWORK. European Commission, Brussels.
+dplyr::mutate(
+  # Flow in LEWEBRE (breeding ewes)
+  LEWEBRE_Fout = LEWEBRE_SN,
+  ## LEWEBRE_Fin = LEWEBRE_PN + LEWEBRE_CN - LEWEBRE_ON + LEWEBRE_SN, # no ON and CN variables for LEWEBRE
+  LEWEBRE_Fin = LEWEBRE_PN + LEWEBRE_Fout,
+
+  # Flow in LSHEPOTH (other sheep: juveniles / fattening)
+  LSHEPOTH_Fout = LSHEPOTH_SN,
+  LSHEPOTH_Fin = LSHEPOTH_PN + LSHEPOTH_CN - LSHEPOTH_ON + LSHEPOTH_Fout
+) |>
+  # replace flow values below zero by zeros
+  dplyr::mutate(
+    dplyr::across(
+      dplyr::matches("Fin|Fout"),
+      ~ pmax(.x, 0, na.rm = TRUE)
+    )
+  ) |>
+  ### rearing parameters ----
+## average number of animals = average livestock unit / livestock unit coefficient
+## see Commission Regulation (EC) No 1200/2009 of 30 November 2009 implementing Regulation (EC) No 1166/2008 of the European Parliament and of the Council on farm structure surveys and the survey on agricultural production methods, as regards livestock unit coefficients and definitions of the characteristics (Text with EEA relevance), 2009. , OJ L.
+dplyr::mutate(
+  rt_LEWEBRE = LEWEBRE_Qobs / ((LEWEBRE_Fin+LEWEBRE_Fout)/2),
+  rt_LSHEPOTH = LSHEPOTH_Qobs / ((LSHEPOTH_Fin+LSHEPOTH_Fout)/2)
+) |>
+  ### Estimate rearing stage quantities and offspring parameter ----
+## LSHEPOTH represents a single "others" stage (no fattening/breeders split needed)
+dplyr::mutate(
+  offspring_LEWEBRE = (LSHEPOTH_Fin-LSHEPOTH_PN) / LEWEBRE_Qobs
+) |>
+  # replace Inf per NAs
+  dplyr::mutate(
+    dplyr::across(
+      dplyr::matches("rt_|t_1st|offspring"),
+      ~ ifelse(!is.finite(.x), NA_real_, .x)
+    )) |>
+  # estimate observed quantities and times for each rearing stage
+  dplyr::mutate(
+    # others (juveniles / fattening)
+    Qobs_o = LSHEPOTH_Qobs,
+    rt_o = rt_LSHEPOTH,
+    # breeders
+    Qobs_b = LEWEBRE_Qobs,
+    rt_b = rt_LEWEBRE,
+    offspring = offspring_LEWEBRE
+  ) |>
+  dplyr::select(dplyr::all_of(id_cols),dplyr::matches("Qobs|rt_|offspring")) |>
+  tidyr::pivot_longer(
+    cols = -all_of(id_cols),
+    names_to = "rearing_param",
+    values_to = "value"
+  )
+
+## Reference values for sheep ----
+
+# Create reference values per NUTS2
+tmp_ref_NUTS2 <- tmp_param_sheep |>
+  # remove unreliable values
+  dplyr::filter(
+    value >0 & is.finite(value)
+  ) |>
+  # summarise
+  dplyr::summarise(
+    median= median(value, na.rm = T),
+    mean = mean(value, na.rm = T),
+    sd = sd(value, na.rm = T),
+    n = length(value),
+    .by = c(NUTS2, rearing_param)
+  ) |>
+  # remove NUTS2 with less than n_obs_min farms
+  ## 13 639 observations to 11 303
+  # WIP: to validate
+  dplyr::filter(n >= n_obs_min)
+
+# Create overall reference values
+tmp_ref_all <- tmp_param_sheep |>
+  # remove unreliable values
+  dplyr::filter(
+    value >0 & is.finite(value)
+  ) |>
+  dplyr::summarise(
+    median = median(value,na.rm = T),
+    q1 = as.numeric(quantile(value,0.25,na.rm = T)),
+    q3 = as.numeric(quantile(value,0.75,na.rm = T)),
+    mean = mean(value,na.rm = T),
+    sd = sd(value,na.rm = T),
+    n = length(value),
+    p01 = as.numeric(quantile(value, 0.01,na.rm = T)),
+    p05 = as.numeric(quantile(value, 0.05,na.rm = T)),
+    p10 = as.numeric(quantile(value, 0.10,na.rm = T)),
+    p90 = as.numeric(quantile(value, 0.90,na.rm = T)),
+    p95 = as.numeric(quantile(value, 0.95,na.rm = T)),
+    p99 = as.numeric(quantile(value, 0.99,na.rm = T)),
+    .by = c(rearing_param)
+  )
+
+
+## Threshold for sheep rearing parameters ----
+## we define min and max for each rearing parameter regarding parameter distribution
+
+#tmp0 = "offspring"
+#tmp1 = tmp_param_sheep |> filter(rearing_param == tmp0 & is.finite(value) & value >0)
+
+#hist(log(tmp1 |> pull(value)),1000,main = tmp0)
+#abline(v= c(log(tmp_ref_all$p01[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p99[tmp_ref_all$rearing_param == tmp0])), col = "blue")
+#abline(v= c(log(tmp_ref_all$p05[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p95[tmp_ref_all$rearing_param == tmp0])), col = "red")
+#abline(v= c(log(tmp_ref_all$p10[tmp_ref_all$rearing_param == tmp0]),log(tmp_ref_all$p90[tmp_ref_all$rearing_param == tmp0])), col = "green")
+
+
+tmp_ref_all <- tmp_ref_all |>
+  dplyr::mutate(
+    threshold_down = case_when(
+      rearing_param == "rt_LEWEBRE" ~ p01,
+      rearing_param == "rt_LSHEPOTH" ~ p01,
+      rearing_param == "rt_LSHEPOTH_fattening" ~ p01,
+      rearing_param == "rt_LSHEPOTH_breeders" ~ p01,
+      rearing_param == "offspring_LEWEBRE" ~ p01,
+      rearing_param == "rt_o" ~ p01,
+      rearing_param == "rt_b" ~ p01,
+      rearing_param == "offspring" ~ p01
+    ),
+    threshold_up = case_when(
+      rearing_param == "rt_LEWEBRE" ~ p99,
+      rearing_param == "rt_LSHEPOTH" ~ p99,
+      rearing_param == "rt_LSHEPOTH_fattening" ~ p99,
+      rearing_param == "rt_LSHEPOTH_breeders" ~ p99,
+      rearing_param == "offspring_LEWEBRE" ~ p01,
+      rearing_param == "rt_o" ~ p99,
+      rearing_param == "rt_b" ~ p99,
+      rearing_param == "offspring" ~ p99
+    )
+  )
+
+reference_rearing_param$ref_per_NUTS2$sheep<- tmp_ref_NUTS2
+reference_rearing_param$ref_overall$sheep <- tmp_ref_all
+
 
 
 # export data

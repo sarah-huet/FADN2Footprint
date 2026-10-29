@@ -36,6 +36,10 @@
 #' }
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
+#' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
+#'   the function returns
+#'   the cached object and no recomputation is performed. If TRUE, existing
+#'   cached GHGE results are ignored and computations are re-run.
 #'
 #' @return A \code{\link[tibble]{tibble}} with one row per farm observation ×
 #' crop category, containing:
@@ -60,8 +64,8 @@
 #' 276, 111211. \doi{10.1016/j.jenvman.2020.111211}
 #'
 #' @seealso
-#' \code{\link{f_n_ferti}}, \code{\link{GHGE_n2o_msoils}},
-#' \code{\link{f_GHGE_crops}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_n_ferti()}}, \code{\link{f_GHGE_n2o_msoils()}},
+#' \code{\link{f_GHGE_crops()}}, \code{\link{FADN2Footprint-class}}
 #'
 #' @importFrom dplyr mutate select all_of
 #'

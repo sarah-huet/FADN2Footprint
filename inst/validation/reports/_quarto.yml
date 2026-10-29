@@ -1,0 +1,19 @@
+project:
+  type: default
+  output-dir: reports
+
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    embed-resources: true
+  pdf:
+    toc: true
+
+execute:
+  echo: true
+  warning: false
+
+bibliography: ../../vignettes/references.bib
+link-citations: true

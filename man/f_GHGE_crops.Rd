@@ -13,6 +13,13 @@ f_GHGE_crops(object, overwrite = FALSE, account_pseudoherd = FALSE, ...)
 the function returns
 the cached object and no recomputation is performed. If TRUE, existing
 cached GHGE results are ignored and computations are re-run.}
+
+\item{account_pseudoherd}{Logical, default FALSE. When TRUE, pseudo-herd
+animals (inferred from feed flows rather than directly observed) are
+included in the emission calculation. Currently reserved for future
+implementation.}
+
+\item{...}{Additional arguments.}
 }
 \value{
 A \code{\link[tibble]{tibble}} containing one row per farm-crop
@@ -134,8 +141,8 @@ Ngarize, S., Osako, A., Pyrozhenko, Y., Shermanau, P. and Federici, S. (eds).
 IPCC, Switzerland.
 }
 \seealso{
-\code{\link{f_GHGE_n2o_msoils}}, \code{\link{f_GHGE_ferti_prod}},
-\code{\link{f_GHGE_fuels}}, \code{\link{f_GHGE_elec}},
-\code{\link{f_GHGE_livestock}}, \code{\link{FADN2Footprint-class}}
+\code{\link{f_GHGE_n2o_msoils()}}, \code{\link{f_GHGE_ferti_prod()}},
+\code{\link{f_GHGE_fuels()}}, \code{\link{f_GHGE_elec()}},
+\code{\link{f_GHGE_herd()}}, \code{\link{FADN2Footprint-class}}
 }
 \concept{footprint-ghge}

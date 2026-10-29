@@ -13,6 +13,8 @@ f_GHGE_ch4_manure(object, overwrite = F, ...)
 the function returns
 the cached object and no recomputation is performed. If TRUE, existing
 cached GHGE results are ignored and computations are re-run.}
+
+\item{...}{Additional arguments.}
 }
 \value{
 A \code{\link[tibble]{tibble}} containing one row per farm-livestock
@@ -158,8 +160,8 @@ UNFCCC National Inventory Submissions.
 \url{https://unfccc.int/ghg-inventories-annex-i-parties/2023}
 }
 \seealso{
-\code{\link{GHGE_ch4_enteric}}, \code{\link{f_feed_onfarm}},
-\code{\link{f_feed_offfarm}}, \code{\link{GWP}},
+\code{\link{f_GHGE_ch4_enteric()}}, \code{\link{f_feed_onfarm()}},
+\code{\link{f_feed_offfarm()}}, \code{\link{GWP}},
 \code{\link{UNFCCC_data}}, \code{\link{FADN2Footprint-class}}
 }
 \concept{footprint-ghge}

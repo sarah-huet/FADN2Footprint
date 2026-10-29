@@ -1,11 +1,15 @@
 #' Function to estimate theoretical rations of feed by livestock category
 #' `f_feed_theo_ration` Estimate the theoretical herd ration of the farm per livestock category and per crop using the total amount of dry matter per livestock category in AROPAJ and the total dry matter per crop in Sailley.
 #'
-#' @param my_object a FADN2Footprint object
-#' @returns a list with the following dataframes:
-#' - AROPAJ_ref_ration: reference total amount of feed per livestock category (in ton of dry matter per livestock unit per year)
-#' - Sailley_ref_feed_allocation: reference total amount of feed per crop and herd orientation (e.g., milk, meat) (in ton of dry matter per year)
-#' - th_feed_ration: the theoretical ration of each farm herd (for each crop, in total ton of dry matter per year and in ton of dry matter per livestock unit per year)
+#' @param object An object of class \code{\link{FADN2Footprint}}.
+#'
+#' @return A list with the following data frames:
+#'   - AROPAJ_ref_ration: reference total amount of feed per livestock category (in ton of dry matter per livestock unit per year)
+#'   - Sailley_ref_feed_allocation: reference total amount of feed per crop and herd orientation (e.g., milk, meat) (in ton of dry matter per year)
+#'   - feed_value: reference feed price information (see th_feed_value)
+#'   - th_feed_ration: the theoretical ration of each farm herd (for each crop, in total ton of dry matter per year and in ton of dry matter per livestock unit per year)
+#'   - th_feed_value: the theoretical feed value per crop and feed type
+#' 
 #' @examples
 #' data(fadn_fict)
 #' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
@@ -31,7 +35,7 @@ f_feed_theo_ration <- function(object){
   ## assign average ratio by livestock code
   AROPAJ_ref_ration <- data_extra$livestock |>
     dplyr::select(FADN_code_letter,AROPAJ) |>
-    tidyr::separate_longer_delim(AROPAJ,";") |>
+    tidyr::separate_longer_delim(AROPAJ,"|") |>
     # add AROPAJ values in ton of Dry Matter per livestock unit per year
     dplyr::left_join(AROPAJ,
                      by = c('AROPAJ')) |>

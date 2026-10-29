@@ -31,9 +31,10 @@
 #'     where \eqn{DMI} is the dry matter intake (kg head\eqn{^{-1}} yr\eqn{^{-1}})
 #'     and \eqn{MY} is the methane yield (g CH4 kg DMI\eqn{^{-1}}) (IPCC Equation 10.21A).
 #' }
-#' Total cattle CH4 emissions are estimated as the average of the two methods:
-#' \deqn{CH4_{enteric} = Q_{obs} \times \frac{EF_{Ym} + EF_{MY}}{2}}
-#'
+#' Total cattle CH4 emissions are estimated using the Ym method (Equation 10.21):
+#' \deqn{CH4_{enteric} = Q_{obs} \times EF_{Ym}}
+#' Note: The MY method (Equation 10.21A) is calculated but not used in the final output.
+#' 
 #' ## Sheep (Tier 2)
 #' For sheep, a fixed methane conversion factor \eqn{Y_m = 6.7\%} (IPCC Table 10.13)
 #' is used with the Ym method (IPCC Equation 10.21):
@@ -45,6 +46,15 @@
 #' is used with the Ym method (IPCC Equation 10.21):
 #' \deqn{EF_{Ym} = \frac{GE \times (Y_m / 100)}{55.65}}
 #' \deqn{CH4_{enteric} = Q_{obs} \times EF_{Ym}}
+#' 
+#' ## Swine (Tier 1)
+#' For swine, a default emission factor of 1.25 kg CH4 head\eqn{^{-1}} yr\eqn{^{-1}} 
+#' is used (IPCC Table 10.10), and total CH4 emissions are estimated as:
+#' \deqn{CH4_{enteric} = Q_{obs} \times EF}
+#' 
+#' ## Poultry (Tier 1)
+#' For poultry, enteric fermentation emissions are considered negligible under IPCC guidelines,
+#' and total CH4 emissions are set to zero.
 #'
 #' ## CO2 equivalents conversion
 #' All CH4 emissions are converted to CO2 equivalents using the GWP coefficient
@@ -66,17 +76,19 @@
 #'   the function returns
 #'   the cached object and no recomputation is performed. If TRUE, existing
 #'   cached GHGE results are ignored and computations are re-run.
+#' @param ... Additional arguments.
+#'
 #'
 #' @return A \code{\link[tibble]{tibble}} containing one row per farm-livestock
 #' category combination, with the following columns:
 #' \describe{
-#'   \item{...}{Traceability identifier columns as defined in
-#'     \code{object@traceability$id_cols} (e.g., farm ID, year, NUTS2 region).}
-#'   \item{FADN_code_letter}{\code{character}. FADN livestock category code.}
-#'   \item{species}{\code{character}. Livestock species (\code{"cattle"},
+#'  \item{...}{Traceability identifier columns as defined in
+#'     \code{`object@traceability$id_cols`} (e.g., farm ID, year, NUTS2 region).}
+#'  \item{FADN_code_letter}{\code{character}. FADN livestock category code.}
+#'  \item{species}{\code{character}. Livestock species (\code{"cattle"},
 #'     \code{"sheep"}, or \code{"goats"}).}
-#'   \item{Qobs}{\code{numeric}. Observed number of animals (heads).}
-#'   \item{CH4_enteric_kgCO2e_livcat}{\code{numeric}. Total CH4 emissions from enteric
+#'  \item{Qobs}{\code{numeric}. Observed number of animals (heads).}
+#'  \item{CH4_enteric_kgCO2e_livcat}{\code{numeric}. Total CH4 emissions from enteric
 #'     fermentation expressed in kg CO2 equivalents per year.}
 #' }
 #'
@@ -94,7 +106,7 @@
 #' IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_feed_onfarm}}, \code{\link{f_feed_offfarm}},
+#' \code{\link{f_feed_onfarm()}}, \code{\link{f_feed_offfarm()}},
 #' \code{\link{GWP}}, \code{\link{FADN2Footprint-class}}
 #'
 #' @importFrom dplyr left_join filter select rename inner_join mutate group_by summarise across all_of bind_rows case_when
@@ -107,7 +119,7 @@
 
 
 f_GHGE_ch4_enteric <- function(object,
-                             overwrite = F,
+                             overwrite = FALSE,
                              ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
@@ -160,7 +172,7 @@ f_GHGE_ch4_enteric <- function(object,
     dplyr::inner_join(
       feed_intake |>
         dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter,
-                      GE_MJ_anim, DE, DM_t_anim, CP_p100),
+                      GE_MJ_anim, DM_t_anim, CP_p100, DE_pc),
       by = c(object@traceability$id_cols, "FADN_code_letter"))
 
   ## CATTLE ----
@@ -187,10 +199,14 @@ f_GHGE_ch4_enteric <- function(object,
         stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim < 5.000 ~ 6.5,
 
         # other cattle
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE <= 62 ~ 7.0,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE > 62 & DE <= 71 ~ 6.3,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE >= 72 & DE < 75 ~ 4.0,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE >= 75 ~ 3.0
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc <= 62 ~ 7.0,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 62 & DE_pc <= 71 ~ 6.3,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 72 & DE_pc < 75 ~ 4.0,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 75 ~ 3.0,
+        ## In Table 10.12, there is no default MY for cattle with a feed DE >71 & <72 which introduce NAs
+        ## Hence, for this range of DE, we use the average of the adjacent DE categories
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 71 & DE_pc < 72 ~ (6.3+4.0)/2
+
       ),
 
       # EQUATION 10.21 METHANE EMISSION FACTORS FOR ENTERIC FERMENTATION FROM A LIVESTOCK CATEGORY
@@ -213,10 +229,14 @@ f_GHGE_ch4_enteric <- function(object,
         stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim < 5.000 ~ 21.4,
 
         # other cattle
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE <= 62 ~ 23.3,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE > 62 & DE <= 71 ~ 21,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE >= 72 & DE < 75 ~ 13.6,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE >= 75 ~ 10
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc <= 62 ~ 23.3,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 62 & DE_pc <= 71 ~ 21,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 72 & DE_pc < 75 ~ 13.6,
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 75 ~ 10,
+        ## In Table 10.12, there is no default MY for cattle with a feed DE >71 & <72 which introduce NAs
+        ## Hence, for this range of DE, we use the average of the adjacent DE categories
+        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 71 & DE_pc < 72 ~ (21+13.6)/2
+
       ),
 
       # EQUATION 10.21A (NEW) METHANE EMISSION FACTORS FOR ENTERIC FERMENTATION FROM A LIVESTOCK CATEGORY

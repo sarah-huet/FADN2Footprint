@@ -1,0 +1,273 @@
+---
+title: "FADN2Footprint — Validation Report"
+subtitle: "Comparison of package estimates with national inventoriess"
+author: "Sarah HUET & Valentin BELLASSEN"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    embed-resources: true        
+  pdf:
+    toc: true
+execute:
+  echo: true
+  warning: false
+editor: 
+  markdown: 
+    wrap: 150
+bibliography: ../../vignettes/references.bib
+link-citations: true
+---
+
+# Purpose
+
+This report compares the outputs of `FADN2Footprint` (v`r packageVersion("FADN2Footprint")`)
+against the national inventories.
+An estimate is flagged **in range** if it falls within the literature min–max,
+**within tolerance** if the relative deviation from the literature midpoint is
+below a per-indicator threshold, or **out of range** otherwise.
+
+# Setup
+
+```{r setup}
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(gt)
+
+library(readxl)
+library(zip)
+
+library(ggplot2)
+
+devtools::load_all()
+#library(FADN2Footprint)
+
+```
+
+# UNFCCC data
+
+## Extract raw data
+
+```{r UNFCCC_raw_data, echo=FALSE, message=FALSE}
+
+# Raw UNFCCC files
+folder_path = "C:/Users/srhuet/OneDrive/Research/Data/UNFCCC_ghg_inventories/"
+
+
+# Wrangle UNFCCC files ----
+UNFCCC_data_validation <- list(
+     "Summary1.As2" = tibble(),
+     "Table3" = tibble(),
+     "Table3.D" = tibble()
+)
+
+#for (loop_zip in list.files(folder_path)) {
+loop_zip = list.files(folder_path)[12]
+
+
+loop_files = zip_list(paste0(folder_path,loop_zip))
+loop_data_country = toupper(str_sub(loop_zip,1,3))
+print(loop_data_country)
+
+for (loop_data_year in c("2018", "2019", "2020")) {
+     #loop_data_year = sub(paste0("^",loop_data_country,"_2023_(\\d{4})_.*$"), "\\1", loop_files$filename)[29]
+     print(loop_data_year)
+     
+     
+     loop_unzip <- tempfile()
+     loop_unzip <- utils::unzip(zipfile =  paste0(folder_path,loop_zip),
+                                files = loop_files$filename[grep(paste0("_",loop_data_year,"_"),loop_files$filename)])
+     
+     ## SUMMARY 1.A  SUMMARY REPORT FOR NATIONAL GREENHOUSE GAS INVENTORIES ----
+     #sheet Summary1.As2
+     
+     # read file
+     loop_raw_sheet <- read_excel(loop_unzip,sheet = "Summary1.As2", col_names = F)
+     # select table
+     loop_range <- loop_raw_sheet[seq(which(grepl("Agriculture",loop_raw_sheet$...1)),max(which(is.na(loop_raw_sheet$...1)))-1),]
+     # retrieve column names
+     loop_colnames <- as.character(loop_raw_sheet[which(grepl("SOURCE",loop_raw_sheet$...1)),])
+     colnames(loop_range) <- loop_colnames
+     
+     # frame tibble
+     loop_table <- as_tibble(loop_range) |>
+          # numeric values
+          dplyr::mutate(dplyr::across(
+               .cols = dplyr::all_of(loop_colnames[-1]),
+               .fns = ~ suppressWarnings(as.numeric(.))
+          )) |>
+          # add country and year
+          dplyr::mutate(
+               Country_ISO_3166_1_A3 = loop_data_country,
+               YEAR = as.character(loop_data_year)
+          )
+     
+     UNFCCC_data_validation$Summary1.As2 <- dplyr::bind_rows(UNFCCC_data_validation$Summary1.As2, loop_table)
+     
+     ## TABLE 3 SECTORAL REPORT FOR AGRICULTURE ----
+     #sheet Table3s1 Table3s2
+     
+     # read file
+     loop_raw_sheet <- read_excel(loop_unzip,sheet = "Table3s1", col_names = F)
+     # select table
+     loop_range <- loop_raw_sheet[seq(which(grepl("Total agriculture",loop_raw_sheet$...1)),max(which(is.na(loop_raw_sheet$...1)))-1),]
+     # retrieve column names
+     loop_colnames <- as.character(loop_raw_sheet[which(grepl("SOURCE",loop_raw_sheet$...1)),])
+     colnames(loop_range) <- loop_colnames
+     
+     # frame tibble
+     loop_table <- as_tibble(loop_range) |>
+          # numeric values
+          dplyr::mutate(dplyr::across(
+               .cols = dplyr::all_of(loop_colnames[-1]),
+               .fns = ~ suppressWarnings(as.numeric(.))
+          )) |>
+          # add country and year
+          dplyr::mutate(
+               Country_ISO_3166_1_A3 = loop_data_country,
+               YEAR = as.character(loop_data_year)
+          )
+     
+     UNFCCC_data_validation$Table3 <- dplyr::bind_rows(UNFCCC_data_validation$Table3, loop_table)
+     
+     # read file
+     loop_raw_sheet <- read_excel(loop_unzip,sheet = "Table3s2", col_names = F)
+     # select table
+     loop_range <- loop_raw_sheet[seq(which(grepl("Rice cultivation",loop_raw_sheet$...1)),which(grepl("J.  Other",loop_raw_sheet$...1))),]
+     # retrieve column names
+     loop_colnames <- as.character(loop_raw_sheet[which(grepl("SOURCE",loop_raw_sheet$...1)),])
+     colnames(loop_range) <- loop_colnames
+     
+     # frame tibble
+     loop_table <- as_tibble(loop_range) |>
+          # numeric values
+          dplyr::mutate(dplyr::across(
+               .cols = dplyr::all_of(loop_colnames[-1]),
+               .fns = ~ suppressWarnings(as.numeric(.))
+          )) |>
+          # add country and year
+          dplyr::mutate(
+               Country_ISO_3166_1_A3 = loop_data_country,
+               YEAR = as.character(loop_data_year)
+          )
+     
+     UNFCCC_data_validation$Table3 <- dplyr::bind_rows(UNFCCC_data_validation$Table3, loop_table)
+     
+     ## TABLE 3.D Direct and indirect N2O emissions from agricultural soils ----
+     # sheet Table3.D
+     
+     # read file
+     loop_raw_sheet <- read_excel(loop_unzip,sheet = "Table3.D", col_names = F)
+     # select table
+     loop_range <- loop_raw_sheet[seq(which(grepl("Direct N2O emissions",loop_raw_sheet$...1)),
+                                      which(grepl("Nitrogen leaching and run-off",loop_raw_sheet$...1))),]
+     # retrieve column names
+     loop_colnames <- t(loop_raw_sheet[c( which(grepl("GREENHOUSE GAS",loop_raw_sheet$...1)):
+                                               (which(grepl("GREENHOUSE GAS",loop_raw_sheet$...1))+2)),]) |>
+          transform(V0 = paste(coalesce(V1,""),coalesce(V2,""),coalesce(V3,"")))
+     colnames(loop_range) <- loop_colnames$V0
+     
+     # frame tibble
+     loop_table <- as_tibble(loop_range) |>
+          # numeric values
+          dplyr::mutate(dplyr::across(
+               .cols = dplyr::all_of(loop_colnames$V0[-c(1,2)]),
+               .fns = ~ suppressWarnings(as.numeric(.))
+          )) |>
+          # add country and year
+          dplyr::mutate(
+               Country_ISO_3166_1_A3 = loop_data_country,
+               YEAR = as.character(loop_data_year)
+          )
+     
+     UNFCCC_data_validation$Table3.D <- dplyr::bind_rows(UNFCCC_data_validation$Table3.D, loop_table)
+     
+     
+     
+     unlink(loop_unzip)
+}
+#}
+
+#
+#
+# TABLE 3 SECTORAL BACKGROUND DATA FOR AGRICULTURE
+# 3.A Enteric Fermentation 
+# sheet Table3.As1
+#
+# 3.B(a) CH4 Emissions from Manure Management
+# sheet Table3.B(a)s1
+#
+# 3.B(b) N2O Emissions from Manure Management
+# sheet Table3.B(b)
+#
+
+rm(list = names(.GlobalEnv)[grepl("loop_", names(.GlobalEnv))])
+rm(folder_path)
+
+```
+
+# Package output
+
+## Run package
+
+```{r load_data, echo=FALSE, message=TRUE, warning=FALSE}
+
+## Load raw data and run model
+#source("validation_FADN_data.R")
+#source("validation_FADN_data_offline.R")
+## 
+#load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
+load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
+#my_object_GHGE <- m_prune_farms(my_object_GHGE,
+#                                YEAR %in% c("2018", "2019", "2020"))
+
+id_cols = my_object_GHGE@traceability$id_cols
+
+cat("FADN dataset loaded:", nrow(my_object_GHGE@farm), "farm-year observations\n")
+cat("Countries covered:", paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "), "\n")
+cat("Years covered:", paste(sort(unique(my_object_GHGE@farm$YEAR)), collapse = ", "), "\n")
+
+```
+## Agregate outputs
+
+```{r crops}
+
+# a. Direct N2O emissions from managed soils 	
+# 1.   Inorganic N fertilizers(3)	N input from application of inorganic fertilizers to cropland and grassland
+crops_n_min_input <- my_object_GHGE@practices$crops$N_ferti |>
+     # add agregation weight
+     dplyr::left_join(my_object_GHGE@farm |>
+                           dplyr::select(dplyr::all_of(id_cols), SYS02),
+                      by = id_cols) |>
+     # sum up by country and year
+     dplyr::summarise(
+          N_ferti_min = sum(N_ferti_min * area_ha * SYS02, na.rm = TRUE),
+          .by = c(COUNTRY, YEAR)
+     )
+
+
+# 2.   Organic N fertilizers(3)	N input from organic N fertilizers to cropland and grassland
+#       a. Animal manure applied to soils	N input from manure applied to soils
+#       b. Sewage sludge applied to soils	N input from sewage sludge applied to soils
+#       c. Other organic fertilizers applied to soils	N input from application of other organic fertilizers
+# 3.   Urine and dung deposited by grazing animals	N excretion on pasture, range and paddock
+# 4.   Crop residues	N in crop residues returned to soils
+# 5.  Mineralization/immobilization associated with loss/gain of soil organic matter (4)(5)	N in mineral soils that is mineralized in association with loss # of soil C
+# 6.   Cultivation of organic soils (i.e. histosols)(2)	Area of cultivated organic soils
+# 7.   Other	
+
+
+# b. Indirect N2O Emissions from managed soils 	
+# 1.   Atmospheric deposition(6)	Volatilized N from agricultural inputs of N
+# 2.   Nitrogen leaching and run-off	N from fertilizers and other agricultural inputs that is lost through leaching and run-off
+
+
+
+```
+
+
+

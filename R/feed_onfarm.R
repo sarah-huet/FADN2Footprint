@@ -40,14 +40,12 @@
 #'   the helper f_feed_theo_ration; these must be available in the package
 #'   environment and compatible with the FADN2Footprint object structure.
 #'
-#' @param object An S4 object of class "FADN2Footprint". The object must
-#'   contain standard slots used by the package (for example:
-#'   object@crop, object@traceability$id_cols) and be prepared by the package
-#'   workflow so that helper functions (f_feed_theo_ration) work correctly.
+#' @param object An object of class \code{\link{FADN2Footprint}}.
 #' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
 #'   the function returns
 #'   the cached object and no recomputation is performed. If TRUE, existing
 #'   cached GHGE results are ignored and computations are re-run.
+#' @param ... Additional arguments.
 #'
 #' @return A tibble/data.frame with one or more rows per traceable farm and
 #' feed line containing:
@@ -83,7 +81,8 @@
 
 
 f_feed_onfarm <- function(object,
-                          overwrite = FALSE){
+                          overwrite = FALSE,
+                          ...){
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -91,6 +90,8 @@ f_feed_onfarm <- function(object,
     message("Using cached values stored in object@practices$herding$feed$feed_produced.")
     return(object@practices$herding$feed$feed_produced)  # use cached value
   }
+
+  id_cols = object@traceability$id_cols
 
   # Estimate theoretical livestock feed ration and value ---------------------------------------------------------------------------------
   th_feed <- f_feed_theo_ration(object)
@@ -120,20 +121,26 @@ f_feed_onfarm <- function(object,
       feed_t_crop_total = coalesce(prod_t,0) - coalesce(sales_t,0)) |>
     # remove crops with zero quantity as feed
     dplyr::filter(feed_t_crop_total >0) |>
+    # add feed_type corresponding to the crop registered in FADN
+    dplyr::left_join(
+      data_extra$crops |>
+        dplyr::select(FADN_code_letter, feed_type),
+      by = 'FADN_code_letter'
+    ) |>
     # select
-    dplyr::select(all_of(object@traceability$id_cols),FADN_code_letter,feed_t_crop_total,yield) |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, feed_t_crop_total, yield, feed_type) |>
     rename(FADN_code_feed = FADN_code_letter)
 
   ## 2. Add theoretical feed ration estimated through f_feed_theo_ration(object) ----
   feed_produced_qty = th_feed$th_feed_ration |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
-                  FADN_code_letter,Qobs,Sailley_livestock,
-                  Sailley_feed,th_DMI_t_livcat_y)|>
+    dplyr::select(dplyr::all_of(id_cols),
+                  FADN_code_letter, Qobs, Sailley_livestock,
+                  Sailley_feed, th_DMI_t_livcat_y)|>
     # Add FADN-to-Sailley name match
     dplyr::left_join(
       data_extra$Sailley_2021_feed_flows |>
-        dplyr::filter(feed_produced_onfarm == "T") |>
-        dplyr::select(Sailley_feed,FADN_code_feed,feed_type) |>
+        dplyr::filter(feed_produced_onfarm == TRUE) |>
+        dplyr::select(Sailley_feed, FADN_code_feed) |>
         tidyr::separate_longer_delim(FADN_code_feed,";"),
       by = 'Sailley_feed',
       relationship = "many-to-many"
@@ -141,14 +148,14 @@ f_feed_onfarm <- function(object,
     # Add on farm feed production
     dplyr::left_join(
       onfarm_feed_prod,
-      by = c(object@traceability$id_cols, "FADN_code_feed")
+      by = c(id_cols, "FADN_code_feed")
     ) |>
     #filter(feed_t_crop_total >0) |>
     # 3. Estimate share of produced feed for each livestock category ----
   ## sum theoretical ration for each feed category
     dplyr::mutate(
-      sum_th_DMI_t_livcat_y = sum(th_DMI_t_livcat_y,na.rm = T),
-      .by = c(object@traceability$id_cols,FADN_code_feed,feed_type)
+      sum_th_DMI_t_livcat_y = sum(th_DMI_t_livcat_y, na.rm = T),
+      .by = c(dplyr::all_of(id_cols), FADN_code_feed, feed_type)
     ) |>
     # Allocate produced feed to livestock categories
     dplyr::mutate(
@@ -163,29 +170,38 @@ f_feed_onfarm <- function(object,
   # average crop quality
   ## average GE, DM & CP (DM is not estimated as it is always 100%)
   Sailley_crop_qlty <- data_extra$Sailley_2021_feed_flows |>
-    dplyr::select(Sailley_feed,feed_tables) |>
+    dplyr::select(Sailley_feed, feed_tables, NZ_feed_DE) |>
     tidyr::separate_longer_delim(feed_tables,";") |>
-    # add feed quality
+    tidyr::separate_longer_delim(NZ_feed_DE,";") |>
+    # add feed nutritional values
     dplyr::left_join(
       data_extra$feed_table_all_as_DM,
-      by = join_by(feed_tables)
+      by = c('feed_tables')
+    ) |>
+    # add feed digestibility
+    dplyr::left_join(
+      data_extra$NZ_feed_DE,
+      by = dplyr::join_by(NZ_feed_DE == Feed_Description)
     ) |>
     # summarise by Sailley crop name
     dplyr::summarise(
-      GE_MJ_kg = mean(`GE MJ/kg`,na.rm = T),
-      GE_kcal_kg = mean(`GE kcal/kg`,na.rm = T),
-      CP_pc = mean(`CP %`,na.rm = T),
-      Ash_pc = mean(`Ash %`,na.rm = T),
+      GE_MJ_kg = mean(`GE MJ/kg`, na.rm = T),
+      GE_kcal_kg = mean(`GE kcal/kg`, na.rm = T),
+      CP_pc = mean(`CP %`, na.rm = T),
+      Ash_pc = mean(`Ash %`, na.rm = T),
+      DE_pc = mean(Dry_Matter_Digestibility_pct, na.rm = T),
       .by = "Sailley_feed"
     )
 
-  ## Total GE, DM & CP
+  ## Total GE, DM, CP, and DE
   feed_produced_qlty <- feed_produced_qty |>
-    dplyr::select(all_of(object@traceability$id_cols),FADN_code_letter,FADN_code_feed,feed_type,Sailley_feed,feed_prod_t_livcat,yield) |>
+    dplyr::select(all_of(id_cols),
+                  FADN_code_letter,FADN_code_feed,feed_type,Sailley_feed,
+                  feed_prod_t_livcat,yield) |>
     # add average feed quality
     dplyr::left_join(
       Sailley_crop_qlty,
-      by = join_by(Sailley_feed)
+      by = c('Sailley_feed')
     ) |>
     # convert
     dplyr::mutate(
@@ -198,7 +214,10 @@ f_feed_onfarm <- function(object,
 
   # Output ---------------------------------------------------------------------
   feed_produced <- feed_produced_qlty |>
-    dplyr::select(all_of(object@traceability$id_cols),FADN_code_letter,FADN_code_feed,feed_type,Sailley_feed,yield,DM_t_livcat,GE_MJ_livcat,GE_kcal_livcat,CP_t_livcat,Ash_t_livcat) |>
+    dplyr::select(all_of(id_cols),
+                  FADN_code_letter,
+                  FADN_code_feed, feed_type, Sailley_feed,
+                  yield, DM_t_livcat, GE_MJ_livcat, GE_kcal_livcat, CP_t_livcat, Ash_t_livcat, DE_pc) |>
     dplyr::filter(DM_t_livcat >0)
 
   return(feed_produced)

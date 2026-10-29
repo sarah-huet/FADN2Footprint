@@ -117,12 +117,12 @@ library(readxl)
 library(dplyr)
 
 # Path to your Excel file
-file_path <- "inst/ext_data/dict_FADN.xls"
+file_path <- "inst/ext_data/dict_FADN_2026.xlsx"
 
 # Read with all columns as text
 dict_FADN <- readxl::read_excel(
   file_path,
-  sheet = "dict_conversion"
+  sheet = "dict_FADN"
 )
 
 # export data

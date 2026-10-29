@@ -134,7 +134,7 @@ Tillage intensity (expressed in L of diesel used for tillage/ha) is
 estimated from the farm’s off-road diesel consumption, which is
 allocated to the different crops according to their area. Then, we
 subtract the average amount of off-road diesel per hectare used by farms
-which practice direct seeding, i.e., cultivate crops without tillage (XX
+which practice direct seeding, i.e., cultivate crops without tillage (54
 L/ha, Chenu and Butault, 2015). The implicit assumption is that the
 average off-road diesel use in these farms broadly corresponds to the
 amount of diesel used for other interventions than tillage. Note that
@@ -160,10 +160,10 @@ the farm has livestock.
 
 For farms without livestock, a standard value, equal to the French
 average organic nitrogen input for farms that do not produce organic
-manure (XX kgN/ha, Ministère De L’Agriculture - SSP, 2019; see
-“PKGC_N_ferti” sheet of Appendix C in Huet et al., 2026), is added to
-the different crops, distinguishing between organic and conventional
-farms.
+manure is added to the different crops, distinguishing between organic
+and conventional farms (ranging from 2.9 to 151 kgN/ha for conventional soybean
+and fodder maize, respectively, Ministère De L’Agriculture - SSP, 2019; see
+“PKGC_N_ferti” sheet of Appendix C in Huet et al., 2026).
 
 For farms with livestock, we consider that the total amount of nitrogen
 excreted by the farm herd is spread on-farm. The amount of nitrogen
@@ -173,25 +173,28 @@ excretion by animals is based on the livestock population reported in
 FADN and the estimation of the feed quantity and nutritional quality of
 the ration provided to these animals (see Section 2.7.1), in accordance
 with IPCC recommendations (Calvo Buendia et al., 2019; Eggleston et al.,
-2006). The crop allocation uses the national averages of organic
-nitrogen input per crop of farms producing their own manure as a
-distribution key (Ministère De L’Agriculture - SSP, 2019); see
-“PKGC_N_ferti_org” sheet in Appendix C in Huet et al., 2026).
+2006). 
 
-If the resulting amount is smaller than the lowest value between i) the
-French average organic nitrogen input for farms that do not produce
-organic manure and ii) the lower bound of the 95% confidence interval of
+The allocation of excreted nitrogen to crops and grasslands uses the
+national averages of organic nitrogen input per hectare of farms
+producing their own manure as a distribution key,
+distinguishing between organic and conventional farms
+(Ministère De L’Agriculture - SSP, 2019; see `data_extra$PKGC_N_ferti_org`).
+
+If the resulting amount of the allocation for a given crop or grassland is smaller
+than the lowest value between i) the French average organic nitrogen input for farms that do not produce
+organic manure (e.g., 9.6 kgN/ha for conventional soft wheat) and ii) the lower bound of the 95% confidence interval of
 the average of organic nitrogen inputs of farms producing their own
-organic manure (XX kgN/ha, Ministère De L’Agriculture - SSP, 2019), we
-assign the lowest of these two values, that is XX kgN/ha, instead
+organic manure (e.g., 55 kgN/ha for conventional soft wheat, Ministère De L’Agriculture - SSP, 2019), we
+assign the lowest of these two values instead
 (implicitly concluding that despite having a few animals, these farms
 import manure).
 
 At the opposite, if the resulting amount is greater than the highest
-value between i) the national average of organic nitrogen inputs and ii)
+value between i) the French average organic nitrogen input for farms that do not produce organic manure (e.g., 9.6 kgN/ha for conventional soft wheat) and ii)
 the higher bound of the *95*% confidence interval of the average of
 organic nitrogen inputs of farms producing their own organic manure
-(Ministère De L’Agriculture - SSP, 2019), we assign the highest of these
+(e.g., 116 kgN/ha for conventional soft wheat, Ministère De L’Agriculture - SSP, 2019), we assign the highest of these
 two values instead (implicitly concluding that these farms have too many
 animals per hectare and therefore export manure).
 
@@ -517,12 +520,16 @@ available or infinite, we replace the missing value by a reference value
 based on our data. We estimate reference values for each rearing
 parameter as the median in farms of the same NUTS2 where the species is
 present, or, if less than 3 farms are registered for the NUTS2, the
-median farm where the species is present in the same NUTS1. We also
-estimate thresholds below and above which a value is considered aberrant
-by graphically determining outliers on the rearing parameter
-distribution in data set. Note that the maximum threshold for categories
-whose age is specified is logically determined by this definition (e.g.,
-female bovine between 1 and 2 y.o. have a maximum residence time of 1).
+median farm where the species is present in the same NUTS1. 
+
+We also estimate thresholds below and above which a value is considered aberrant 
+(see `pseudoherd_reference_table.R`). Lower and upper thresholds correspond to 1st, 
+5th, or 10th and 90th, 95th, or 99th percentiles, respectively, of the considered 
+rearing parameter distribution, depending on the stringency desired. The desired stringency 
+is graphically estimated by examining the distribution of the rearing parameter and 
+identifying outliers visually.
+Note that the maximum threshold for categories whose age is specified is logically determined 
+by this definition (e.g., female bovine between 1 and 2 y.o. have a maximum residence time of 1).
 When a value is below or above these thresholds, we replace the aberrant
 value by the inferior or superior threshold, respectively.
 
@@ -566,7 +573,7 @@ specific activity (e.g., slaughtered bovine, calves and suckler cows for
 beef; fattening pigs, piglets and breeding sows for pork; etc.), whether
 they are present on-farm or not (i.e., off-farm).
 
-#### Restrain pseudo-herd animals to farm activities
+#### Restrain pseudo-herd animals to farm activities {#sec-restrain-activities}
 
 First, we estimate animals involved in each activity (i.e., milk, eggs,
 and meat).
@@ -617,119 +624,118 @@ library(dplyr)
 
 # Use MathJax inline delimiters for HTML rendering
 allocation_data <- data.frame(
-  row_label = c(
-    "$$\\bar{Q}_{j}$$",
-    "$$\\bar{Q}_{f}$$",
-    "$$\\bar{Q}_{b}$$"
-  ),
-  col_j = c(
-    "—",
-    "$$t_j \\cdot \\left(\\frac{\\bar{Q}_{f}}{t_f}\\right)$$",
-    "$$t_j \\cdot \\bar{Q}_{b} \\cdot \\text{Offsprings}$$"
-  ),
-  col_f = c(
-    "$$t_f \\cdot \\left(\\frac{\\bar{Q}_{j}}{t_j}\\right)$$",
-    "—",
-    "$$t_f \\cdot \\bar{Q}_{b} \\cdot \\text{Offsprings}$$"
-  ),
-  col_b = c(
-    "$$\\frac{\\bar{Q}_{j}}{t_j} \\cdot \\frac{1}{\\text{Offsprings}}$$",
-    "$$\\frac{\\bar{Q}_{f}}{t_f} \\cdot \\frac{1}{\\text{Offsprings}}$$",
-    "—"
-  ),
-  stringsAsFactors = FALSE
+    row_label = c(
+        "$$\\bar{Q}_{j}$$",
+        "$$\\bar{Q}_{f}$$",
+        "$$\\bar{Q}_{b}$$"
+    ),
+    col_j = c(
+        "—",
+        "$$t_j \\cdot \\left(\\frac{\\bar{Q}_{f}}{t_f}\\right)$$",
+        "$$t_j \\cdot \\bar{Q}_{b} \\cdot \\text{Offsprings}$$"
+    ),
+    col_f = c(
+        "$$t_f \\cdot \\left(\\frac{\\bar{Q}_{j}}{t_j}\\right)$$",
+        "—",
+        "$$t_f \\cdot \\bar{Q}_{b} \\cdot \\text{Offsprings}$$"
+    ),
+    col_b = c(
+        "$$\\frac{\\bar{Q}_{j}}{t_j} \\cdot \\frac{1}{\\text{Offsprings}}$$",
+        "$$\\frac{\\bar{Q}_{f}}{t_f} \\cdot \\frac{1}{\\text{Offsprings}}$$",
+        "—"
+    ),
+    stringsAsFactors = FALSE
 )
 
 # table ----
 allocation_data |>
-  gt() |>
-  cols_label(
-    row_label = md(""),
-    col_j     = md("$$\\widehat{Q}_{j}$$"),
-    col_f     = md("$$\\widehat{Q}_{f}$$"),
-    col_b     = md("$$\\widehat{Q}_{b}$$")
-  ) |>
-  fmt_markdown(columns = everything()) |>
-  # Row label column styling
-  tab_style(
-    style     = list(
-      cell_fill(color = "#1B4F72"),
-      cell_text(color = "white", weight = "bold", align = "center")
-    ),
-    locations = cells_body(columns = row_label)
-  ) |>
-  # Column header styling
-  tab_style(
-    style = list(
-      cell_fill(color = "#1A5276"),
-      cell_text(color = "white", weight = "bold", align = "center")
-    ),
-    locations = cells_column_labels(columns = everything())
-  ) |>
-  # Alternating row backgrounds (excluding row_label column)
-  tab_style(
-    style     = cell_fill(color = "#D6EAF8"),
-    locations = cells_body(columns = c(col_j, col_f, col_b), rows = c(1, 3))
-  ) |>
-  tab_style(
-    style     = cell_fill(color = "#AED6F1"),
-    locations = cells_body(columns = c(col_j, col_f, col_b), rows = 2)
-  ) |>
-  # Diagonal (—) cells highlighted
-  tab_style(
-    style     = list(
-      cell_fill(color = "#F0F3F4"),
-      cell_text(color = "#717D7E", size = px(16), weight = "bold", align = "center")
-    ),
-    locations = list(
-      cells_body(columns = col_j, rows = 1),
-      cells_body(columns = col_f, rows = 2),
-      cells_body(columns = col_b, rows = 3)
-    )
-  ) |>
-  # Center all equation cells
-  cols_align(align = "center", columns = everything()) |>
-  # Column widths
-  cols_width(
-    row_label ~ px(130),
-    col_j     ~ px(220),
-    col_f     ~ px(220),
-    col_b     ~ px(220)
-  ) |>
-  # Footnotes
-  tab_footnote(
-    footnote  = md("Specifically for cattle: Minus the number of calves sold for slaughter."),
-    locations = cells_body(columns = col_f, rows = c(1,3))
-  ) |>
-  tab_source_note(
-    source_note = md(
-      "**Notation:** &nbsp;
+    gt() |>
+    cols_label(
+        row_label = md(""),
+        col_j     = md("$$\\widehat{Q}_{j}$$"),
+        col_f     = md("$$\\widehat{Q}_{f}$$"),
+        col_b     = md("$$\\widehat{Q}_{b}$$")
+    ) |>
+    fmt_markdown(columns = everything()) |>
+    # Row label column styling
+    tab_style(
+        style = list(
+            cell_fill(color = "#1B4F72"),
+            cell_text(color = "white", weight = "bold", align = "center")
+        ),
+        locations = cells_body(columns = row_label)
+    ) |>
+    # Column header styling
+    tab_style(
+        style = list(
+            cell_fill(color = "#1A5276"),
+            cell_text(color = "white", weight = "bold", align = "center")
+        ),
+        locations = cells_column_labels(columns = everything())
+    ) |>
+    # Alternating row backgrounds (excluding row_label column)
+    tab_style(
+        style     = cell_fill(color = "#D6EAF8"),
+        locations = cells_body(columns = c(col_j, col_f, col_b), rows = c(1, 3))
+    ) |>
+    tab_style(
+        style     = cell_fill(color = "#AED6F1"),
+        locations = cells_body(columns = c(col_j, col_f, col_b), rows = 2)
+    ) |>
+    # Diagonal (—) cells highlighted
+    tab_style(
+        style = list(
+            cell_fill(color = "#F0F3F4"),
+            cell_text(color = "#717D7E", size = px(16), weight = "bold", align = "center")
+        ),
+        locations = list(
+            cells_body(columns = col_j, rows = 1),
+            cells_body(columns = col_f, rows = 2),
+            cells_body(columns = col_b, rows = 3)
+        )
+    ) |>
+    # Center all equation cells
+    cols_align(align = "center", columns = everything()) |>
+    # Column widths
+    cols_width(
+        row_label ~ px(130),
+        col_j ~ px(220),
+        col_f ~ px(220),
+        col_b ~ px(220)
+    ) |>
+    # Footnotes
+    tab_footnote(
+        footnote  = md("Specifically for cattle, multiplied by the ratio of calves sold for slaughter: $\\frac{\\bar{Q}_{LBOV1}^{slaughter}}{F^{out}_{LBOV1}}$."),
+        locations = cells_body(columns = col_f, rows = c(1, 3))
+    ) |>
+    tab_source_note(
+        source_note = md(
+            "**Notation:** &nbsp;
        $t$ = residence time in the category; &nbsp;
        $\\bar{Q}$ = observed number of animals; &nbsp;
        $\\widehat{Q}$ = estimated number of animals; &nbsp;
        $\\{j,f,b\\}$ = rearing stage (i.e., juveniles, fattening or breeders); &nbsp;
        $\\text{Offsprings}$ = number of offspring per breeder"
+        )
+    ) |>
+    tab_options(
+        table.font.names                  = "Source Sans Pro, Calibri, sans-serif",
+        table.font.size                   = px(13),
+        table.border.top.color            = "#1B4F72",
+        table.border.top.width            = px(3),
+        table.border.bottom.color         = "#1B4F72",
+        table.border.bottom.width         = px(2),
+        column_labels.border.bottom.color = "#AED6F1",
+        column_labels.border.bottom.width = px(2),
+        data_row.padding                  = px(14),
+        heading.background.color          = "#1B4F72",
+        heading.title.font.size           = px(15),
+        heading.subtitle.font.size        = px(12),
+        footnotes.font.size               = px(10),
+        footnotes.marks                   = "standard",
+        source_notes.font.size            = px(10),
+        table.width                       = pct(90)
     )
-  ) |>
-  tab_options(
-    table.font.names                  = "Source Sans Pro, Calibri, sans-serif",
-    table.font.size                   = px(13),
-    table.border.top.color            = "#1B4F72",
-    table.border.top.width            = px(3),
-    table.border.bottom.color         = "#1B4F72",
-    table.border.bottom.width         = px(2),
-    column_labels.border.bottom.color = "#AED6F1",
-    column_labels.border.bottom.width = px(2),
-    data_row.padding                  = px(14),
-    heading.background.color          = "#1B4F72",
-    heading.title.font.size           = px(15),
-    heading.subtitle.font.size        = px(12),
-    footnotes.font.size               = px(10),
-    footnotes.marks                   = "standard",
-    source_notes.font.size            = px(10),
-    table.width                       = pct(90)
-  )
-
 ```
 
 Equations to estimate theoretical equilibrium stocks of the pseudo-herd
@@ -746,7 +752,9 @@ weighted average of the residence times of its categories
 (`f_pseudoherd_cattle()`, variables `Qobs_j`, `Qobs_f`, `Qobs_b`, `rt_j`,
 `rt_f`):
 
-$$\bar{Q}_{s} = \sum_{l=1}^{L_s} \bar{Q}_{l,\;meat}$$ {#eq-Qobs-stage}
+$$
+\bar{Q}_{s} = \sum_{l=1}^{L_s} \bar{Q}_{l,\;meat}
+$$ {#eq-Qobs-stage}
 
 For cattle involved in the meat activity, the fattening stage ($f$) gathers male bovine between one and two years old (`LBOV1_2M`),
 male bovine over two years old (`LBOV2`), fattening female bovine between one and two years old (the fattening share of `LBOV1_2F`),
@@ -765,13 +773,32 @@ one year plus the residence time of later rearing categories (`LBOV2` and
 reference to derive equilibrium quantities is the one with the highest
 observed-to-equilibrium ratio, i.e., the stage whose observed quantity
 $\bar{Q}_s$ is at least as large as what would be implied by each of the
-two other stages. For cattle, this comparison — and the subsequent
-computation of $\widehat{Q}_j$, $\widehat{Q}_f$ and $\widehat{Q}_b$
-following @tbl-pseudoherd_eq — additionally accounts for juveniles sold
-directly for slaughter (`LBOV1_SSN`), which never reach the fattening
-stage, through the share:
+two other stages. 
 
-$$remove_{juv} = \frac{LBOV1\_SSN}{F^{out}_{LBOV1}}$$ {#eq-remove-juv}
+For cattle, this comparison — and the subsequent
+computation of $\widehat{Q}_j$, $\widehat{Q}_f$ and $\widehat{Q}_b$
+following @tbl-pseudoherd_eq — additionally accounts for animals sold
+directly for slaughter, which never reach the following rearing stage,
+through the estimation of the retention time for fattening animals (@eq-rt_f_cattle) and
+through the estimation of the equilibrium quantity of fattening animals (@eq-remove-juv).
+
+$$
+\begin{aligned}
+t_f = ((t_{LBOV1\_2M}^{slaughter}) *
+        (Q^{slaughter}_{LBOV1\_2M} / (F^{out}_{LBOV1\_2M} + F^{out}_{LBOV1\_2F\_fattening})) +
+        (1 + t_{LBOV2}) *
+         (( (F^{out}_{LBOV1\_2M} - Q^{slaughter}_{LBOV1\_2M})) / (F^{out}_{LBOV1\_2M} + F^{out}_{LBOV1\_2F\_fattening})) +
+        (t_{LBOV1\_2F\_fattening}^{slaughter}) *
+         (Q^{slaughter}_{LBOV1\_2F} / (F^{out}_{LBOV1\_2M} + F^{out}_{LBOV1\_2F\_fattening})) +
+        (1 + t_{LHEIFFAT}) * 
+        (( (F^{out}_{LBOV1\_2F\_fattening} - Q^{slaughter}_{LBOV1\_2F})) / (F^{out}_{LBOV1\_2M} + F^{out}_{LBOV1\_2F\_fattening}))
+        )
+\end{aligned}
+$$ {#eq-rt_f_cattle}
+
+$$
+remove_{juv} = \frac{LBOV1\_SSN}{F^{out}_{LBOV1}}
+$$ {#eq-remove-juv}
 
 In every case, the equilibrium quantity of a stage is bounded below by
 its observed quantity ($\widehat{Q}_s \geq \bar{Q}_s$), as the

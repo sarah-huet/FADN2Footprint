@@ -83,11 +83,9 @@
 #' FADN2Footprint:::FADN_averages$GE_MJ_anim_day
 #' }
 
-
-
 # ---- Load FADN data ----
-load("../FADN2Footprint/data_raw/FADN_16_18.RData")
-fadn_data = FADN_16_18
+load("../FADN2Footprint/data_raw/raw_FADN_EU_17_21.RData")
+fadn_data <- my_FADN_data
 
 # TODO: recalculate averages using SYS02 variable
 
@@ -96,17 +94,23 @@ fadn_data = FADN_16_18
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 crop_raw <- fadn_data |>
-  dplyr::select(ID, YEAR, COUNTRY, NUTS2, SYS02,
-                dplyr::matches("_A$|_TA$|_AA$|_PRQ$") & dplyr::matches("^C"))
+  dplyr::select(
+    ID,
+    YEAR,
+    COUNTRY,
+    NUTS2,
+    SYS02,
+    dplyr::matches("_A$|_TA$|_AA$|_PRQ$") & dplyr::matches("^C")
+  )
 
 crop_raw_long0 <- crop_raw |>
   tidyr::pivot_longer(
     cols = dplyr::matches("_A$|_TA$|_AA$|_PRQ$")
   ) |>
-  dplyr::filter(value >0) |>
+  dplyr::filter(value > 0) |>
   dplyr::mutate(
-    FADN_code_letter = gsub("_A$|_TA$|_AA$|_PRQ$","",name),
-    var = stringr::str_extract(name,"A$|TA$|AA$|PRQ$")
+    FADN_code_letter = gsub("_A$|_TA$|_AA$|_PRQ$", "", name),
+    var = stringr::str_extract(name, "A$|TA$|AA$|PRQ$")
   ) |>
   tidyr::pivot_wider(
     id_cols = c('ID', 'YEAR', 'COUNTRY', 'NUTS2', 'SYS02', 'FADN_code_letter'),
@@ -114,14 +118,18 @@ crop_raw_long0 <- crop_raw |>
     values_from = 'value'
   ) |>
   # Add missing columns with NA
-  dplyr::bind_rows(tibble::tibble(A = numeric(), TA = numeric(), AA = numeric())) |>
+  dplyr::bind_rows(tibble::tibble(
+    A = numeric(),
+    TA = numeric(),
+    AA = numeric()
+  )) |>
   dplyr::mutate(
     area_ha = pmax(A, TA, AA, na.rm = TRUE),
     prod_t = PRQ
   )
 crop_raw_long <- crop_raw_long0 |>
   # keep complete data
-  dplyr::filter(area_ha >0 & prod_t >0) |>
+  dplyr::filter(area_ha > 0 & prod_t > 0) |>
   # estimate yields
   dplyr::mutate(
     avrg_FADN_yield = prod_t / area_ha
@@ -144,97 +152,106 @@ missing_cat <- dplyr::anti_join(
 # weight_var   : farm extrapolation coefficient (e.g., "SYS02" in FADN)
 
 crop_yields <- h_average_practices(
-  data          = crop_raw_long |>
+  data = crop_raw_long |>
     dplyr::bind_rows(missing_cat),
-  target_vars   = c("avrg_FADN_yield"),
-  primary_grp   = c('FADN_code_letter', "NUTS2"),
+  target_vars = c("avrg_FADN_yield"),
+  primary_grp = c('FADN_code_letter', "NUTS2"),
   secondary_grp = c('FADN_code_letter'),
-  weight_var    = "SYS02"            # adjust to actual weight column name
+  weight_var = "SYS02" # adjust to actual weight column name
 )
 
-View(crop_yields)
-
-
-
-
-
+#View(crop_yields)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # --- Share of rearing vs slaughter sales by livestock category ----
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
 # --- Compute share variables at farm level ---
 # Share = SSN / SN and SRN / SN for each livestock category
 
-sales_raw <- fadn_data |>
-  dplyr::select(ID, YEAR, COUNTRY, NUTS2, SYS02, TF14,
-                dplyr::matches("_SN$|_SSN$|_SRN$"))
-
-sales_raw_long <- sales_raw |>
-  tidyr::pivot_longer(
-    cols = dplyr::matches("_SN$|_SSN$|_SRN$")
-  ) |>
-  dplyr::filter(value >0) |>
-  dplyr::mutate(
-    FADN_code_letter = gsub("_SN$|_SSN$|_SRN$","",name),
-    var = stringr::str_extract(name,"SN$|SSN$|SRN$")
-  ) |>
-  tidyr::pivot_wider(
-    id_cols = c('ID', 'YEAR', 'COUNTRY', 'NUTS2', 'TF14', 'SYS02', 'FADN_code_letter'),
-    names_from = 'var',
-    values_from = 'value',
-    values_fill = 0
-  ) |>
-  # check if SN = SRN + SSN
-  dplyr::mutate(
-    complete_sales = SN == SRN + SSN
-  )
-
-table(sales_raw_long$complete_sales)
-
-sales_shares_raw <- sales_raw_long |>
-  # keep only farms with complete sales values
-  dplyr::filter(complete_sales) |>
-  # estimate shares
-  dplyr::mutate(
-    share_SRN = SRN / SN,
-    share_SSN = SSN / SN
-  )
-
-# Missing NUTS2 x livestock category x type of farming
-missing_cat <- dplyr::anti_join(
-  sales_raw_long |>
-    dplyr::select(NUTS2, TF14, FADN_code_letter) |>
-    dplyr::distinct(),
-  sales_shares_raw |>
-    dplyr::select(NUTS2, TF14, FADN_code_letter) |>
-    dplyr::distinct(),
-  by = c('NUTS2', 'FADN_code_letter')
-)
-
+#sales_raw <- fadn_data |>
+#  dplyr::select(
+#    ID,
+#    YEAR,
+#    COUNTRY,
+#    NUTS2,
+#    SYS02,
+#    TF14,
+#    dplyr::matches("_SN$|_SSN$|_SRN$")
+#  )
+#
+#sales_raw_long <- sales_raw |>
+#  tidyr::pivot_longer(
+#    cols = dplyr::matches("_SN$|_SSN$|_SRN$")
+#  ) |>
+#  dplyr::filter(value > 0) |>
+#  dplyr::mutate(
+#    FADN_code_letter = gsub("_SN$|_SSN$|_SRN$", "", name),
+#    var = stringr::str_extract(name, "SN$|SSN$|SRN$")
+#  ) |>
+#  tidyr::pivot_wider(
+#    id_cols = c(
+#      'ID',
+#      'YEAR',
+#      'COUNTRY',
+#      'NUTS2',
+#      'TF14',
+#      'SYS02',
+#      'FADN_code_letter'
+#    ),
+#    names_from = 'var',
+#    values_from = 'value',
+#    values_fill = 0
+#  ) |>
+#  # check if SN = SRN + SSN
+#  dplyr::mutate(
+#    complete_sales = SN == SRN + SSN
+#  )
+#
+#table(sales_raw_long$complete_sales)
+#
+#sales_shares_raw <- sales_raw_long |>
+#  # keep only farms with complete sales values
+#  dplyr::filter(complete_sales) |>
+#  # estimate shares
+#  dplyr::mutate(
+#    share_SRN = SRN / SN,
+#    share_SSN = SSN / SN
+#  )
+#
+## Missing NUTS2 x livestock category x type of farming
+#missing_cat <- dplyr::anti_join(
+#  sales_raw_long |>
+#    dplyr::select(NUTS2, TF14, FADN_code_letter) |>
+#    dplyr::distinct(),
+#  sales_shares_raw |>
+#    dplyr::select(NUTS2, TF14, FADN_code_letter) |>
+#    dplyr::distinct(),
+#  by = c('NUTS2', 'FADN_code_letter')
+#)
+#
 # --- Summarise shares at NUTS2 level using h_average_practices ---
 # primary_grp  : NUTS2 (the level we want results at)
 # secondary_grp: COUNTRY (fallback if NUTS2 has missing values)
 # weight_var   : farm extrapolation coefficient (e.g., "SYS02" in FADN)
 
-sales_shares <- h_average_practices(
-  data          = sales_shares_raw |>
-    dplyr::bind_rows(missing_cat),
-  target_vars   = c("share_SRN", "share_SSN"),
-  primary_grp   = c('FADN_code_letter', "NUTS2", "TF14"),
-  secondary_grp = c('FADN_code_letter'),
-  weight_var    = "SYS02"            # adjust to actual weight column name
-)
-
-View(sales_shares)
+#sales_shares <- h_average_practices(
+#  data = sales_shares_raw |>
+#    dplyr::bind_rows(missing_cat),
+#  target_vars = c("share_SRN", "share_SSN"),
+#  primary_grp = c('FADN_code_letter', "NUTS2", "TF14"),
+#  secondary_grp = c('FADN_code_letter'),
+#  weight_var = "SYS02" # adjust to actual weight column name
+#)
+#
+#View(sales_shares)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # --- Feed averages ----
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # ---- Create object ---
-object = data_4FADN2Footprint(fadn_data)
+object <- data_4FADN2Footprint(fadn_data)
 
 ## Yields per feed type ----
 
@@ -246,7 +263,7 @@ feed_yield <- feed_produced |>
     .by = c(Sailley_feed, COUNTRY)
   )
 
-FADN_averages = list(
+FADN_averages <- list(
   feed_yield = feed_yield
 )
 
@@ -257,7 +274,7 @@ herd_feed <- f_herd_feed(object, overwrite = overwrite)
 
 # --- Compute GE mean and sd at farm level by livestock category ---
 tmp_GE <- herd_feed$feed_intake$total |>
-  dplyr::filter(Qobs >0) |>
+  dplyr::filter(Qobs > 0) |>
   dplyr::mutate(GE_MJ_anim_day = GE_MJ_anim / 365) |>
   # add SYS02
   dplyr::left_join(
@@ -273,7 +290,7 @@ summarise_GE <- function(data, grp_vars) {
   data |>
     dplyr::summarise(
       mean_GE_MJ_anim_day = mean(GE_MJ_anim_day, na.rm = TRUE),
-      sd_GE_MJ_anim_day   = sd(GE_MJ_anim_day,   na.rm = TRUE),
+      sd_GE_MJ_anim_day = sd(GE_MJ_anim_day, na.rm = TRUE),
       .by = dplyr::all_of(grp_vars)
     )
 }
@@ -281,14 +298,14 @@ summarise_GE <- function(data, grp_vars) {
 # Compute summaries at each geographic level
 #GE_by_nuts2   <- summarise_GE(tmp_GE, c("FADN_code_letter", "NUTS2", "COUNTRY"))
 GE_by_country <- summarise_GE(tmp_GE, c("FADN_code_letter", "COUNTRY"))
-GE_by_europe  <- summarise_GE(tmp_GE,   "FADN_code_letter")
+GE_by_europe <- summarise_GE(tmp_GE, "FADN_code_letter")
 
 # --- Apply two-step fallback hierarchy ---
 tmp_mean_GE <- GE_by_country |>
   # join EU-level estimates
   dplyr::left_join(
     GE_by_europe,
-    by     = "FADN_code_letter",
+    by = "FADN_code_letter",
     suffix = c("", "_europe")
   ) |>
   # Step 3: coalesce NUTS2 -> country -> EU
@@ -304,12 +321,17 @@ tmp_mean_GE <- GE_by_country |>
   ) |>
   # Drop intermediate fallback columns
   dplyr::select(
-    FADN_code_letter, COUNTRY,
-    mean_GE_MJ_anim_day, sd_GE_MJ_anim_day
+    FADN_code_letter,
+    COUNTRY,
+    mean_GE_MJ_anim_day,
+    sd_GE_MJ_anim_day
   )
 
 # --- Report remaining NAs after all fallback steps ---
-remaining_nas <- colSums(is.na(tmp_mean_GE[c("mean_GE_MJ_anim_day", "sd_GE_MJ_anim_day")]))
+remaining_nas <- colSums(is.na(tmp_mean_GE[c(
+  "mean_GE_MJ_anim_day",
+  "sd_GE_MJ_anim_day"
+)]))
 if (any(remaining_nas > 0)) {
   warning(
     "The following GE variables still contain NAs after all fallback steps:\n",
@@ -319,20 +341,17 @@ if (any(remaining_nas > 0)) {
   message("No remaining NAs in GE variables after fallback imputation.")
 }
 
-View(tmp_mean_GE)
-
-
+#View(tmp_mean_GE)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # --- Export data ----
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-FADN_averages = list(
+FADN_averages <- list(
   crop_yields = crop_yields,
-  sales_shares = sales_shares,
+  #sales_shares = sales_shares,
   feed_yield = feed_yield,
   GE_MJ_anim_day = tmp_mean_GE
 )
 
 usethis::use_data(FADN_averages, overwrite = T)
-

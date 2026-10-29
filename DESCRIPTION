@@ -1,7 +1,7 @@
 Package: FADN2Footprint
 Type: Package
 Title: Infer agricultural practices and compute environmental footprints from FADN data
-Version: 1.1.0
+Version: 1.1.1
 Authors@R: c(person("Sarah", "Huet",
                     email = "huetsarah49@live.fr",
                     comment = c(ORCID = "0000-0002-5449-6959"),

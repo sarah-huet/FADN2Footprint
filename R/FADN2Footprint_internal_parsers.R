@@ -364,8 +364,8 @@
     #  df
     #})() |>
     dplyr::mutate(
-      #area_ha = pmax(as.numeric(TA), as.numeric(A), na.rm = T),
-      area_ha = dplyr::coalesce(as.numeric(A), as.numeric(TA)),
+      area_ha = pmax(as.numeric(TA), as.numeric(A), na.rm = T),
+      #area_ha = dplyr::coalesce(as.numeric(A), as.numeric(TA)),
       prod_t = PRQ,
       sales_t = SQ
     ) #|>
@@ -1181,8 +1181,7 @@
       by = c("COUNTRY" = "country_FADN", "YEAR")
     ) |>
     dplyr::mutate(
-      N_min_ferti_Q_estim_EUROSTAT =
-        N_min_ferti_V * n_ratio
+      N_min_ferti_Q_estim_EUROSTAT = N_min_ferti_V * n_ratio
     ) |>
     dplyr::mutate(
       N_min_ferti_Q = dplyr::case_when(
@@ -1191,13 +1190,13 @@
       )
     )
 
-#  df_base |>
-#    dplyr::mutate(ratio = N_min_ferti_Q / N_min_ferti_V) |>
-#    ggplot2::ggplot() +
-#    ggplot2::geom_boxplot(ggplot2::aes(x = YEAR, y = ratio)) +
-#    ggplot2::scale_y_log10()
+  #  df_base |>
+  #    dplyr::mutate(ratio = N_min_ferti_Q / N_min_ferti_V) |>
+  #    ggplot2::ggplot() +
+  #    ggplot2::geom_boxplot(ggplot2::aes(x = YEAR, y = ratio)) +
+  #    ggplot2::scale_y_log10()
 
-    # 2. Filter Zero Rows -----------------------------------------------------
+  # 2. Filter Zero Rows -----------------------------------------------------
   # Remove rows where all numeric value variables are zero/NA.
   # We do this before the expensive join.
   # Note: logic excludes IDs.

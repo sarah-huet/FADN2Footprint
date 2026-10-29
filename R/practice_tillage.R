@@ -18,28 +18,35 @@
 #' consumption for wheat (60 L/ha), maize (48 L/ha) and a wheat–maize
 #' rotation (54 L/ha), giving a baseline of 54 L/ha.
 #'
-#' Only arable land use types are considered; permanent grassland, orchards
-#' and other non-arable land uses are excluded from the output.
+#' This arable reference is applied uniformly to all recorded land areas,
+#' including grassland and other non-arable land, to estimate a whole-farm
+#' non-tillage baseline. This is an allocation assumption, not a validated
+#' grassland-specific reference. Only arable activities receive the residual
+#' diesel; non-arable activities are excluded from the output.
 #'
 #' The estimation procedure per crop activity is:
-#' 1. The farm's total diesel consumption (diesel_l) is allocated to each
-#'    crop in proportion to its share of the farm's total arable area
-#'    (area_ha / sum_area_ha within the same land_use_type group).
-#' 2. The no-till baseline (avrg_diesel_no_tillage × area_ha) is subtracted
-#'    from the allocated diesel.
-#' 3. The result is divided by crop area (area_ha) to express the indicator
-#'    in L/ha.
+#' 1. Multiply the no-till reference by the farm's total recorded area across
+#'    all land use types to estimate baseline diesel consumption in litres.
+#' 2. Subtract this baseline from total farm diesel consumption (diesel_l),
+#'    retaining only positive excess consumption.
+#' 3. Allocate the excess to arable crops in proportion to their arable area
+#'    shares, then divide by crop area. This simplifies to excess consumption
+#'    divided by total arable area, in L/ha, for every positive-area arable crop.
 #'
 #' Three cases are handled explicitly:
 #' - **NA or zero diesel**: farms with missing or non-positive diesel_l are
 #'   assigned NA (it is considered implausible that a farm has no diesel
 #'   consumption, so these records are flagged as unreliable and will be
 #'   invalidated by infer_practices).
-#' - **Below no-till baseline**: when the allocated diesel is lower than the
-#'   no-till reference, tillage is set to 0 (interpreted as direct seeding /
-#'   no-till practice).
+#' - **At or below the whole-farm baseline**: tillage is set to 0, indicating
+#'   no positive excess detected, rather than proof of no-till practice.
 #' - **Default**: excess diesel per hectare is returned as the tillage
 #'   intensity indicator.
+#'
+#' Arable activities with missing or non-positive area receive NA. Missing
+#' areas are omitted from farm area totals, so incomplete area records can
+#' underestimate the baseline. The residual is a proxy, not measured tillage
+#' fuel; other operations and machinery efficiency can also affect it.
 #'
 #' The function returns cached results stored in
 #' object@practices$crops$tillage when present and `overwrite = FALSE`.
@@ -49,8 +56,9 @@
 #'   - object@traceability$id_cols: character vector of farm identifier
 #'     column names,
 #'   - object@crop: crop activity table with columns FADN_code_letter,
-#'     land_use_type and area_ha,
-#'   - object@input: farm input table with column diesel_l.
+#'     land_use_type and area_ha (hectares), covering all land use types,
+#'   - object@input: farm input table with column diesel_l (litres over the
+#'     farm reporting period).
 #' @param overwrite Logical, default FALSE. If FALSE and
 #'   object@practices$crops$tillage is not NULL, the cached table is
 #'   returned with a message. Set to TRUE to force recomputation.
@@ -63,8 +71,9 @@
 #'   \item{FADN_code_letter}{FADN crop activity code.}
 #'   \item{land_use_type}{Land use type (always "arable" in the output).}
 #'   \item{tillage}{Tillage intensity indicator in litres of diesel per
-#'     hectare above the no-till baseline. 0 indicates no-till or direct
-#'     seeding; NA indicates unreliable diesel data.}
+#'     arable hectare above the whole-farm baseline per reporting period.
+#'     0 indicates no positive excess; NA indicates unreliable diesel data
+#'     or missing/non-positive crop area.}
 #' }
 #'
 #' @references
@@ -88,72 +97,70 @@
 #' @importFrom dplyr select left_join mutate filter case_when all_of
 #' @importFrom tidyselect all_of
 
-f_tillage <-function(object,
-                     overwrite = FALSE){
+f_tillage <- function(object, overwrite = FALSE) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
-  if (!is.null(object@practices$crops$tillage)&& !overwrite) {
+  if (!is.null(object@practices$crops$tillage) && !overwrite) {
     message("Using cached values stored in object@practices$crops$tillage.")
-    return(object@practices$crops$tillage)  # use cached value
+    return(object@practices$crops$tillage) # use cached value
   }
 
-  # some preliminary notes:
-  # here we choose a proxy of "Soil movement" metric as the total GNR consumption (in liter) minus the mean consumption without tillage per hectare divided by the UAA in crop production
-  # we consider that only arable land use receive tillage
-  # I calculate the mean off-road diesel used without tillage (i.e., direct seedling) per hectare for wheat, maize and the wheat-maize rotation (Chenu, 2013)
-  avrg_diesel_no_tillage = mean(c(60,48,54))
+  id_cols <- object@traceability$id_cols
+  # Chenu (2013): arable no-till reference, assumed here for all land uses.
+  avrg_diesel_no_tillage <- mean(c(60, 48, 54))
 
   # Input data ------------------------------------------------------------------------------------------------------------------------------------------------------
 
   input_data <- object@crop |>
     # crop data
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),FADN_code_letter,land_use_type,area_ha) |>
-    #filter(!is.na(area_ha)) |>
+    dplyr::select(
+      dplyr::all_of(id_cols),
+      FADN_code_letter,
+      land_use_type,
+      area_ha
+    ) |>
     # input data
     dplyr::left_join(
       object@input |>
-        dplyr::select(tidyselect::all_of(object@traceability$id_cols),diesel_l),
-      by = object@traceability$id_cols
+        dplyr::select(tidyselect::all_of(id_cols), diesel_l),
+      by = id_cols
     )
-
 
   # Estimate parameter -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   tillage <- input_data |>
-    # estimate total arable area per farm
-    mutate(
-      sum_area_ha = sum(area_ha,na.rm = T),
-      .by = c(object@traceability$id_cols,land_use_type)
-) |>
-  # estimate parameter
-  dplyr::mutate(
-    tillage = dplyr::case_when(
-      # we discard farms without any diesel registered as it is unlikely
-      is.na(diesel_l) | diesel_l <= 0 ~ NA,
-      # for farms that consume less off-road diesel than the no-till average, we considered that they practice no-till
-      (diesel_l* area_ha/sum_area_ha) - avrg_diesel_no_tillage*area_ha <0 ~ 0,
-      # default formula
-      .default = ((diesel_l* area_ha/sum_area_ha) - avrg_diesel_no_tillage*area_ha) / area_ha
+    dplyr::mutate(
+      sum_area_ha = sum(area_ha, na.rm = T),
+      arable_area_ha = sum(area_ha[land_use_type %in% "arable"], na.rm = TRUE),
+      .by = dplyr::all_of(id_cols)
+    ) |>
+    dplyr::mutate(
+      excess_diesel_l = pmax(
+        0,
+        diesel_l - avrg_diesel_no_tillage * sum_area_ha
+      ),
+      tillage = dplyr::case_when(
+        land_use_type == "grassland" ~ 0,
+        is.na(area_ha) | area_ha <= 0 | arable_area_ha <= 0 ~ 0,
+        # we discard farms without any diesel registered as it is unlikely
+        is.na(diesel_l) | diesel_l <= 0 ~ NA_real_,
+        # default estimation
+        .default = excess_diesel_l / arable_area_ha
+      )
     )
-  )
 
+  #mean(tillage$tillage[tillage$FADN_code_letter %in% c("CWHTC", "CMZ")], na.rm = TRUE)
 
+  # Output -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  tillage <- tillage |>
+    dplyr::select(
+      tidyselect::all_of(object@traceability$id_cols),
+      FADN_code_letter,
+      land_use_type,
+      tillage
+    )
 
-# Output -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-tillage = tillage |>
-  dplyr::select(tidyselect::all_of(object@traceability$id_cols),FADN_code_letter,land_use_type,tillage) |>
-  # only for arable land
-  dplyr::filter(land_use_type == "arable")
-
-#object@practices$crops$tillage <- tillage
-
-
-return(tillage)
-
+  return(tillage)
 }
-
-
-
-

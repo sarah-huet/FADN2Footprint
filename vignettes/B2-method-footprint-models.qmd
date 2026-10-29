@@ -25,9 +25,9 @@ For crops, footprints are estimated at the crop level (i.e., scope subdivision) 
 each crop. The impact per ton of crop (kgCO~2~e t^-1^, BVI~t~) is then calculated by dividing the per hectare impact by the yield of the considered
 crop in t/ha.
 
-For animal products, we subdivide the scope to the herd involved in the product of interest (e.g., dairy herd for milk production; XX reference B1
-insteadXX) but apply economic allocation for co-products from this herd (e.g., milk and cull cow meat from dairy cattle). We assess the animal product
-impact in two steps:
+For animal products, we subdivide the scope to the herd involved in the product of interest (e.g., dairy herd for milk production;
+@sec-restrain-activities) but apply economic allocation for co-products from this herd (e.g., milk and cull cow meat from dairy cattle). We assess the
+animal product impact in two steps:
 
 1.  We estimate the total impact of the herd activity (e.g., milk production) as the sum of the per hectare impact of the feed given to the livestock
     activity (e.g., feed, including both farm-grown and externally sourced purchased feed, given to the dairy cows, heifers and calves involved in the
@@ -177,8 +177,8 @@ to CH~4~), yielding an emission factor (kg CH~4~ head⁻¹ yr^-1^) computed as (
 
 $$EF = \frac{GE \times (Y_m / 100)}{55.65}$$
 
-where *GE* is the gross energy intake (MJ head⁻¹ day⁻¹; see xx ref to other vignette for GE estimation), *Ym* is the methane conversion factor derived
-from IPCC, and *55.65 MJ kg⁻¹ CH~4~* is the energy content of methane.
+where *GE* is the gross energy intake (MJ head⁻¹ day⁻¹; @sec-method-practices-feed-qty-qlty), *Ym* is the methane conversion factor derived from IPCC,
+and *55.65 MJ kg⁻¹ CH~4~* is the energy content of methane.
 
 The total cattle CH~4~ emission is calculated as:
 
@@ -230,11 +230,9 @@ where *GE* is the gross energy intake (MJ head⁻¹ day⁻¹), *DE* is the diges
 intake (default = 0.04 for ruminants, reduced to 0.02 for animals fed ≥ 85% grain or for swine), *ASH* is the ash content of feed expressed as a
 fraction of dry matter intake, and 18.45 is the conversion factor for dietary GE per kg of dry matter (MJ kgDM⁻¹).
 
-Digestibility values (*DE*%) were sourced from UNFCCC national inventory submissions (Table 3.A s2 XXwhat does s2 mean here?XX) and weighted by
-livestock population size at the country level. When country-specific values were unavailable for a given UNFCCC livestock category, a cross-country
+Digestibility values (*DE*%) are feed type-specific sourced from the New Zealand Ministry of Primary Industries (2024) and weighted by livestock
+population size at the country level. When country-specific values were unavailable for a given UNFCCC livestock category, a cross-country
 population-weighted mean was used as a fallback.
-
-XX to be replaced with feed type-specific DE% value from New Zealand's method, p80XX
 
 ### Country-Specific Parameters
 
@@ -348,11 +346,11 @@ $N_2O_{G,mm}$ (indirect volatilisation), and $N_2O_{L,mm}$ (indirect leaching), 
 Direct and indirect nitrous oxide (N~2~O) emissions from managed soils (cropland and grassland) were estimated following IPCC Tier 2/3 methodology
 [@IPCC2006; @IPCC2019], anchored on country-specific emission factors reported to the UNFCCC. Three emission pathways were considered:
 
-- direct N~2~O emissions from nitrogen inputs to managed soils,
+-   direct N~2~O emissions from nitrogen inputs to managed soils,
 
-- indirect N~2~O emissions from atmospheric deposition of volatilised NH₃ and NO~x~,
+-   indirect N~2~O emissions from atmospheric deposition of volatilised NH₃ and NO~x~,
 
-- indirect N~2~O emissions from nitrogen leaching and runoff.
+-   indirect N~2~O emissions from nitrogen leaching and runoff.
 
 ### Activity Data Assembly
 
@@ -365,17 +363,17 @@ crop-specific IPCC parameters could not be matched to a given species, generic d
 
 Six nitrogen input variables were considered:
 
-- **Synthetic nitrogen** ($F_{SN}$, kg N yr^-1^): synthetic fertiliser nitrogen applied per crop and farm, estimated via the `f_n_ferti` function.
+-   **Synthetic nitrogen** ($F_{SN}$, kg N yr^-1^): synthetic fertiliser nitrogen applied per crop and farm, estimated via the `f_n_ferti` function.
 
-- **Organic nitrogen on arable soils** ($F_{ON}$, kg N yr^-1^): organic fertiliser nitrogen applied to arable crops, estimated via `f_n_ferti`; set to
-  zero for grassland.
+-   **Organic nitrogen on arable soils** ($F_{ON}$, kg N yr^-1^): organic fertiliser nitrogen applied to arable crops, estimated via `f_n_ferti`; set
+    to zero for grassland.
 
-- **Nitrogen deposited by grazing animals on pasture** ($F_{PRP}$, kg N yr^-1^): approximated as the organic fertilisation of grassland from
-  `f_n_ferti`; set to zero for arable land.
+-   **Nitrogen deposited by grazing animals on pasture** ($F_{PRP}$, kg N yr^-1^): approximated as the organic fertilisation of grassland from
+    `f_n_ferti`; set to zero for arable land.
 
-- **Crop residue nitrogen** ($F_{CR}$, kg N yr^-1^): nitrogen in crop residues returned to soil, estimated from above-ground and below-ground dry
-  matter residues using IPCC crop-specific regression parameters (Tables 11.1 and 11.2). Above-ground dry matter ($AG_{DM,T}$) was estimated as a
-  linear function of crop yield:
+-   **Crop residue nitrogen** ($F_{CR}$, kg N yr^-1^): nitrogen in crop residues returned to soil, estimated from above-ground and below-ground dry
+    matter residues using IPCC crop-specific regression parameters (Tables 11.1 and 11.2). Above-ground dry matter ($AG_{DM,T}$) was estimated as a
+    linear function of crop yield:
 
 $$AG_{DM,T} = Crop_T \times Slope_T + Intercept_T$$
 
@@ -391,10 +389,10 @@ where $RS_T$ is the root-to-shoot ratio, $N_{AG,T}$ and $N_{BG,T}$ are the nitro
 and $Frac_{renew,T}$ is the fraction of land renewed annually. Grasslands were assumed to be renewed every six years ($Frac_{renew} = 1/6$), while
 annual crops had $Frac_{renew} = 1$. Residue removal and burning were assumed to be zero ($Frac_{remove} = 0$; $Frac_{burn} = 0$).
 
-- **Nitrogen mineralised from soil organic matter** ($F_{SOM}$, kg N yr^-1^): nitrogen mineralised following land use change; currently set to zero,
-  pending integration with a land use change module.
+-   **Nitrogen mineralised from soil organic matter** ($F_{SOM}$, kg N yr^-1^): nitrogen mineralised following land use change; currently set to zero,
+    pending integration with a land use change module.
 
-- **Drained organic soils** ($F_{OS}$, ha): area of drained organic soils; currently set to zero.
+-   **Drained organic soils** ($F_{OS}$, ha): area of drained organic soils; currently set to zero.
 
 ### Direct N~2~O Emissions
 
@@ -417,9 +415,8 @@ $$N_2O\text{-}N_{ATD} = \left(F_{SN} \times Frac_{GASF} + (F_{ON} + F_{PRP}) \ti
 $$N_2O_{ATD} = N_2O\text{-}N_{ATD} \times \frac{44}{28}$$
 
 where $Frac_{GASF} = 0.11$ is the fraction of synthetic fertiliser nitrogen that volatilises as NH₃ and NO~x~, $Frac_{GASM} = 0.21$ is the
-corresponding fraction for organic nitrogen amendments and grazing deposits (IPCC Table 11.3) XX why not recover them from UNFCCC table 3.D? =\> TODO
-Table3.D (C32:C34)XX, and $EF_4$ is the emission factor for N~2~O from atmospheric deposition of volatilised nitrogen, sourced from UNFCCC submissions
-XX how do you do this?XX.
+corresponding fraction for organic nitrogen amendments and grazing deposits, and $EF_4$ is the emission factor for N~2~O from atmospheric deposition
+of volatilised nitrogen (UNFCCC Table 3.D).
 
 ### Indirect N~2~O Emissions from Leaching and Runoff
 
@@ -429,9 +426,8 @@ $$N_2O\text{-}N_L = (F_{SN} + F_{ON} + F_{PRP} + F_{CR} + F_{SOM}) \times Frac_{
 
 $$N_2O_L = N_2O\text{-}N_L \times \frac{44}{28}$$
 
-where $Frac_{leach,H} = 0.24$ is the fraction of total nitrogen additions that is lost through leaching and runoff in regions where leaching occurs
-(IPCC Table 11.3)XX why not recover them from UNFCCC table 3.D? =\> TODO Table3.D (C32:C34)XX, and $EF_5$ is the emission factor for N~2~O from
-nitrogen leaching and runoff, sourced from UNFCCC submissionsXX how do you do this?XX.
+where $Frac_{leach,H} = 0.24$ is the fraction of total nitrogen additions that is lost through leaching and runoff in regions where leaching occurs,
+and $EF_5$ is the emission factor for N~2~O from nitrogen leaching and runoff (UNFCCC Table 3.D).
 
 ### Total N~2~O Emissions from Managed Soils
 
@@ -591,11 +587,10 @@ only above-ground species have been listed as endangered, threatened or extinct 
 communities is highly idiosyncratic and limited at the plot scale or even infra. In order to calibrate our model, we compare estimated biodiversity
 levels with in situ measurements identified in the literature. These in situ measurements serve as references and we adjust the three sets of
 parameters in order to minimize the distance between our results and the in situ measurements selected. The range of possible $BV_{loc}$ are derived
-on the wild plants abundance and diversity reported by Gallego-Zamorano et al. (2022) (Table A xxx; see Section 2.2.1). The two other sets of
-parameters are calibrated to minimize the average distance between our results and literature values on plants, birds, bees, butterflies, hoverflies,
-carabids, spiders, bats, bush-crickets, other arthropods and microbes (Beketov et al., 2013; Sánchez-Bayo and Wyckhuys, 2019; Sirami et al., 2019;
-Tuck et al., 2014; Vallé et al., 2023) (Table A xxx; see Section 2.2.2). This calibration step uses the optim function from the R base package (R Core
-Team, 2023).
+on the wild plants abundance and diversity reported by Gallego-Zamorano et al. (2022) (\@tbl-land-use-BV). The two other sets of parameters are
+calibrated to minimize the average distance between our results and literature values on plants, birds, bees, butterflies, hoverflies, carabids,
+spiders, bats, bush-crickets, other arthropods and microbes (Beketov et al., 2013; Sánchez-Bayo and Wyckhuys, 2019; Sirami et al., 2019; Tuck et al.,
+2014; Vallé et al., 2023) (\@tbl-practice-BVloc). This calibration step uses the optim function from the R base package (R Core Team, 2023).
 
 ### Levels of biodiversity in different land use types
 
@@ -763,16 +758,16 @@ Wyckhuys, 2019).
 #### Landscape effects
 
 To compare the effects of mean field size and crop diversity, we relied on Sirami et al. (2019), one of the only studies that provides effect sizes
-for these two variables (Table A xxx). To compare the effects of hedges we use (Vallé et al., 2023) which estimate the effect of small woody features
-(Table A xxx). To retrieve the average percentile corresponding to the breaking point and the average effect size of the predicted species diversity
-(Simpson index) of the three taxa, we used WebPlotDigitizer (version 5.2) to calculate the area under the density curve and retrieve breaking point
-Simpson index value (see sheet “valle_2023_WebPlotDigitizer” in Appendix C).
+for these two variables (@tbl-practice-BVloc). To compare the effects of hedges we use (Vallé et al., 2023) which estimate the effect of small woody
+features (@tbl-practice-BVloc). To retrieve the average percentile corresponding to the breaking point and the average effect size of the predicted
+species diversity (Simpson index) of the three taxa, we used WebPlotDigitizer (version 5.2) to calculate the area under the density curve and retrieve
+breaking point Simpson index value (see sheet "valle_2023_WebPlotDigitizer” in Appendix C, Huet et al., 2026).
 
 #### Comparison of labels
 
 The effect of organic farming on biodiversity has been examined by numerous studies whose results have been aggregated in a meta-analysis comparing in
 situ measurements of species richness between organic and conventional agriculture (Tuck et al., 2014). We take the observed differences to calibrate
-the model (Table A xxx).
+the model (@tbl-practice-BVloc).
 
 #### The case of grassland
 
@@ -783,23 +778,23 @@ for grasslands. These five variables will therefore be weighted to zero for the 
 ### Model calibration
 
 First, the range of possible biodiversity values (in which BVLU is projected for normalization) for each land use type (arable and grassland) are
-defined as in Gallego-Zamorano et al. (2022) (Table A xxx). Secondly, the set of response function parameters (BVCi,l,v, see Section 4.1) and the
+defined as in Gallego-Zamorano et al. (2022) (@tbl-land-use-BV). Secondly, the set of response function parameters (BVCi,l,v, see Section 4.1) and the
 aggregation weights for each type of land use are calibrated (separately for arable and grassland). The calibration pursues the objective of
-minimizing the fourth power of the distance from one of the ratio between our predicted values and the target values of Table A xxx (average croplands
-and grasslands) and Table AErreur : source de la référence non trouvée:
+minimizing the fourth power of the distance from one of the ratio between our predicted values and the target values of @tbl-land-use-BV (average
+croplands and grasslands) and @tbl-practice-BVloc:
 
-- Initially, the functional forms of the responses are taken from Lindner et al. (2019). Unlike initial Lindner’s method (2022) that aggregates
-  variables by averaging them, the variable weights used for their aggregation are assigned manually such that their value corresponds to the effect
-  size of variables listed in the literature (Table A xxx), with a minimum weight of 0.05 (for the negative effect sizes and the variables not listed
-  in the literature).
+-   Initially, the functional forms of the responses are taken from Lindner et al. (2019). Unlike initial Lindner’s method (2022) that aggregates
+    variables by averaging them, the variable weights used for their aggregation are assigned manually such that their value corresponds to the effect
+    size of variables listed in the literature (@tbl-practice-BVloc), with a minimum weight of 0.05 (for the negative effect sizes and the variables
+    not listed in the literature).
 
-- Then, both the functional forms of the responses (all constants except epsilon and gamma, which modulates the response range, and beta which define
-  the variation direction; see code available online) and the aggregation weights are calibrated using the basic optim function of R (R Core Team,
-  2023)
+-   Then, both the functional forms of the responses (all constants except epsilon and gamma, which modulates the response range, and beta which
+    define the variation direction; see code available online) and the aggregation weights are calibrated using the basic optim function of R (R Core
+    Team, 2023)
 
-- Note that the effect size of each variable (or its relative importance) results from the combination of both weights and functional forms. In
-  principle, a very “responsive” functional form combined with low weight can confer the same importance as a very “flat” functional form combined
-  with high weight.
+-   Note that the effect size of each variable (or its relative importance) results from the combination of both weights and functional forms. In
+    principle, a very “responsive” functional form combined with low weight can confer the same importance as a very “flat” functional form combined
+    with high weight.
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 

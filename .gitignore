@@ -67,6 +67,8 @@ old/
 Test/
 data_raw/
 doc/
+data/unzipped/
+data/raw/hrl_grassland/
 
 # Heavy unneeded folder
 inst/ext_data/EF_parameters/

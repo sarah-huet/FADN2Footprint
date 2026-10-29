@@ -21,85 +21,72 @@
 #'
 #'
 
-f_livestock_density <- function(object,
-                                overwrite = FALSE){
+f_livestock_density <- function(object, overwrite = FALSE) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
-  if (!is.null(object@practices$crops$livestock_density)&& !overwrite) {
-    message("Using cached values stored in object@practices$crops$livestock_density.")
-    return(object@practices$crops$livestock_density)  # use cached value
+  if (!is.null(object@practices$crops$livestock_density) && !overwrite) {
+    message(
+      "Using cached values stored in object@practices$crops$livestock_density."
+    )
+    return(object@practices$crops$livestock_density) # use cached value
   }
+
+  id_cols <- object@traceability$id_cols
 
   # see EUROSTAT glossary: grazing livestock density
 
   # 1. Estimate Main Forage Area ------------------------------------------------------------------------------
 
-  tmp_forage = unique(na.omit(data_extra$crops$FADN_code_letter[data_extra$crops$feed_type == "feed_rough"]))
-  tmp_grazing_livestock = c("cattle","sheep","goats","equidae")
+  tmp_forage <- unique(na.omit(data_extra$crops$FADN_code_letter[
+    data_extra$crops$feed_type == "feed_rough"
+  ]))
+  tmp_grazing_livestock <- c("cattle", "sheep", "goats", "equidae")
   #tmp_grazing_livestock = "cattle"
 
-   MFA <- object@crop |>
+  MFA <- object@crop |>
     # filter forage
-     dplyr::filter(FADN_code_letter %in% tmp_forage) |>
+    dplyr::filter(FADN_code_letter %in% tmp_forage) |>
     # sum up areas
-     dplyr::summarise(
-      MFA_ha = sum(area_ha,na.rm = T),
-      .by = object@traceability$id_cols
+    dplyr::summarise(
+      MFA_ha = sum(area_ha, na.rm = T),
+      .by = id_cols
     )
 
-   # 2. Estimate grazing livestock units ------------------------------------------------------------------------------
+  # 2. Estimate grazing livestock units ------------------------------------------------------------------------------
 
   grazing_LU <- object@herd |>
-     dplyr::filter(species %in% tmp_grazing_livestock) |>
+    dplyr::filter(species %in% tmp_grazing_livestock) |>
     ## summarize livestock_density per farm
     dplyr::summarise(
-      grazing_LU = sum(Qobs*livestock_unit_coef,na.rm = T),
-      .by = c(object@traceability$id_cols)
+      grazing_LU = sum(Qobs * livestock_unit_coef, na.rm = T),
+      .by = c(id_cols)
     )
 
   # 3. Estimate livestock density ------------------------------------------------------------------------------
 
-   livestock_density <- object@crop |>
-     # livestock density is applied only to grasslands
-     dplyr::filter(land_use_type == "grassland") |>
-     dplyr::select(tidyselect::all_of(object@traceability$id_cols),land_use_type,FADN_code_letter) |>
-     # add main forage area
-     dplyr::left_join(
-       MFA,
-       by = object@traceability$id_cols
-     ) |>
-     # add grazing livestock units
-     dplyr::left_join(
-       grazing_LU,
-       by = object@traceability$id_cols
-     ) |>
-     ## if NA in grazing LU = zero grazing LU
-     tidyr::replace_na(list(grazing_LU = 0)) |>
-     # estimate grazing livestock density
-     dplyr::mutate(
-       livestock_density = grazing_LU / MFA_ha
-     )
+  livestock_density <- object@farm |>
+    dplyr::select(dplyr::all_of(id_cols)) |>
+    # add main forage area
+    dplyr::left_join(
+      MFA,
+      by = id_cols
+    ) |>
+    # add grazing livestock units
+    dplyr::left_join(
+      grazing_LU,
+      by = id_cols
+    ) |>
+    # estimate grazing livestock density for farms with grazing livestock and main forage area
+    dplyr::mutate(
+      livestock_density = dplyr::case_when(
+        MFA_ha > 0 & grazing_LU > 0 ~ grazing_LU / MFA_ha,
+        # ToDo: handle cases where either MFA_ha or grazing_LU is zero or absent, which may indicate missing data or invalid practices
+        ## specifically: how to handle farms with grazing livestock but no main forage area, or vice versa
+        TRUE ~ 0
+      )
+    )
 
   return(livestock_density)
-
 }
-
-
-utils::globalVariables(c('TFI_ha', 'CONSOPEST', 'TFI', 'TFI_th', 'TFI_crop_name', 'ifttref', 'TFI_th', 'sum_TFI_th'))
-# this is to avoid a note in check package (the issue is from the use of dplyr)
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -22,63 +22,110 @@
 #'
 #'
 
-infer_practices <- function(object,
-                            overwrite = FALSE,
-                            account_pseudoherd = TRUE,
-                            ...){
+infer_practices <- function(
+  object,
+  overwrite = FALSE,
+  account_pseudoherd = TRUE,
+  ...
+) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
-  id_cols = object@traceability$id_cols
+  id_cols <- object@traceability$id_cols
   # 1. Compute each practice ----
   # 2. Define validation rule for each practice
   ## Farms with non valid practice will be discarded from the analysed data set
   # 3. Update object slot
 
   ### CROPS ----
-  crop_diversity = f_crop_diversity(object, overwrite = overwrite) |>
-    dplyr::mutate(valid_practice = ifelse(!is.na(crop_diversity) & crop_diversity >= 0,TRUE,FALSE))
+  crop_diversity <- f_crop_diversity(object, overwrite = overwrite) |>
+    dplyr::mutate(
+      valid_practice = ifelse(
+        !is.na(crop_diversity) & crop_diversity >= 0,
+        TRUE,
+        FALSE
+      )
+    )
   object@practices$crops$crop_diversity <- crop_diversity
 
-  N_ferti = f_n_ferti(object, overwrite = overwrite) |>
-    dplyr::mutate(valid_practice = dplyr::case_when(
-      # farms without fertilization estimation or negative one
-      is.na(N_ferti) ~ FALSE,
-      N_ferti < 0 ~ FALSE,
-      # farms that are organic but have purchased mineral fertiliser
-      ORGANIC == TRUE & N_min_ferti_Q > 0 ~ FALSE,
-      .default = TRUE))
+  N_ferti <- f_n_ferti(object, overwrite = overwrite) |>
+    dplyr::mutate(
+      valid_practice = dplyr::case_when(
+        # farms without fertilization estimation or negative one
+        is.na(N_ferti) ~ FALSE,
+        N_ferti < 0 ~ FALSE,
+        # farms that are organic but have purchased mineral fertiliser
+        ORGANIC == TRUE & N_min_ferti_Q > 0 ~ FALSE,
+        .default = TRUE
+      )
+    )
   object@practices$crops$N_ferti <- N_ferti
 
   share_Nmin_ferti <- f_share_Nmin_ferti(object, overwrite = overwrite) |>
-    dplyr::mutate(valid_practice = ifelse(!is.na(share_Nmin_ferti) & share_Nmin_ferti >= 0 & share_Nmin_ferti <= 1,TRUE,FALSE))
+    dplyr::mutate(
+      valid_practice = ifelse(
+        !is.na(share_Nmin_ferti) &
+          share_Nmin_ferti >= 0 &
+          share_Nmin_ferti <= 1,
+        TRUE,
+        FALSE
+      )
+    )
   object@practices$crops$share_Nmin_ferti <- share_Nmin_ferti
 
   pesticides <- f_plant_prot(object, overwrite = overwrite) |>
-    dplyr::mutate(valid_practice = ifelse(!is.na(pesticides) & pesticides >= 0,TRUE,FALSE))
+    dplyr::mutate(
+      valid_practice = ifelse(!is.na(pesticides) & pesticides >= 0, TRUE, FALSE)
+    )
   object@practices$crops$pesticides <- pesticides
 
   tillage <- f_tillage(object, overwrite = overwrite) |>
-    dplyr::mutate(valid_practice = ifelse(!is.na(tillage) & tillage >= 0,TRUE,FALSE))
+    dplyr::mutate(
+      valid_practice = ifelse(!is.na(tillage) & tillage >= 0, TRUE, FALSE)
+    )
   ## In the f_tillage function, we set as NA tillage value for farms without any diesel registered as it is unlikely
   object@practices$crops$tillage <- tillage
 
   livestock_density <- f_livestock_density(object, overwrite = overwrite) |>
-    dplyr::mutate(valid_practice = ifelse(!is.na(livestock_density) & livestock_density >= 0,TRUE,FALSE))
+    dplyr::mutate(
+      valid_practice = ifelse(
+        !is.na(livestock_density) & livestock_density >= 0,
+        TRUE,
+        FALSE
+      )
+    )
   object@practices$crops$livestock_density <- livestock_density
 
   if (!is.null(object@landscape_metrics)) {
     hedge_density <- f_hedge_density(object, overwrite = overwrite) |>
-      dplyr::mutate(valid_practice = ifelse(!is.na(hedge_density) & hedge_density >= 0,TRUE,FALSE))
+      dplyr::mutate(
+        valid_practice = ifelse(
+          !is.na(hedge_density) & hedge_density >= 0,
+          TRUE,
+          FALSE
+        )
+      )
     object@practices$crops$hedge_density <- hedge_density
 
     mean_field_size <- f_mean_field_size(object, overwrite = overwrite) |>
-      dplyr::mutate(valid_practice = ifelse(!is.na(mean_field_size) & mean_field_size >= 0,TRUE,FALSE))
+      dplyr::mutate(
+        valid_practice = ifelse(
+          !is.na(mean_field_size) & mean_field_size >= 0,
+          TRUE,
+          FALSE
+        )
+      )
     object@practices$crops$mean_field_size <- mean_field_size
 
     ground_cover <- f_ground_cover(object, overwrite = overwrite) |>
-      dplyr::mutate(valid_practice = ifelse(!is.na(ground_cover) & ground_cover >= 0 & ground_cover <= 366,TRUE,FALSE))
+      dplyr::mutate(
+        valid_practice = ifelse(
+          !is.na(ground_cover) & ground_cover >= 0 & ground_cover <= 366,
+          TRUE,
+          FALSE
+        )
+      )
     # we set the maximum at 366 to account for leap years such as 2020
     object@practices$crops$ground_cover <- ground_cover
   }
@@ -96,21 +143,21 @@ infer_practices <- function(object,
   object@practices$herding$feed <- herd_feed
 
   # Remove farms with aberrant gross energy values for their main livestock category
-  ## GE thresholds
+
+  ## GE thresholds from FADN_averages$GE_MJ_anim_day
   tmp_mean_GE <- FADN_averages$GE_MJ_anim_day |>
-    dplyr::summarise(
-      mean_GE_MJ_anim_day = mean(mean_GE_MJ_anim_day, na.rm = T),
-      sd_GE_MJ_anim_day = mean(sd_GE_MJ_anim_day, na.rm = T),
-      .by = FADN_code_letter
-    ) |>
+    #dplyr::summarise(
+    #  mean_GE_MJ_anim_day = mean(mean_GE_MJ_anim_day, na.rm = T),
+    #  sd_GE_MJ_anim_day = mean(sd_GE_MJ_anim_day, na.rm = T),
+    #  .by = FADN_code_letter
+    #) |>
     # define thresholds
     dplyr::mutate(
-
-      threshold_up = mean_GE_MJ_anim_day + 3*sd_GE_MJ_anim_day,
+      threshold_up = mean_GE_MJ_anim_day + 3 * sd_GE_MJ_anim_day,
 
       threshold_down = dplyr::case_when(
-        FADN_code_letter == "LCOWDAIR" ~  0.25*mean_GE_MJ_anim_day,
-        .default = 0.10*mean_GE_MJ_anim_day
+        FADN_code_letter == "LCOWDAIR" ~ 0.25 * mean_GE_MJ_anim_day,
+        .default = 0.10 * mean_GE_MJ_anim_day
       )
     )
 
@@ -121,15 +168,19 @@ infer_practices <- function(object,
       LU = Qobs * livestock_unit_coef
     ) |>
     # filter max LU
-    dplyr::slice_max(order_by = LU, with_ties = FALSE, by = dplyr::all_of(id_cols)) |>
+    dplyr::slice_max(
+      order_by = LU,
+      with_ties = FALSE,
+      by = dplyr::all_of(id_cols)
+    ) |>
     # select columns
-    dplyr::select(dplyr::all_of(id_cols),FADN_code_letter) |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter) |>
     # add thresholds
     dplyr::left_join(
       tmp_mean_GE,
-      by = 'FADN_code_letter'
+      #by = 'FADN_code_letter'
       # TODO: restore by country when good enough data
-      #by = c('FADN_code_letter', 'COUNTRY')
+      by = c('FADN_code_letter', 'COUNTRY')
     )
 
   ## retrieve farms with aberrant values
@@ -137,13 +188,14 @@ infer_practices <- function(object,
     # add thresholds and filter for the main livestock category
     dplyr::inner_join(
       tmp_max_cat,
-      by = c(id_cols,'FADN_code_letter')
+      by = c(id_cols, 'FADN_code_letter')
     ) |>
     # filter farms above & below thresholds
     dplyr::mutate(
       valid_practice = dplyr::case_when(
         # between thresholds
-        GE_MJ_anim / 365 >= threshold_down & GE_MJ_anim / 365 <= threshold_up ~ TRUE,
+        GE_MJ_anim / 365 >= threshold_down &
+          GE_MJ_anim / 365 <= threshold_up ~ TRUE,
         # if NAs
         is.na(GE_MJ_anim) | is.na(threshold_down) | is.na(threshold_up) ~ FALSE,
         .default = FALSE
@@ -156,16 +208,83 @@ infer_practices <- function(object,
       problem = "aberrant_feed"
     )
 
+  ### GE threshold from AROPAj and Sailley 2023
 
+  #  AROPAJ_Sailley_filter <- source(
+  #    "inst/scripts/AROPAJ_Sailley_filter_for_GE.R"
+  #  )$value
+  #
+  #  tmp_mean_GE <- AROPAJ_Sailley_filter |>
+  #    # add livestock unit coefficient
+  #    dplyr::left_join(
+  #      data_extra$livestock |>
+  #        dplyr::select(FADN_code_letter, livestock_unit_coef),
+  #      by = c('FADN_code_letter')
+  #    ) |>
+  #    # define thresholds
+  #    dplyr::mutate(
+  #      threshold_up = (th_GE_MJ_LU_y * livestock_unit_coef) * 10,
+  #      threshold_down = dplyr::case_when(
+  #        FADN_code_letter == "LCOWDAIR" ~ 0.25 *
+  #          (th_GE_MJ_LU_y * livestock_unit_coef),
+  #        .default = 0.10 * (th_GE_MJ_LU_y * livestock_unit_coef)
+  #      )
+  #    )
+  #
+  #  ## main livestock category
+  #  tmp_max_cat <- object@herd |>
+  #    # estimate LU
+  #    dplyr::mutate(
+  #      LU = Qobs * livestock_unit_coef
+  #    ) |>
+  #    # filter max LU
+  #    dplyr::slice_max(
+  #      order_by = LU,
+  #      with_ties = FALSE,
+  #      by = dplyr::all_of(id_cols)
+  #    ) |>
+  #    # select columns
+  #    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter) |>
+  #    # add thresholds
+  #    dplyr::left_join(
+  #      tmp_mean_GE,
+  #      by = 'FADN_code_letter'
+  #    )
+  #
+  #  ## retrieve farms with aberrant values
+  #  farms_to_remove <- object@practices$herding$feed$feed_intake$total |>
+  #    # add thresholds and filter for the main livestock category
+  #    dplyr::inner_join(
+  #      tmp_max_cat,
+  #      by = c(id_cols, 'FADN_code_letter')
+  #    ) |>
+  #    # filter farms above & below thresholds
+  #    dplyr::mutate(
+  #      valid_practice = dplyr::case_when(
+  #        # between thresholds
+  #        GE_MJ_anim >= threshold_down &
+  #          GE_MJ_anim <= threshold_up ~ TRUE,
+  #        # if NAs
+  #        is.na(GE_MJ_anim) | is.na(threshold_down) | is.na(threshold_up) ~ FALSE,
+  #        .default = FALSE
+  #      )
+  #    ) |>
+  #    dplyr::filter(valid_practice == FALSE) |>
+  #    # add removing justification
+  #    dplyr::select(tidyselect::all_of(id_cols)) |>
+  #    dplyr::mutate(
+  #      problem = "aberrant_feed"
+  #    )
 
-
- # Remove farms where species other than cattle, sheep, pigs, and poultry 
+  # Remove farms where species other than cattle, sheep, pigs, and poultry
   # account for > 95% of total livestock units
   ## Define the FADN code letters for the main species
   main_species_codes <- data_extra$livestock |>
-    dplyr::filter(species %in% c("cattle", "sheep", "goats", "swine", "poultry")) |>
+    dplyr::filter(
+      species %in% c("cattle", "sheep", "goats", "swine", "poultry")
+    ) |>
     dplyr::pull(FADN_code_letter)
-  
+
   ## Calculate the share of LU for non-main species
   aberrant_species <- object@herd |>
     dplyr::mutate(
@@ -194,9 +313,9 @@ infer_practices <- function(object,
       problem = "minor_main_livestock_category"
     )
 
-    # reactable::reactable(aberrant_species, filterable = TRUE, searchable = TRUE)
-    # reactable::reactable(object@herd, filterable = TRUE, searchable = TRUE)
-  
+  # reactable::reactable(aberrant_species, filterable = TRUE, searchable = TRUE)
+  # reactable::reactable(object@herd, filterable = TRUE, searchable = TRUE)
+
   # Add these farms to the farms to remove list
   farms_to_remove <- dplyr::bind_rows(farms_to_remove, aberrant_species)
 
@@ -209,18 +328,15 @@ infer_practices <- function(object,
 
   rear_param_cattle <- f_herd_rearing_param_cattle(object)
   object@practices$herding$rearing_parameters$cattle <- rear_param_cattle |>
-    dplyr::select(dplyr::all_of(id_cols),
-                  dplyr::matches("rt_|t_1st|offspring"))
+    dplyr::select(dplyr::all_of(id_cols), dplyr::matches("rt_|t_1st|offspring"))
 
   rear_param_swine <- f_herd_rearing_param_swine(object)
   object@practices$herding$rearing_parameters$swine <- rear_param_swine |>
-    dplyr::select(dplyr::all_of(id_cols),
-                  dplyr::matches("rt_|t_1st|offspring"))
+    dplyr::select(dplyr::all_of(id_cols), dplyr::matches("rt_|t_1st|offspring"))
 
   rear_param_poultry <- f_herd_rearing_param_poultry(object)
   object@practices$herding$rearing_parameters$poultry <- rear_param_poultry |>
-    dplyr::select(dplyr::all_of(id_cols),
-                  dplyr::matches("rt_|t_1st|offspring"))
+    dplyr::select(dplyr::all_of(id_cols), dplyr::matches("rt_|t_1st|offspring"))
 
   #### Activity ----
 
@@ -233,70 +349,67 @@ infer_practices <- function(object,
     pseudoherd_animals <- f_pseudoherd_animals(object, overwrite = overwrite)
     object@practices$herding$pseudoherd$animals <- pseudoherd_animals
 
-    pseudoherd_output <- f_pseudoherd_output_off_farm(object, overwrite = overwrite)
+    pseudoherd_output <- f_pseudoherd_output_off_farm(
+      object,
+      overwrite = overwrite
+    )
     object@practices$herding$pseudoherd$output_off_farm <- pseudoherd_output
-
-
-
   }
 
   # 2. Retrieve farms with non valid practices ----
 
-  if (!is.null(object@traceability$discarded_farms)&& !overwrite) {
-
+  if (!is.null(object@traceability$discarded_farms) && !overwrite) {
     message("Using cached values stored in object@traceability$discarded_farms")
-    discarded_farms = object@traceability$discarded_farms  # use cached value
+    discarded_farms <- object@traceability$discarded_farms # use cached value
   } else {
+    ## Farms with non valid practice will be discarded from the analysed data set
+    ## Farms for which we could not estimate any practices will be discarded
+    discarded_farms <- tibble::tibble()
+    # or even better, pre-define with id_cols
 
-  ## Farms with non valid practice will be discarded from the analysed data set
-  ## Farms for which we could not estimate any practices will be discarded
-  discarded_farms <- tibble::tibble()
-  # or even better, pre-define with id_cols
+    ### CROPS
+    for (i in names(object@practices$crops)[
+      !sapply(object@practices$crops, is.null)
+    ]) {
+      tmp <- object@practices$crops[[i]] |>
+        dplyr::select(tidyselect::all_of(id_cols), valid_practice) |>
+        dplyr::filter(valid_practice == FALSE) |>
+        dplyr::distinct() |>
+        # add justification
+        dplyr::mutate(problem = paste0("invalid_", i))
 
-  ### CROPS
-  for (i in names(object@practices$crops)[!sapply(object@practices$crops, is.null)]) {
+      discarded_farms <- discarded_farms |>
+        # add to other farms
+        dplyr::bind_rows(tmp) |>
+        dplyr::distinct()
+    }
+    ### HERDING
+    if (exists("farms_to_remove") && nrow(farms_to_remove) > 0) {
+      discarded_farms <- dplyr::bind_rows(discarded_farms, farms_to_remove)
+    }
 
-    tmp <- object@practices$crops[[i]] |>
-      dplyr::select(tidyselect::all_of(id_cols),valid_practice) |>
-      dplyr::filter(valid_practice == FALSE) |>
-      dplyr::distinct() |>
-      # add justification
-      dplyr::mutate(problem = paste0("invalid_",i))
+    # 5. Remove discarded farms from object
 
-    discarded_farms <- discarded_farms  |>
-      # add to other farms
-      dplyr::bind_rows(tmp) |>
-      dplyr::distinct()
-  }
-  ### HERDING
-  if (exists("farms_to_remove") && nrow(farms_to_remove) > 0) {
-    discarded_farms <- dplyr::bind_rows(discarded_farms, farms_to_remove)
-  }
+    if (nrow(discarded_farms) > 0) {
+      discarded_farms_nb <- discarded_farms |>
+        dplyr::select(tidyselect::all_of(id_cols)) |>
+        dplyr::distinct()
 
-  # 5. Remove discarded farms from object
+      message(
+        nrow(discarded_farms_nb),
+        " out of ",
+        nrow(object@farm),
+        " (",
+        round(nrow(discarded_farms_nb) / nrow(object@farm) * 100, 0),
+        "%)",
+        " observations with non valid practices are discarded from the S4 object slots (see object@traceability$discarded_farms$problem)."
+      )
 
-  if (nrow(discarded_farms) >0) {
-    discarded_farms_nb <- discarded_farms |>
-      dplyr::select(tidyselect::all_of(id_cols)) |>
-      dplyr::distinct()
-
-    message(nrow(discarded_farms_nb),
-            " out of ",
-            nrow(object@farm),
-            " (",
-            round(nrow(discarded_farms_nb)/nrow(object@farm)*100,0),
-            "%)",
-            " observations with non valid practices are discarded from the S4 object slots (see object@traceability$discarded_farms$problem).")
-
-    object <- m_remove_farms(object, farms_to_remove = discarded_farms)
-
-  }
-
+      object <- m_remove_farms(object, farms_to_remove = discarded_farms)
+    }
   }
 
   # Return updated object
 
   return(object)
-
 }
-

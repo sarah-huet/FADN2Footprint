@@ -3,7 +3,7 @@ devtools::load_all("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/")
 load("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/R/sysdata.rda")
 
 source(
-  "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/EUROSTAT_ferti_use_ratio.R"
+  "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/inst/scripts/data_extra.R"
 )
 
 usethis::use_data(

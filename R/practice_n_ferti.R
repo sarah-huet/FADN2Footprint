@@ -84,6 +84,8 @@ f_n_ferti <- function(object, overwrite = FALSE) {
   # here we considered that fertilizers are applied both on crops and grasslands
 
   # EPK averages --------------------------------------------------------------------------------------------------------------------------------------
+  #source("~/inst/scripts/EPK_data_Nferti_avrg.R", encoding = 'UTF-8')
+  ## execute script when EPK 2017 data available
   EPK_Nferti <- data_extra$PKGC_N_ferti
 
   # assign averages by crop codes (60 different crops)
@@ -111,9 +113,9 @@ f_n_ferti <- function(object, overwrite = FALSE) {
     )
 
   # Estimate N org threshold for farms with livestock ---------------------------------------------------------------------------------------------------------------------
-  #source("~/BiodivLabel/scripts/EPK_data_Norg_threshold.R", encoding = 'UTF-8')
+  #source("~/inst/scripts/EPK_data_Norg_threshold.R", encoding = 'UTF-8')
   ## execute script when EPK 2017 data available
-  EPK_Norg <- data_extra$PKGC_N_ferti_org_thresholds
+  EPK_Norg <- data_extra$PKGC_N_ferti_org
 
   # assign threshold by crop codes (60 different crops)
   EPK_thrhld <- data_extra$crops |>
@@ -123,29 +125,50 @@ f_n_ferti <- function(object, overwrite = FALSE) {
     # add fertilization data from EPK 2017
     tidyr::separate_longer_delim(EPK_ferti_crop_name, "|") |>
     dplyr::left_join(
-      EPK_Norg,
+      EPK_Norg |>
+        dplyr::rename(
+          ORGANIC = BIO,
+          farm_prod_own_manure = Norg_int
+        ),
       by = join_by(EPK_ferti_crop_name),
       relationship = "many-to-many" # each crop has both an organic and a conventional value
     ) |>
     # average by crop and organic certification
     dplyr::filter(!is.na(EPK_ferti_crop_name)) |>
     dplyr::summarise(
+      Norg_avrg = mean(N_org, na.rm = T),
       Norg_thrhld_min = min(Norg_thrhld_min, na.rm = T),
       Norg_thrhld_max = max(Norg_thrhld_max, na.rm = T),
-      .by = c(FADN_code_letter, ORGANIC)
+      .by = c(FADN_code_letter, ORGANIC, farm_prod_own_manure)
     )
 
   # Combine EPK reference values ---------------------------------------------------------------------------------------------------------------------
 
-  # select threshold as the minimum or maximum between average standard value CI 95% limit
-  EPK_ref <- dplyr::left_join(
-    EPK_avrg,
-    EPK_thrhld,
-    by = join_by(FADN_code_letter, ORGANIC)
-  ) |>
+  # select threshold as the minimum or maximum between
+  # i) the French average organic nitrogen input for farms that do not produce organic manure
+  # and ii) the lower bound of the 95% confidence interval of the average of organic nitrogen inputs of farms producing their own organic manure
+  EPK_ref <- EPK_thrhld |>
+    tidyr::pivot_wider(
+      id_cols = c(FADN_code_letter, ORGANIC),
+      names_from = farm_prod_own_manure,
+      values_from = c(Norg_avrg, Norg_thrhld_min, Norg_thrhld_max)
+    ) |>
     dplyr::mutate(
-      Norg_thrhld_min = pmin(EPK_Norg, Norg_thrhld_min, na.rm = T),
-      Norg_thrhld_max = pmax(EPK_Norg, Norg_thrhld_max, na.rm = T),
+      Norg_thrhld_min = pmin(
+        Norg_avrg_FALSE,
+        Norg_thrhld_min_TRUE,
+        na.rm = T
+      ),
+      Norg_thrhld_max = pmax(
+        Norg_avrg_FALSE,
+        Norg_thrhld_max_TRUE,
+        na.rm = T
+      )
+    ) |>
+    # add national averages
+    dplyr::left_join(
+      EPK_avrg,
+      by = c('FADN_code_letter', 'ORGANIC')
     ) |>
     # encode organic farming
     dplyr::mutate(
@@ -202,7 +225,11 @@ f_n_ferti <- function(object, overwrite = FALSE) {
     ) |>
     ungroup()
 
-  EPK_ref <- rbind(EPK_ref, EPK_missing |> dplyr::select(colnames(EPK_ref))) |>
+  EPK_ref <- dplyr::bind_rows(
+    EPK_ref,
+    EPK_missing |>
+      dplyr::select(dplyr::matches(colnames(EPK_ref)))
+  ) |>
     dplyr::mutate(ORGANIC = as.logical(ORGANIC))
 
   # Estimate N excretion from livestock --------------------------------------------------------------------------------------------------------------------------------------
@@ -369,10 +396,10 @@ f_n_ferti <- function(object, overwrite = FALSE) {
       ORGANIC,
       FADN_code_letter,
       area_ha,
-      N_min_ferti_Q,
-      N_ferti,
-      N_ferti_min,
-      N_ferti_org
+      N_min_ferti_Q, # total amount of mineral N fertilization on the farm
+      N_ferti, # total nitrogen fertilization, t N ha-1
+      N_ferti_min, # per hectare of crop mineral fertilization
+      N_ferti_org # per hectare of crop organic fertilization
     )
 
   message("\nNitrogen fertilization variables are in ton of N ha-1.")

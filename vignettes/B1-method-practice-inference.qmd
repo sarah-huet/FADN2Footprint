@@ -25,46 +25,45 @@ SENTINEL-2 data, and parameters from national greenhouse gas inventories
 from UNFCCC (@tbl-practice-list).
 
 ::: {#tbl-practice-list}
-+---------------+---------------+---------------+---------------+
-|               |               |               |               |
-+===============+===============+===============+===============+
-| Data source / | FADN (+ Farm  | \+ LPIS & SWF | Parameters    |
-| Practices     | practices     | & SENTINEL-2  | from national |
-|               | survey & feed | (farm level)  | GHGIs (yearly |
-|               | tables for    |               | national      |
-|               | allocation    |               | averages) and |
-|               | keys)         |               | other sources |
-+---------------+---------------+---------------+---------------+
-| Crop          | N fertilizer  | Hedge density |               |
-| practices     | quantity,     |               |               |
-|               | organic and   | Mean Field    |               |
-|               | mineral       | Size          |               |
-|               |               |               |               |
-|               | Pesticides    | Ground Cover  |               |
-|               |               |               |               |
-|               | Tillage       |               |               |
-|               |               |               |               |
-|               | Crop          |               |               |
-|               | Diversity     |               |               |
-|               |               |               |               |
-|               | Yields        |               |               |
-+---------------+---------------+---------------+---------------+
-| Grassland     | N Fertilizer  | Hedge density | Yield (XX     |
-| practices     | quantity,     |               | source to     |
-|               | organic and   |               | define)       |
-|               | mineral       |               |               |
-|               |               |               |               |
-|               | Livestock     |               |               |
-|               | density       |               |               |
-+---------------+---------------+---------------+---------------+
-| Herding       | Feed intake   |               | Manure        |
-| practices     |               |               | Management    |
-|               | Rearing       |               | System        |
-|               | parameters    |               |               |
-|               |               |               | Animal Weight |
-|               | Production    |               |               |
-|               | yields        |               |               |
-+---------------+---------------+---------------+---------------+
++----------------+----------------+----------------+----------------+
+|                |                |                |                |
++================+================+================+================+
+| Data source /  | FADN (+ Farm   | \+ LPIS & SWF  | Parameters     |
+| Practices      | practices      | & SENTINEL-2   | from national  |
+|                | survey & feed  | (farm level)   | GHGIs (yearly  |
+|                | tables for     |                | national       |
+|                | allocation     |                | averages) and  |
+|                | keys)          |                | other sources  |
++----------------+----------------+----------------+----------------+
+| Crop practices | N fertilizer   | Hedge density  |                |
+|                | quantity,      |                |                |
+|                | organic and    | Mean Field     |                |
+|                | mineral        | Size           |                |
+|                |                |                |                |
+|                | Pesticides     | Ground Cover   |                |
+|                |                |                |                |
+|                | Tillage        |                |                |
+|                |                |                |                |
+|                | Crop Diversity |                |                |
+|                |                |                |                |
+|                | Yields         |                |                |
++----------------+----------------+----------------+----------------+
+| Grassland      | N Fertilizer   | Hedge density  | Yield (XX      |
+| practices      | quantity,      |                | source to      |
+|                | organic and    |                | define)        |
+|                | mineral        |                |                |
+|                |                |                |                |
+|                | Livestock      |                |                |
+|                | density        |                |                |
++----------------+----------------+----------------+----------------+
+| Herding        | Feed intake    |                | Manure         |
+| practices      |                |                | Management     |
+|                | Rearing        |                | System         |
+|                | parameters     |                |                |
+|                |                |                | Animal Weight  |
+|                | Production     |                |                |
+|                | yields         |                |                |
++----------------+----------------+----------------+----------------+
 
 List of agricultural practices inferred by the FADN2Footprint package,
 based on FADN data, potentially combined with data from LPIS, SWF,
@@ -478,7 +477,7 @@ category $l-1$), L is the ensemble of categories directly downward to
 $l-1$ and $Q$ are registered numbers of animals (i.e., $average$,
 $opening$, $closing$, $purchases$, or $sales$).
 
-Note that some farm can experience animal losses, resulting in negative
+Note that some farms can experience animal losses, resulting in negative
 flows. Losses are not recorded, so they are generally assumed to be
 null. The exception is when this assumption leads to negative inflows:
 this is impossible, so inflow is then set to zero.
@@ -516,8 +515,9 @@ fattener without piglets and sows), preventing the estimation of
 associated rearing parameters. When the rearing parameter is not
 available or infinite, we replace the missing value by a reference value
 based on our data. We estimate reference values for each rearing
-parameter as the median farm in the same NUTS2, or, if less than 3 farms
-are registered for the NUTS2, the median farm in the same NUTS1. We also
+parameter as the median in farms of the same NUTS2 where the species is
+present, or, if less than 3 farms are registered for the NUTS2, the
+median farm where the species is present in the same NUTS1. We also
 estimate thresholds below and above which a value is considered aberrant
 by graphically determining outliers on the rearing parameter
 distribution in data set. Note that the maximum threshold for categories
@@ -535,7 +535,7 @@ distinguished in the FADN between fattening and breeding ones, female
 below two y.o. are not (@fig-herd-flows). In such mixed category, only
 the number of animals sold are differentiated between sales for
 slaughtering and those for rearing. We consider that sales for rearing
-are for breeding purposes and that sales for slaughter are fattening
+are for breeding purposes and that sales for slaughter are fattened
 animals (i.e., $Q_{B}^{sales}$ and $Q_{F}^{sales}$, respectively; see
 section Animal products). For other numbers (i.e., observed, average,
 opening, closing, and purchases) in these mixed categories, we
@@ -544,10 +544,12 @@ based on their proportion in the downward flow of animals (see Eq.
 @eq-mixed_cat for an example calculation of the observed number of
 animals for fattening).
 
-$$\bar{Q}_{l_F} = \bar{Q}_{l} \cdot \frac{\sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}})}{ \sum (\bar{Q}_{l_F+1} \cdot \frac{1}{t_{l_F+1}}) + \sum (\bar{Q}_{l_B+1} \cdot \frac{1}{t_{l_B+1}}) }$$
-{#eq-mixed_cat}
+$$
+\bar{Q}_{F,l} = \bar{Q}_{l} \cdot \frac{F_{B,out}}{F_{B,out} + F_{F,out}} \\
+= \bar{Q}_{l} \cdot \frac{\sum (\bar{Q}_{F,l+1} \cdot \frac{1}{t_{F,l+1}})}{ \sum (\bar{Q}_{F,l+1} \cdot \frac{1}{t_{F,l+1}}) + \sum (\bar{Q}_{B,l+1} \cdot \frac{1}{t_{B,l+1}}) }
+$$ {#eq-mixed_cat}
 
-where $l_F$ are fattening animals and $l_B$ are breeders in category
+where $F,l$ are fattening animals and $B,l$ are breeders in category
 $l$.
 
 ### Estimation of pseudo-herd {#sec-method-practices-pseudoherd}

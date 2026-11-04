@@ -89,3 +89,4 @@ STATUS.md
 
 # Temporary files
 tmp*
+/.quarto/

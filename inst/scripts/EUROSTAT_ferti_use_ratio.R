@@ -84,7 +84,8 @@ n_idx <- idx_lab |>
             dplyr::select(country_name, country_FADN) |>
             tidyr::separate_longer_delim(country_name, ";"),
         by = c("geo" = "country_name")
-    )
+    ) |>
+    dplyr::filter(!is.na(country_FADN))
 
 #n_idx |> tibble::view()
 
@@ -111,16 +112,20 @@ devtools::load_all(getwd())
 #    ggplot2::facet_wrap(~COUNTRY)
 
 # to estimate the base ratio, we calculate the five year average around 2020
-n_ratio_2020 <- my_FADN_data_sub |>
+n_ratio_2020 <- my_FADN_data |>
     dplyr::filter(YEAR %in% 2018:2022) |>
     dplyr::filter(SE295 > 0) |>
     dplyr::mutate(
-        n_ratio_2020 = dplyr::coalesce(dplyr::coalesce(INUSE_Q, 0) / SE295, NA)
+        n_ratio_2020 = dplyr::coalesce(INUSE_Q, 0) / SE295
     ) |>
     # we estimate this ratio for each country
     dplyr::summarise(
-        n_ratio_2020 = mean(n_ratio_2020, na.rm = TRUE),
+        n_ratio_2020_mean = mean(n_ratio_2020, na.rm = TRUE),
+        n_ratio_2020_median = median(n_ratio_2020, na.rm = TRUE),
         .by = c(COUNTRY)
+    ) |>
+    dplyr::mutate(
+        n_ratio_2020 = n_ratio_2020_mean
     )
 
 # We estimate other years based on the 2020 ratio

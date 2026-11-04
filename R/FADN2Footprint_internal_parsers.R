@@ -1048,6 +1048,12 @@
 #'   \item **Fuel quantities** (litres, optional): \code{IFULS_Q} and
 #'     \code{IHFULS_Q} are included where available, otherwise set to
 #'     \code{NA}.
+#'   \item **Contract rearing sales** (EUR, optional): sales values of
+#'     animals reared under contract (\code{PCNTRCATL_SV},
+#'     \code{PCNTRSHEPGOAT_SV}, \code{PCNTRPIG_SV}, \code{PCNTRPLTR_SV}),
+#'     included where available as \code{sales_contract_*} columns. They are
+#'     used by \code{\link{f_feed_offfarm_animals_under_contract}} to impute
+#'     purchased feed supplied by the integrator.
 #' }
 #'
 #' ## Step 2 — Zero-Row Filtering
@@ -1099,6 +1105,11 @@
 #'     feed expenditure for pigs (EUR yr\eqn{^{-1}}).}
 #'   \item{feed_purch_concent_poultry}{\code{numeric}. Purchased concentrate
 #'     feed expenditure for poultry (EUR yr\eqn{^{-1}}).}
+#'   \item{sales_contract_cattle, sales_contract_sheepgoat,
+#'     sales_contract_pigs, sales_contract_poultry}{\code{numeric}, optional.
+#'     Sales values of animals reared under contract (EUR yr\eqn{^{-1}}),
+#'     present only when the corresponding \code{PCNTR*_SV} variables exist
+#'     in the input data.}
 #'   \item{N_min_ferti_Q}{\code{numeric}. Mineral nitrogen fertiliser
 #'     quantity (kg N yr\eqn{^{-1}}).}
 #'   \item{pesticides_v}{\code{numeric}. Pesticide expenditure
@@ -1134,6 +1145,7 @@
 #' @keywords internal
 #'
 .parse_input_data <- function(df_harmonized, id_cols) {
+  # Load fuel data
   ref_fuel_data <- ref_fuel_wob
 
   # 1. Select and Rename Core Variables -------------------------------------
@@ -1146,7 +1158,7 @@
       feed_purch_rough_graz = "IGRFEDCRSPUR_V", # Purchased coarse fodder for grazing stock (equines, ruminants) Value	in EUR
       feed_purch_concent_pigs = "IPIGFEDPUR_V", # Purchased feedstuffs for pigs Value	in EUR
       feed_purch_concent_poultry = "IPLTRFEDPUR_V", # Purchased feedstuffs for poultry and other small animals Value	in EUR
-      N_min_ferti_Q = "INUSE_Q", # Quantity of N used in mineral fertilisers Quantity	in tonnes
+      N_min_ferti_Q_raw = "INUSE_Q", # Quantity of N used in mineral fertilisers Quantity	in tonnes
       N_min_ferti_V = "SE295", # SE295	Purchased fertilisers and soil improvers (excluding those used for forests).
       pesticides_v = "IPROT_V", # Crop protection products Value	in EUR
       diesel_v = "IFULS_V", # Motor fuels and lubricants Value	in EUR
@@ -1156,6 +1168,15 @@
       dplyr::any_of(c(
         diesel_l = "IFULS_Q",
         heating_fuels_l = "IHFULS_Q"
+      )),
+      # Optional sales values of animals reared under contract (EUR),
+      # used to impute purchased feed supplied by the integrator
+      # (see f_feed_offfarm_animals_under_contract)
+      dplyr::any_of(c(
+        sales_contract_cattle = "PCNTRCATL_SV", # Cattle under contract Sales value	in EUR
+        sales_contract_sheepgoat = "PCNTRSHEPGOAT_SV", # Sheep and/or goats under contract Sales value	in EUR
+        sales_contract_pigs = "PCNTRPIG_SV", # Pigs under contract Sales value	in EUR
+        sales_contract_poultry = "PCNTRPLTR_SV" # Poultry under contract Sales value	in EUR
       ))
     ) |>
     ## create variable if they do not exist
@@ -1170,6 +1191,16 @@
       } else {
         NA_real_
       })
+    )
+  # Apply EUROSTAT indexes and GAM adjustment to predict N_min_ferti_Q from N_min_ferti_V and N_min_ferti_Q_raw
+  ## Load GAM model for N_min inference
+  gam_reg <- N_min_inference_GAM
+  ## Add controls
+  df_Nmin <- df_base |>
+    dplyr::select(
+      dplyr::all_of(id_cols),
+      N_min_ferti_Q_raw,
+      N_min_ferti_V
     ) |>
     # fertilisers use quantity where not collected before 2017
     # estimate N_min_ferti_Q using N_min_ferti_V / ratio if quantity not available
@@ -1183,18 +1214,52 @@
     dplyr::mutate(
       N_min_ferti_Q_estim_EUROSTAT = N_min_ferti_V * n_ratio
     ) |>
+    dplyr::left_join(
+      df_harmonized |>
+        dplyr::select(dplyr::all_of(id_cols), TF14, SIZC),
+      by = id_cols
+    )
+  # Predict N_min_ferti_Q using GAM model
+  pred_N_min_ferti_Q <- predict(
+    gam_reg,
+    newdata = df_Nmin,
+    type = "link",
+    se.fit = TRUE
+  )
+  # Adjust EUROSTAT estimated N_min_ferti_Q using GAM model
+  df_Nmin <- df_Nmin |>
+    dplyr::mutate(
+      N_min_ferti_Q_estim_adjusted = ifelse(
+        N_min_ferti_V > 0,
+        exp(pred_N_min_ferti_Q$fit),
+        0
+      ),
+      N_min_ferti_Q_estim_adjusted_lo = ifelse(
+        N_min_ferti_V > 0,
+        exp(pred_N_min_ferti_Q$fit - 1.96 * pred_N_min_ferti_Q$se.fit),
+        0
+      ),
+      N_min_ferti_Q_estim_adjusted_hi = ifelse(
+        N_min_ferti_V > 0,
+        exp(pred_N_min_ferti_Q$fit + 1.96 * pred_N_min_ferti_Q$se.fit),
+        0
+      )
+    ) |>
     dplyr::mutate(
       N_min_ferti_Q = dplyr::case_when(
-        as.numeric(YEAR) < 2017 ~ N_min_ferti_Q_estim_EUROSTAT,
-        .default = N_min_ferti_Q
+        as.numeric(YEAR) < 2017 ~ N_min_ferti_Q_estim_adjusted,
+        .default = N_min_ferti_Q_raw
       )
     )
 
-  #  df_base |>
-  #    dplyr::mutate(ratio = N_min_ferti_Q / N_min_ferti_V) |>
-  #    ggplot2::ggplot() +
-  #    ggplot2::geom_boxplot(ggplot2::aes(x = YEAR, y = ratio)) +
-  #    ggplot2::scale_y_log10()
+  # add prediction to base df
+  df_base <- df_base |>
+    # add N min prediction
+    dplyr::left_join(
+      df_Nmin |>
+        dplyr::select(dplyr::all_of(id_cols), N_min_ferti_Q),
+      by = id_cols
+    )
 
   # 2. Filter Zero Rows -----------------------------------------------------
   # Remove rows where all numeric value variables are zero/NA.

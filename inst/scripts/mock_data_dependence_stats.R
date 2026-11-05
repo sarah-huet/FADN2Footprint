@@ -221,9 +221,12 @@ lookup_pairs <- list(
 )
 cat_lookup <- do.call(rbind, lapply(lookup_pairs, function(p) {
   if (!all(p %in% cat_vars)) return(NULL)
-  raw[!is.na(raw[[p[1]]]) & !is.na(raw[[p[2]]]), p] |>
-    dplyr::count(from_level = .data[[p[1]]], to_level = .data[[p[2]]]) |>
-    dplyr::slice_max(n, n = 1, by = from_level, with_ties = FALSE) |>
+  raw[!is.na(raw$ID) & !is.na(raw[[p[1]]]) & !is.na(raw[[p[2]]]),
+      c("ID", p)] |>
+    dplyr::group_by(from_level = .data[[p[1]]], to_level = .data[[p[2]]]) |>
+    dplyr::summarise(n_farms = dplyr::n_distinct(ID), .groups = "drop") |>
+    dplyr::filter(n_farms >= min_n) |>
+    dplyr::slice_max(n_farms, n = 1, by = from_level, with_ties = FALSE) |>
     dplyr::transmute(from_var = p[1], from_level, to_var = p[2], to_level)
 }))
 

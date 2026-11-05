@@ -1374,6 +1374,22 @@ h_generate_mock_data <- function(n = 500,
 }
 
 
+#' Adjust categorical copy probability for chance matches on redraw
+#' @noRd
+.h_cat_copy_probability <- function(p_same, cat_stats) {
+  for (v in names(p_same)) {
+    counts <- as.numeric(cat_stats$count[cat_stats$variable == v])
+    counts <- counts[is.finite(counts) & counts > 0]
+    if (length(counts) == 0) next
+    probs <- counts / sum(counts)
+    chance <- sum(probs^2)
+    target <- min(max(p_same[[v]], 0), 1)
+    p_same[[v]] <- if (chance >= 1) 0 else max((target - chance) / (1 - chance), 0)
+  }
+  p_same
+}
+
+
 #' Derive nested classifications (e.g. NUTS2 from NUTS3) from a lookup
 #' @noRd
 .h_apply_cat_lookup <- function(cats, cat_lookup, cat_stats) {
@@ -1537,6 +1553,7 @@ h_generate_mock_panel <- function(n,
     rho <- pmin(pmax(.h_dep_param(dep[["autocorr"]], cvars, 0), 0), 0.999)
     rho_s <- min(max(scalar(dep[["size_autocorr"]], 0), 0), 0.999)
     p_same <- .h_dep_param(dep[["cat_persistence"]], catvars, 0)
+    p_same <- .h_cat_copy_probability(p_same, cat_g)
     ord <- .h_dep_param(dep[["ordinal_loading"]], catvars, NA_real_)
 
     state <- NULL
@@ -1666,6 +1683,7 @@ h_generate_mock_child_panel <- function(parent_latent,
   catvars <- if (is.null(catst)) character(0) else unique(catst$variable)
   rho <- pmin(pmax(.h_dep_param(dep[["autocorr"]], cvars, 0), 0), 0.999)
   p_same <- .h_dep_param(dep[["cat_persistence"]], catvars, 0)
+  if (!is.null(catst)) p_same <- .h_cat_copy_probability(p_same, catst)
   lam_rows <- .h_dep_param(dep[["size_loading"]], ".rows", 0)[[1]]
 
   years <- sort(unique(parent_latent[[year_col]]))

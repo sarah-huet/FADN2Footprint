@@ -70,6 +70,32 @@ test_that("staying farms keep persistent values and categories", {
   expect_lt(abs(stats::cor(a$B_V, b$B_V, method = "spearman")), 0.06)
 })
 
+test_that("categorical persistence accounts for chance matches on redraw", {
+  cat_stats <- data.frame(variable = "CAT", level = c("a", "b"), count = c(1, 1))
+  farms <- h_generate_mock_panel(
+    n = 10000, years = 2019:2020, categorical_stats = cat_stats,
+    dependence = list(retention = 1, cat_persistence = 0.6), seed = 12
+  )
+  a <- farms[farms$YEAR == 2019, ]
+  b <- farms[farms$YEAR == 2020, ]
+  b <- b[match(a$ID, b$ID), ]
+  expect_equal(mean(a$CAT == b$CAT), 0.6, tolerance = 0.02)
+
+  parent_latent <- data.frame(
+    ID = rep(sprintf("F%05d", seq_len(10000)), each = 2),
+    YEAR = rep(2019:2020, times = 10000),
+    .size = 0
+  )
+  children <- h_generate_mock_child_panel(
+    parent_latent, rows_per_parent = 1, categorical_stats = cat_stats,
+    dependence = list(cat_persistence = 0.6), seed = 12
+  )
+  a <- children[children$YEAR == 2019, ]
+  b <- children[children$YEAR == 2020, ]
+  b <- b[match(a$ID, b$ID), ]
+  expect_equal(mean(a$CAT == b$CAT), 0.6, tolerance = 0.02)
+})
+
 test_that("nested classifications are derived consistently", {
   x <- gen(list(retention = 0.5, cat_persistence = 0.5), n = 500)
   expect_true(all(x$NUTS2 == lookup$to_level[match(x$NUTS3, lookup$from_level)]))

@@ -238,28 +238,33 @@ rm(raw); invisible(gc())
 e <- new.env()
 load(marg_path, envir = e)
 marg_vars <- intersect(sheet_cont_vars, names(e$FADN_16_18))
-mraw <- as.data.frame(e$FADN_16_18[, c("COUNTRY", "TF8", marg_vars)])
+mraw <- as.data.frame(e$FADN_16_18[, c("ID", "COUNTRY", "TF8", marg_vars)])
 rm(e); invisible(gc())
 for (v in marg_vars) mraw[[v]] <- as.numeric(mraw[[v]])
 mraw$TF8 <- as.character(mraw$TF8)
+farm_id <- interaction(mraw$COUNTRY, mraw$ID, drop = TRUE)
 
 ## Marginals of extra_cont_vars ----
 # Same layout as the `continuous_vars` sheet (TF8, COUNTRY, variable, mean,
 # sd, min, max), pooled over all years. Every TF8 x COUNTRY group gets a row:
-# groups with fewer than min_n observations fall back to the country level,
+# groups with fewer than min_n distinct farms fall back to the country level,
 # then to the EU-wide TF8 level.
-marg_stats <- function(x) {
-  x <- x[!is.na(x)]
-  if (length(x) < min_n) return(NULL)
+marg_stats <- function(x, id) {
+  ok <- !is.na(x) & !is.na(id)
+  if (length(unique(id[ok])) < min_n) return(NULL)
+  x <- x[ok]
   data.frame(mean = mean(x), sd = stats::sd(x), min = min(x), max = max(x))
 }
 groups <- unique(mraw[c("TF8", "COUNTRY")])
 marginals <- do.call(rbind, lapply(intersect(extra_cont_vars, marg_vars), function(v) {
   do.call(rbind, lapply(seq_len(nrow(groups)), function(i) {
     tf <- groups$TF8[i]; cty <- groups$COUNTRY[i]
-    s <- marg_stats(mraw[[v]][mraw$TF8 == tf & mraw$COUNTRY == cty])
-    if (is.null(s)) s <- marg_stats(mraw[[v]][mraw$COUNTRY == cty])
-    if (is.null(s)) s <- marg_stats(mraw[[v]][mraw$TF8 == tf])
+    idx <- mraw$TF8 == tf & mraw$COUNTRY == cty
+    s <- marg_stats(mraw[[v]][idx], farm_id[idx])
+    idx <- mraw$COUNTRY == cty
+    if (is.null(s)) s <- marg_stats(mraw[[v]][idx], farm_id[idx])
+    idx <- mraw$TF8 == tf
+    if (is.null(s)) s <- marg_stats(mraw[[v]][idx], farm_id[idx])
     if (is.null(s)) return(NULL)
     cbind(data.frame(TF8 = tf, COUNTRY = cty, variable = v), s)
   }))
@@ -268,13 +273,18 @@ marginals <- do.call(rbind, lapply(intersect(extra_cont_vars, marg_vars), functi
 ## Share of non-zero values per TF8 x COUNTRY ----
 # The descriptive statistics sheet has no quartiles, so without this share
 # the mock (moment-matched gamma) never produces exact zeros. Only groups
-# with at least min_n observations and shares below 0.995 are kept.
+# with at least min_n distinct farms and shares below 0.995 are kept.
 grp_key <- paste(mraw$TF8, mraw$COUNTRY, sep = "\r")
 nonzero_share <- do.call(rbind, lapply(split(marg_vars, ceiling(seq_along(marg_vars) / 100)), function(vs) {
   X <- as.matrix(mraw[vs])
   n_obs <- rowsum(1 * !is.na(X), grp_key)
   n_nz <- rowsum(1 * (!is.na(X) & X != 0), grp_key)
-  keep <- which(n_obs >= min_n & n_nz / n_obs < 0.995, arr.ind = TRUE)
+  n_farms <- vapply(vs, function(v) {
+    ok <- !is.na(mraw[[v]]) & !is.na(farm_id)
+    farm_groups <- unique(data.frame(group = grp_key[ok], farm = farm_id[ok]))
+    tabulate(match(farm_groups$group, rownames(n_obs)), nbins = nrow(n_obs))
+  }, integer(nrow(n_obs)))
+  keep <- which(n_farms >= min_n & n_nz / n_obs < 0.995, arr.ind = TRUE)
   if (!nrow(keep)) return(NULL)
   g <- do.call(rbind, strsplit(rownames(n_obs)[keep[, 1]], "\r"))
   data.frame(TF8 = g[, 1], COUNTRY = g[, 2], variable = vs[keep[, 2]],
@@ -287,8 +297,11 @@ rownames(nonzero_share) <- NULL
 # extra_cont_vars (e.g. RICA ACHEN = SE295 for France).
 marginals_country <- do.call(rbind, lapply(intersect(extra_cont_vars, marg_vars), function(v) {
   do.call(rbind, lapply(sort(unique(mraw$COUNTRY)), function(cty) {
-    x <- mraw[[v]][mraw$COUNTRY == cty]; x <- x[!is.na(x)]
-    if (length(x) < min_n) return(NULL)
+    idx <- mraw$COUNTRY == cty
+    x <- mraw[[v]][idx]; id <- farm_id[idx]
+    ok <- !is.na(x) & !is.na(id)
+    if (length(unique(id[ok])) < min_n) return(NULL)
+    x <- x[ok]
     q <- stats::quantile(x, c(0, 0.25, 0.5, 0.75, 1), names = FALSE)
     data.frame(COUNTRY = cty, variable = v, mean = mean(x), sd = stats::sd(x),
                min = q[1], p25 = q[2], p50 = q[3], p75 = q[4], max = q[5])

@@ -17,7 +17,11 @@ h_generate_mock_data(
 \item{n}{Total number of rows to generate.}
 
 \item{continuous_stats}{Data.frame with columns: variable, mean, sd, min, max,
-and optionally grouping columns (e.g., farm_type, country).}
+optionally the quartiles p25, p50, p75 (used to reproduce the shape and
+the zero share of the distribution), optionally \code{p_nonzero}
+(share of non-zero values, 0-1, used for a zero-inflated gamma when
+the quartiles are missing), and optionally grouping columns
+(e.g., farm_type, country).}
 
 \item{categorical_stats}{Data.frame with columns: variable, level, count,
 and optionally the same grouping columns.}

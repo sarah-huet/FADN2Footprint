@@ -1,65 +1,62 @@
 #' Create a mock (non-confidential) FADN dataset for testing FADN2Footprint
 #'
 #' @description
-#' This script builds a shareable *mock* (anonymised / perturbed) dataset from
-#' confidential raw FADN microdata so that users can test the
-#' \pkg{FADN2Footprint} workflow without accessing real farm records.
+#' This script builds shareable *mock* FADN datasets (EU-FADN format and French
+#' RICA format) from aggregated descriptive statistics, so that users can test
+#' the \pkg{FADN2Footprint} workflow without accessing real farm records.
 #'
 #' The script:
 #' \enumerate{
-#'   \item Loads the confidential dataset and a variable dictionary.
-#'   \item Drops direct identifiers and keeps only variables required by the package.
-#'   \item Pre-processes categorical variables by collapsing rare levels into \code{"Other"}.
-#'   \item Pre-processes continuous variables via 1\% / 99\% winsorisation (clipping extremes).
-#'   \item Draws a stratified weighted sample (20\%) by \code{NUTS0}, \code{YEAR} and \code{TF_GEN1},
-#'         excluding strata with too few farms.
-#'   \item Adds random noise to continuous variables (Gaussian noise with SD = 10\% of IQR),
-#'         optionally enforcing non-negativity for variables whose minimum is 0 in the raw data.
-#'   \item Produces a basic validation report comparing summary statistics and selected categorical
-#'         distributions between the real and mock datasets.
-#'   \item Saves \code{mock_data} as an internal package dataset using \code{usethis::use_data()}.
+#'   \item Loads marginal descriptive statistics (mean/sd/min/max and, for the
+#'         French data, quartiles; level counts for categorical variables).
+#'   \item Loads aggregated dependence statistics computed from confidential
+#'         microdata by \code{inst/scripts/mock_data_dependence_stats.R}
+#'         (correlations, latent farm-size loadings, year-to-year persistence,
+#'         national sample retention rates, nested classifications).
+#'   \item Simulates a rotating farm panel over \code{2010:2020} with
+#'         \code{h_generate_mock_panel()}: variables are correlated through a
+#'         Gaussian copula (core variables), a latent farm-size score and
+#'         product-family factors; each year a share of farms (country-specific
+#'         retention of the FADN sampling plan) stays in the sample with
+#'         persistent values and categories, and leaving farms are replaced.
+#'         French crop/animal/product tables follow their farm through the
+#'         panel (\code{h_generate_mock_child_panel()}).
+#'   \item Applies consistency rules (crop variables without area, organic
+#'         farms without mineral fertiliser, farmer age increasing by one year
+#'         per year).
+#'   \item Uses \code{infer_practices()} to retain whole farms so that about
+#'         90\% of farm-years pass the practice inference.
+#'   \item Saves \code{mock_data} with \code{usethis::use_data()} and writes
+#'         Excel files (one per country and year for EU; one folder per year
+#'         and one file per table for France).
 #' }
 #'
 #' @details
-#' ## Inputs (local / confidential)
+#' ## Inputs
 #' \itemize{
-#'   \item \code{FADN_raw_data.RData}: Must contain raw FADN microdata.
-#'   \item \code{inst/scripts/dictionary_FADN.R}: Must create \code{dict_FADN} with (at least)
-#'         the columns \code{var_common}, \code{type} (values \code{"categorical"} or \code{"continuous"}),
-#'         and \code{needed_in_FADN2Footprint} (e.g., \code{"T"} for required variables).
+#'   \item \code{inst/ext_data/French_FADN_desc_stats.xlsx},
+#'         \code{inst/ext_data/EU_FADN_2016_2018_desc_stats.xlsx}: marginal
+#'         descriptive statistics.
+#'   \item \code{inst/ext_data/mock_dependence_stats_EU_17_21.RData}:
+#'         aggregated dependence statistics (\code{mock_dependence}). French RICA
+#'         variable names cannot be matched to EU-FADN names, so the French mock
+#'         uses the French median parameters (size loading, autocorrelation,
+#'         categorical persistence) and the French retention rate.
 #' }
 #'
 #' ## Outputs
 #' \itemize{
-#'   \item \code{mock_data}: A data.frame/tibble saved into the package data using
-#'         \code{usethis::use_data(mock_data, overwrite = TRUE)}.
-#'   \item \code{validation_report}: A list (created in-memory) with:
-#'         \itemize{
-#'           \item \code{summary_comparison}: mean and SD comparison for up to 10 continuous variables.
-#'           \item \code{categorical_comparison}: proportional tables for up to 5 categorical variables.
-#'         }
+#'   \item \code{mock_data}: list with \code{fadn_fict} (EU format, one row per
+#'         farm and year) and \code{rica_fict} (French tables, last year).
+#'   \item \code{inst/ext_data/mock_FADN_EU}, \code{inst/ext_data/mock_FADN_FRA}.
 #' }
 #'
 #' @section Confidentiality / disclosure control:
-#' This script is a *utility* to reduce disclosure risk, but it does **not** guarantee anonymisation.
-#' In particular, users should review:
-#' \itemize{
-#'   \item the identifier drop list (\code{ID}, \code{PACAGE}, \code{SIRET}, \code{NUTS3});
-#'   \item rare-category threshold (\eqn{\le 3} occurrences are collapsed to \code{"Other"});
-#'   \item winsorisation limits (1st and 99th percentiles);
-#'   \item noise magnitude (10\% of IQR);
-#'   \item sampling layers and minimum stratum size (\code{n_farms/5 >= 3}).
-#' }
+#' Only aggregated statistics computed on at least 50 farms (or farm pairs)
+#' are used; no record of the confidential data is copied into the mock.
 #'
 #' @section Dependencies:
-#' Requires \pkg{dplyr}, \pkg{tidyr}, and \pkg{usethis}.
-#'
-#' @section Side effects:
-#' \itemize{
-#'   \item Loads a local \code{.RData} file.
-#'   \item Sources \code{dictionary_FADN.R}.
-#'   \item Writes/updates a package dataset via \code{usethis::use_data()}.
-#' }
+#' Requires \pkg{dplyr}, \pkg{readxl}, \pkg{openxlsx} and \pkg{usethis}.
 #'
 #' @seealso
 #' \code{\link[usethis]{use_data}}
@@ -67,6 +64,67 @@
 #' @keywords internal
 #'
 "mock_data"
+
+# Shared settings and helpers ----
+
+mock_years <- 2010:2020
+target_pass_rate <- 0.9
+
+# Aggregated dependence statistics (see inst/scripts/mock_data_dependence_stats.R)
+load("inst/ext_data/mock_dependence_stats_EU_17_21.RData")
+
+# Dependence parameters of one country for h_generate_mock_panel(). Countries
+# without microdata fall back to the median over countries (no copula).
+build_dependence <- function(cty, md = mock_dependence) {
+  one <- function(df, col) {
+    x <- df[[col]][df$COUNTRY == cty]
+    if (length(x) == 1 && is.finite(x)) x else stats::median(df[[col]], na.rm = TRUE)
+  }
+  named <- function(df, col) {
+    d <- df[df$COUNTRY == cty & is.finite(df[[col]]), , drop = FALSE]
+    stats::setNames(d[[col]], d$variable)
+  }
+  list(
+    retention = one(md$retention, "retention"),
+    cor_core = md$cor_core[[cty]],
+    size_loading = c(.default = one(md$summary, "median_size_loading"),
+                     named(md$size_loading, "loading")),
+    family_cor = one(md$family_cor, "family_cor"),
+    autocorr = c(.default = one(md$summary, "median_autocorr"), named(md$autocorr, "rho")),
+    size_autocorr = one(md$size_autocorr, "rho"),
+    cat_persistence = c(.default = one(md$summary, "median_cat_persistence"),
+                        named(md$cat_persistence, "p_same")),
+    ordinal_loading = c(SIZC = one(md$ordinal_loading, "loading"))
+  )
+}
+
+# Keep whole farms (so that panels are not broken) such that ~target_pass_rate
+# of the retained farm-years pass infer_practices(). Fully valid farms are
+# kept first, then farms by decreasing share of valid years (ties in random
+# order). `all_rows` and `valid_rows` are data.frames with ID and YEAR.
+select_panel_farms <- function(all_rows, valid_rows, target_pass_rate, seed) {
+  set.seed(seed)
+  ok <- paste(all_rows$ID, all_rows$YEAR) %in% paste(valid_rows$ID, valid_rows$YEAR)
+  n_rows <- tapply(ok, all_rows$ID, length)
+  n_ok <- tapply(ok, all_rows$ID, sum)
+  fully_valid <- names(n_rows)[n_ok == n_rows]
+  others <- setdiff(names(n_rows), fully_valid)
+  others <- others[order(-(n_ok[others] / n_rows[others]), stats::runif(length(others)))]
+  valid_cum <- sum(n_ok[fully_valid]) + c(0, cumsum(n_ok[others]))
+  total_cum <- sum(n_rows[fully_valid]) + c(0, cumsum(n_rows[others]))
+  k <- which.min(abs(valid_cum / total_cum - target_pass_rate))
+  if (abs(valid_cum[k] / total_cum[k] - target_pass_rate) > 0.01) {
+    stop("Cannot reach a ", target_pass_rate, " pass rate by selecting whole farms.")
+  }
+  c(fully_valid, others[seq_len(k - 1)])
+}
+
+# Share of the farms of year t still in the sample in year t+1
+panel_retention <- function(ids, years) {
+  yrs <- sort(unique(years))
+  a <- unlist(lapply(yrs[-length(yrs)], function(y) ids[years == y] %in% ids[years == y + 1]))
+  mean(a)
+}
 
 # French FADN data ----
 
@@ -110,83 +168,115 @@ table_size <- function(cat_df) {
                 na.rm = TRUE)
 }
 
-n_farms <- 1000
-fr_years <- 2018:2020
+# Farms per year before the infer_practices() selection
+n_farms <- 300L
 tables <- c(rica = "rica20", veg = "veg20", ani = "ani20", pan = "pan20")
-target_pass_rate <- 0.9
 
 # Each table keeps its real size relative to the farm table (e.g. several
 # crop rows per farm in `veg`)
 size_rica <- table_size(data_list$rica20_cat)
 
-make_french_year <- function(year, seed) {
-  tabs <- lapply(tables, function(tb) {
-    h_generate_mock_data(
-      n = round(n_farms * table_size(data_list[[paste0(tb, "_cat")]]) / size_rica),
-      seed = seed,
-      continuous_stats  = prep_cont(data_list[[paste0(tb, "_cont")]]),
-      categorical_stats = prep_cat(data_list[[paste0(tb, "_cat")]])
-    )
-  })
+# RICA variable names cannot be matched to the EU-FADN names of the
+# dependence statistics: use the French median parameters. Farmer age is not
+# driven by farm size (it is aged deterministically below); the economic size
+# class CDEXE is ordinal and follows the latent farm size like SIZC.
+# ACHEN (fertiliser purchases, EUR) is the RICA equivalent of SE295 (see the
+# conversion dictionary): it is missing from the French descriptive
+# statistics, so its marginal and dependence come from the French EU-FADN
+# SE295 statistics.
+dep_fra <- build_dependence("FRA")
+dep_rica <- list(
+  retention = dep_fra$retention,
+  size_loading = c(.default = dep_fra$size_loading[[".default"]], AGECH = 0,
+                   ACHEN = dep_fra$size_loading[["SE295"]]),
+  family_cor = dep_fra$family_cor,
+  autocorr = c(dep_fra$autocorr[".default"], ACHEN = dep_fra$autocorr[["SE295"]]),
+  size_autocorr = dep_fra$size_autocorr,
+  cat_persistence = dep_fra$cat_persistence[".default"],
+  ordinal_loading = c(CDEXE = dep_fra$ordinal_loading[["SIZC"]])
+)
 
-  # add common identifier
-  set.seed(seed)
-  n <- nrow(tabs$rica)
-  id_pool <- paste0("FARM_", year, "_", formatC(seq_len(n), width = nchar(n) + 1, flag = "0"))
-
-  tabs <- lapply(tabs, function(df) {
-    nrows <- nrow(df)
-    if (nrows == n) {
-      df[["IDENT"]] <- id_pool
-    } else if (nrows > n) {
-      # every farm appears at least once, remaining rows sampled with replacement
-      df[["IDENT"]] <- c(id_pool, sample(id_pool, size = nrows - n, replace = TRUE))
-    } else {
-      df[["IDENT"]] <- sample(id_pool, size = nrows, replace = FALSE)
-    }
-    df[, c("IDENT", setdiff(names(df), "IDENT"))]
-  })
-
-  # Use the A2 conversion + infer_practices() as the source of truth for
-  # eligibility, then keep all valid farms and enough invalid ones to reach
-  # the target pass rate.
-  dict_conv <- h_read_dictionary("vignettes/dictionary_conversion_filled_FRA.xlsx")
-  converted <- h_pivot_national_fadn(
-    raw_tables = h_stack_yearly_tables(stats::setNames(list(tabs), year), year_col = "YEAR"),
-    dict_conversion = dict_conv,
-    id_cols = c("IDENT", "YEAR"),
-    table_config = list(
-      CROPS = list(table = "veg", code_col = "CODE3"),
-      LIVESTOCK = list(table = "ani", code_col = "CODE6"),
-      `ANIMAL PRODUCTS AND SERVICES` = list(table = "pan", code_col = "CODE7")
-    )
-  )
-  converted$COUNTRY <- "FRA"
-  ready <- data_4FADN2Footprint(converted, var_dict = dict_FADN,
-                                id_cols = c("ID", "YEAR", "COUNTRY")) |>
-    infer_practices(overwrite = TRUE)
-
-  valid <- unique(as.character(ready@farm$ID))
-  invalid <- unique(as.character(ready@traceability$discarded_farms$ID))
-  n_invalid_to_keep <- round(length(valid) * (1 - target_pass_rate) / target_pass_rate)
-  if (length(invalid) < n_invalid_to_keep) {
-    stop("Not enough invalid candidate French farms to produce a 90% pass rate.")
-  }
-  set.seed(seed)
-  keep <- c(valid, sample(invalid, n_invalid_to_keep))
-  message(year, ": ", length(keep), " French mock farms retained; ",
-          length(valid), " (", round(100 * length(valid) / length(keep), 1),
-          "%) pass infer_practices().")
-
-  lapply(tabs, function(df) df[df$IDENT %in% keep, , drop = FALSE])
+rica_cont <- prep_cont(data_list$rica20_cont)
+if (!"ACHEN" %in% rica_cont$variable) {
+  achen <- mock_dependence$marginals_country
+  achen <- achen[achen$COUNTRY == "FRA" & achen$variable == "SE295", , drop = FALSE]
+  stopifnot(nrow(achen) == 1)
+  achen$variable <- "ACHEN"
+  rica_cont <- dplyr::bind_rows(rica_cont, achen[c("variable", "mean", "sd", "min",
+                                                   "p25", "p50", "p75", "max")])
 }
 
+rica_panel <- h_generate_mock_panel(
+  n = n_farms, years = mock_years,
+  continuous_stats  = rica_cont,
+  categorical_stats = prep_cat(data_list$rica20_cat),
+  dependence = dep_rica, id_col = "IDENT", year_col = "YEAR", seed = 42
+)
+farm_latent <- attr(rica_panel, "latent")
+attr(rica_panel, "latent") <- NULL
+
+# Farmers get one year older each year they stay in the sample
+rica_panel <- rica_panel[order(rica_panel$IDENT, rica_panel$YEAR), ]
+first_year <- ave(rica_panel$YEAR, rica_panel$IDENT, FUN = min)
+first_age <- ave(rica_panel$AGECH, rica_panel$IDENT, FUN = function(x) x[1])
+rica_panel$AGECH <- pmin(first_age + rica_panel$YEAR - first_year,
+                         max(as.numeric(data_list$rica20_cont$Max[data_list$rica20_cont$Variable == "AGECH"])))
+
+panel_tabs <- c(
+  list(rica = rica_panel),
+  lapply(seq_along(tables)[-1], function(i) {
+    tb <- tables[[i]]
+    h_generate_mock_child_panel(
+      farm_latent,
+      rows_per_parent = table_size(data_list[[paste0(tb, "_cat")]]) / size_rica,
+      continuous_stats  = prep_cont(data_list[[paste0(tb, "_cont")]]),
+      categorical_stats = prep_cat(data_list[[paste0(tb, "_cat")]]),
+      dependence = dep_rica[c("size_loading", "family_cor", "autocorr", "cat_persistence")],
+      parent_id_col = "IDENT", year_col = "YEAR", seed = 42 + i
+    )
+  }) |> stats::setNames(names(tables)[-1])
+)
+
+split_years <- function(tabs) {
+  out <- lapply(mock_years, function(y) {
+    lapply(tabs, function(df) {
+      df <- df[df$YEAR == y, , drop = FALSE]
+      df[, c("IDENT", setdiff(names(df), c("IDENT", "YEAR"))), drop = FALSE]
+    })
+  })
+  stats::setNames(out, mock_years)
+}
+
+# Use the A2 conversion + infer_practices() as the source of truth for
+# eligibility, then keep whole farms to reach the target pass rate.
 data("dict_FADN", package = "FADN2Footprint")
-rica_fict_years <- lapply(seq_along(fr_years), function(i) {
-  make_french_year(fr_years[i], seed = 42 + i)
-})
-names(rica_fict_years) <- fr_years
-rica_fict <- rica_fict_years[[as.character(max(fr_years))]]
+dict_conv <- h_read_dictionary("vignettes/dictionary_conversion_filled_FRA.xlsx")
+converted <- h_pivot_national_fadn(
+  raw_tables = h_stack_yearly_tables(split_years(panel_tabs), year_col = "YEAR"),
+  dict_conversion = dict_conv,
+  id_cols = c("IDENT", "YEAR"),
+  table_config = list(
+    CROPS = list(table = "veg", code_col = "CODE3"),
+    LIVESTOCK = list(table = "ani", code_col = "CODE6"),
+    `ANIMAL PRODUCTS AND SERVICES` = list(table = "pan", code_col = "CODE7")
+  )
+)
+converted$COUNTRY <- "FRA"
+ready <- data_4FADN2Footprint(converted, var_dict = dict_FADN,
+                              id_cols = c("ID", "YEAR", "COUNTRY")) |>
+  infer_practices(overwrite = TRUE)
+
+keep_fr <- select_panel_farms(converted[c("ID", "YEAR")], ready@farm[c("ID", "YEAR")],
+                              target_pass_rate, seed = 42)
+panel_tabs <- lapply(panel_tabs, function(df) df[df$IDENT %in% keep_fr, , drop = FALSE])
+rica_fict_years <- split_years(panel_tabs)
+rica_fict <- rica_fict_years[[as.character(max(mock_years))]]
+
+message(
+  length(keep_fr), " French mock farms (", nrow(panel_tabs$rica), " farm-years) retained; ",
+  "retention ", round(panel_retention(panel_tabs$rica$IDENT, panel_tabs$rica$YEAR), 3),
+  " (target ", round(dep_rica$retention, 3), ")."
+)
 
 
 
@@ -200,9 +290,25 @@ sheets <- excel_sheets(file_path)
 data_list <- lapply(sheets, function(s) suppressMessages(read_excel(file_path, sheet = s)))
 names(data_list) <- sheets
 
-# Generate enough candidates to retain a useful practice-ready sample after
-# running the same validation used by the analysis workflow.
-n <- 10000L
+# Variables required by .parse_input_data() but missing from the sheet (e.g.
+# SE295) come from the aggregated marginals exported with the dependence
+# statistics (inst/scripts/mock_data_dependence_stats.R).
+extra_marg <- mock_dependence$marginals
+extra_marg <- extra_marg[!extra_marg$variable %in% data_list$continuous_vars$variable, , drop = FALSE]
+extra_marg$TF8 <- methods::as(extra_marg$TF8, class(data_list$continuous_vars$TF8))
+extra_marg <- dplyr::semi_join(extra_marg, data_list$continuous_vars, by = c("TF8", "COUNTRY"))
+data_list$continuous_vars <- dplyr::bind_rows(data_list$continuous_vars, extra_marg)
+
+# Zero mass: share of non-zero values per TF8 x COUNTRY (the sheet has no
+# quartiles, so a plain gamma would never give exact zeros)
+nz <- mock_dependence$nonzero_share
+nz$TF8 <- methods::as(nz$TF8, class(data_list$continuous_vars$TF8))
+data_list$continuous_vars <- dplyr::left_join(data_list$continuous_vars, nz,
+                                              by = c("TF8", "COUNTRY", "variable"))
+
+# Farms per year before the infer_practices() selection (about a third of
+# the generated farm-years pass, see below).
+n_per_year <- 1000L
 
 # The EU sheets only report mean/sd/min/max (no quartiles), so distributions
 # are moment-matched (gamma for non-negative variables) within each
@@ -215,19 +321,25 @@ group_weights <- data_list$categorical_vars |>
   dplyr::summarise(weight = max(n), .groups = "drop") |>
   as.data.frame()
 
+# Country-specific dependence: copula, size loadings, persistence and
+# retention rate of the national FADN sample
+eu_countries <- unique(data_list$continuous_vars$COUNTRY)
+eu_dependence <- stats::setNames(lapply(eu_countries, build_dependence), eu_countries)
+
 ## Generate mock data ----
-fadn_fict <- h_generate_mock_data(
-  n = n,
-  seed = 42,
+fadn_fict <- h_generate_mock_panel(
+  n = n_per_year,
+  years = mock_years,
   continuous_stats = data_list$continuous_vars,
   categorical_stats = data_list$categorical_vars,
   group_cols    = group_cols,
-  group_weights = group_weights
-) |>
-  # add identifier
-  dplyr::mutate(
-    ID = paste0("FARM_", formatC(seq_len(n), width = nchar(n) + 1, flag = "0")),
-    YEAR = sample(2018:2020, n, replace = TRUE))
+  group_weights = group_weights,
+  dependence    = eu_dependence,
+  dependence_by = "COUNTRY",
+  cat_lookup    = mock_dependence$cat_lookup,
+  seed = 42
+)
+attr(fadn_fict, "latent") <- NULL
 
 # Independent sampling of every crop variable can create crop records with
 # production but no area, as well as crop types without practice references.
@@ -277,41 +389,34 @@ for (code in crop_codes) {
 organic_farms <- as.character(fadn_fict$ORGANIC) %in% c("2", "4")
 fadn_fict$INUSE_Q[organic_farms] <- 0
 
-# Use infer_practices() as the source of truth for mock eligibility. Retain
-# enough invalid farms to make approximately 10% of the final sample fail.
+# Use infer_practices() as the source of truth for mock eligibility. Keep
+# whole farms (panels stay complete) so that ~10% of farm-years fail.
 candidate_n <- nrow(fadn_fict)
 practice_ready <- data_4FADN2Footprint(fadn_fict) |>
   infer_practices(overwrite = TRUE)
-valid_ids <- practice_ready@farm |>
-  dplyr::select(ID)
-invalid_ids <- practice_ready@traceability$discarded_farms |>
-  dplyr::select(ID) |>
-  dplyr::distinct()
+keep_eu <- select_panel_farms(fadn_fict[c("ID", "YEAR")],
+                              practice_ready@farm[c("ID", "YEAR")],
+                              target_pass_rate, seed = 42)
+valid_rows <- paste(practice_ready@farm$ID, practice_ready@farm$YEAR)
 
-target_pass_rate <- 0.9
-n_invalid_to_keep <- round(nrow(valid_ids) * (1 - target_pass_rate) / target_pass_rate)
-if (nrow(invalid_ids) < n_invalid_to_keep) {
-  stop("Not enough invalid candidate farms to produce a mock with a 90% pass rate.")
-}
-
-set.seed(42)
-retained_invalid_ids <- invalid_ids |>
-  dplyr::slice_sample(n = n_invalid_to_keep)
-retained_ids <- dplyr::bind_rows(valid_ids, retained_invalid_ids)
-
-fadn_fict <- fadn_fict |>
-  dplyr::semi_join(retained_ids, by = "ID")
+fadn_fict <- fadn_fict[fadn_fict$ID %in% keep_eu, , drop = FALSE]
+rownames(fadn_fict) <- NULL
 
 if (nrow(fadn_fict) == 0) {
   stop("No EU mock farms were retained; refusing to save empty mock data.")
 }
 
-pass_rate <- nrow(valid_ids) / nrow(fadn_fict)
+pass_rate <- mean(paste(fadn_fict$ID, fadn_fict$YEAR) %in% valid_rows)
 message(
-  nrow(fadn_fict), " of ", candidate_n, " generated EU mock farms retained; ",
-  sum(fadn_fict$ID %in% valid_ids$ID), " (",
-  round(pass_rate * 100, 1), "%) pass infer_practices()."
+  nrow(fadn_fict), " of ", candidate_n, " generated EU mock farm-years retained (",
+  length(keep_eu), " farms); ", round(pass_rate * 100, 1), "% pass infer_practices()."
 )
+retention_check <- do.call(rbind, lapply(split(fadn_fict, fadn_fict$COUNTRY), function(d) {
+  cty <- d$COUNTRY[1]
+  data.frame(COUNTRY = cty, mock = panel_retention(d$ID, d$YEAR),
+             target = eu_dependence[[cty]]$retention)
+}))
+print(retention_check)
 
 # export data ----
 

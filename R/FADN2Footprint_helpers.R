@@ -992,17 +992,28 @@ h_stack_country_tables <- function(country_data, country_col = "COUNTRY") {
 #' @param mean,sd,min,max Reported descriptive statistics (same unit as the
 #'   variable).
 #' @param p25,p50,p75 Reported quartiles (same unit), or \code{NA}.
+#' @param p_nonzero Share of non-zero values (0-1), or \code{NA}. Only used
+#'   when the quartiles are missing and \code{min == 0}: values are zero with
+#'   probability \code{1 - p_nonzero} (the lowest uniform scores) and the
+#'   positive part is a gamma matched to the conditional moments
+#'   \code{mean / p_nonzero} and \code{(sd^2 + mean^2) / p_nonzero - (mean / p_nonzero)^2}.
+#' @param u Optional vector of \code{n} uniform scores in (0, 1). When
+#'   supplied, values are obtained by inverse-CDF transformation of \code{u}
+#'   (monotone in \code{u}), so that dependence between variables can be
+#'   imposed through a copula. When \code{NULL}, independent draws are used.
 #' @return Numeric vector of length \code{n}.
 #' @noRd
 .h_sim_continuous <- function(n, mean, sd, min, max,
-                              p25 = NA_real_, p50 = NA_real_, p75 = NA_real_) {
+                              p25 = NA_real_, p50 = NA_real_, p75 = NA_real_,
+                              u = NULL, p_nonzero = NA_real_) {
   if (n == 0) return(numeric(0))
   if (!is.finite(mean) || !is.finite(min) || !is.finite(max)) return(rep(NA_real_, n))
   if (!is.finite(sd) || sd <= 0 || max <= min) {
     return(rep(min(max(mean, min), max), n))
   }
 
-  u <- runif(n)
+  u_given <- !is.null(u)
+  if (u_given) u <- pmin(pmax(u, 1e-9), 1 - 1e-9) else u <- runif(n)
 
   if (all(is.finite(c(p25, p50, p75)))) {
     probs  <- c(0, 0.25, 0.5, 0.75, 1)
@@ -1037,11 +1048,31 @@ h_stack_country_tables <- function(country_data, country_col = "COUNTRY") {
     } else {
       out <- approx(probs, values, xout = u, rule = 2)$y
     }
+  } else if (is.finite(p_nonzero) && p_nonzero < 1 && min == 0 && mean > 0) {
+    # Zero-inflated gamma: the lowest scores give the zeros
+    out <- numeric(n)
+    if (p_nonzero > 0) {
+      m_pos <- mean / p_nonzero
+      v_pos <- (sd^2 + mean^2) / p_nonzero - m_pos^2
+      pos <- u > 1 - p_nonzero
+      if (any(pos)) {
+        if (v_pos > 0) {
+          v <- pmin(pmax((u[pos] - (1 - p_nonzero)) / p_nonzero, 1e-9), 1 - 1e-9)
+          out[pos] <- qgamma(v, shape = m_pos^2 / v_pos, scale = v_pos / m_pos)
+        } else {
+          out[pos] <- m_pos
+        }
+      }
+    }
   } else if (min >= 0 && mean > min) {
     m <- mean - min
-    out <- min + rgamma(n, shape = (m / sd)^2, scale = sd^2 / m)
+    out <- min + if (u_given) {
+      qgamma(u, shape = (m / sd)^2, scale = sd^2 / m)
+    } else {
+      rgamma(n, shape = (m / sd)^2, scale = sd^2 / m)
+    }
   } else {
-    out <- rnorm(n, mean = mean, sd = sd)
+    out <- if (u_given) qnorm(u, mean = mean, sd = sd) else rnorm(n, mean = mean, sd = sd)
   }
 
   # Match the reported mean, then enforce the reported range. With quartiles,
@@ -1071,7 +1102,9 @@ h_stack_country_tables <- function(country_data, country_col = "COUNTRY") {
 #' @param n Total number of rows to generate.
 #' @param continuous_stats Data.frame with columns: variable, mean, sd, min, max,
 #'   optionally the quartiles p25, p50, p75 (used to reproduce the shape and
-#'   the zero share of the distribution), and optionally grouping columns
+#'   the zero share of the distribution), optionally \code{p_nonzero}
+#'   (share of non-zero values, 0-1, used for a zero-inflated gamma when
+#'   the quartiles are missing), and optionally grouping columns
 #'   (e.g., farm_type, country).
 #' @param categorical_stats Data.frame with columns: variable, level, count,
 #'   and optionally the same grouping columns.
@@ -1107,7 +1140,8 @@ h_generate_mock_data <- function(n = 500,
           n_block,
           mean = get("mean"), sd = get("sd"),
           min = get("min", -Inf), max = get("max", Inf),
-          p25 = get("p25"), p50 = get("p50"), p75 = get("p75")
+          p25 = get("p25"), p50 = get("p50"), p75 = get("p75"),
+          p_nonzero = get("p_nonzero")
         )
       }
     }
@@ -1217,4 +1251,491 @@ h_generate_mock_data <- function(n = 500,
   result <- result[, c(group_cols, setdiff(names(result), group_cols))]
 
   return(result)
+}
+
+
+#' Resolve a per-variable dependence parameter
+#'
+#' @param x \code{NULL}, an unnamed scalar (applied to every variable), or a
+#'   named numeric vector (names = variables, optional element
+#'   \code{".default"} used for unlisted variables). Non-finite values are
+#'   ignored.
+#' @param vars Character vector of variable names.
+#' @param default Value used when \code{x} gives no information.
+#' @return Named numeric vector along \code{vars}.
+#' @noRd
+.h_dep_param <- function(x, vars, default = 0) {
+  out <- stats::setNames(rep(default, length(vars)), vars)
+  if (is.null(x) || length(x) == 0) return(out)
+  if (is.null(names(x))) {
+    if (is.finite(x[1])) out[] <- x[1]
+    return(out)
+  }
+  if (".default" %in% names(x) && is.finite(x[[".default"]])) out[] <- x[[".default"]]
+  hit <- intersect(names(x), vars)
+  hit <- hit[is.finite(x[hit])]
+  out[hit] <- x[hit]
+  out
+}
+
+
+#' Product family of FADN variable names (e.g. "CWHTC_TA" -> "CWHTC")
+#' @noRd
+.h_var_family <- function(v) sub("_[^_]+$", "", sub("_X$", "", v))
+
+
+#' Factorise a correlation matrix for Gaussian-copula sampling
+#'
+#' Negative eigenvalues (pairwise estimates need not be positive definite)
+#' are clipped and the factor is rescaled to give a unit diagonal. Also
+#' returns the first principal component, used as the latent farm-size score.
+#' @noRd
+.h_cor_factor <- function(R) {
+  e <- eigen(R, symmetric = TRUE)
+  A <- e$vectors %*% diag(sqrt(pmax(e$values, 1e-6)), nrow(R))
+  A <- A / sqrt(rowSums(A^2))
+  v1 <- e$vectors[, 1]
+  if (sum(v1) < 0) v1 <- -v1
+  list(vars = colnames(R), A = A, v1 = v1, s_scale = sqrt(sum((t(A) %*% v1)^2)))
+}
+
+
+#' Draw latent standard-normal scores with a farm-like dependence structure
+#'
+#' Core variables (those in \code{dep$cor_core}) follow a Gaussian copula with
+#' that correlation matrix; the latent size score \code{S} is their first
+#' principal component. Every other variable \code{v} is
+#' \code{lambda_v S + sqrt(1 - lambda_v^2) (sqrt(r) G_family + sqrt(1 - r) e_v)}
+#' with \code{lambda_v = dep$size_loading}, \code{r = dep$family_cor}, a
+#' family factor \code{G} shared by variables of the same family
+#' (\code{dep$family}, default \code{.h_var_family()}) and idiosyncratic noise.
+#'
+#' @param n Number of units.
+#' @param vars Continuous variable names.
+#' @param dep Dependence list (see \code{h_generate_mock_panel()}).
+#' @param S Optional size score of length \code{n} (used when there are no
+#'   core variables, e.g. for child-table rows inheriting their farm's size).
+#' @return List with \code{Z} (n x length(vars) matrix) and \code{S}.
+#' @noRd
+.h_mock_latent <- function(n, vars, dep, S = NULL) {
+  Z <- matrix(0, n, length(vars), dimnames = list(NULL, vars))
+  fac <- dep[[".factor"]]
+  core <- if (!is.null(fac)) intersect(fac$vars, vars) else character(0)
+  if (length(core) > 0) {
+    Zc <- matrix(rnorm(n * length(fac$vars)), n, length(fac$vars)) %*% t(fac$A)
+    colnames(Zc) <- fac$vars
+    Z[, core] <- Zc[, core]
+    S <- as.numeric(Zc %*% fac$v1) / fac$s_scale
+  } else if (is.null(S)) {
+    S <- rnorm(n)
+  }
+
+  other <- setdiff(vars, core)
+  if (length(other) > 0 && n > 0) {
+    lam <- pmax(pmin(.h_dep_param(dep[["size_loading"]], other, 0), 0.99), -0.99)
+    r <- dep[["family_cor"]]
+    r <- if (is.null(r) || !is.finite(r[1])) 0 else min(max(r[1], 0), 0.99)
+    fam <- dep[["family"]]
+    fam <- if (is.null(fam)) {
+      .h_var_family(other)
+    } else if (is.null(names(fam))) {
+      rep(fam[1], length(other))
+    } else {
+      ifelse(other %in% names(fam), unname(fam[other]), .h_var_family(other))
+    }
+    ufam <- unique(fam)
+    G <- matrix(rnorm(n * length(ufam)), n, dimnames = list(NULL, ufam))
+    E <- matrix(rnorm(n * length(other)), n, length(other))
+    idio <- sqrt(r) * G[, fam, drop = FALSE] + sqrt(1 - r) * E
+    Z[, other] <- outer(S, lam) + sweep(idio, 2, sqrt(1 - lam^2), `*`)
+  }
+  list(Z = Z, S = S)
+}
+
+
+#' Draw a categorical variable from level counts
+#'
+#' If \code{loading} is finite and levels are numeric, the variable is treated
+#' as ordinal and driven by the size score (latent threshold model).
+#' @noRd
+.h_draw_cat <- function(n, sub, S = NULL, loading = NA_real_) {
+  if (n == 0 || nrow(sub) == 0) return(rep(NA_character_, n))
+  lev <- as.character(sub$level)
+  p <- as.numeric(sub$count)
+  p <- p / sum(p)
+  num <- suppressWarnings(as.numeric(lev))
+  if (is.finite(loading) && !is.null(S) && !anyNA(num)) {
+    o <- order(num)
+    loading <- min(max(loading, -0.99), 0.99)
+    u <- pnorm(loading * S + sqrt(1 - loading^2) * rnorm(n))
+    return(lev[o][pmin(findInterval(u, cumsum(p[o])) + 1L, length(lev))])
+  }
+  sample(lev, n, replace = TRUE, prob = p)
+}
+
+
+#' Derive nested classifications (e.g. NUTS2 from NUTS3) from a lookup
+#' @noRd
+.h_apply_cat_lookup <- function(cats, cat_lookup, cat_stats) {
+  if (is.null(cat_lookup) || nrow(cat_lookup) == 0) return(cats)
+  for (tv in unique(cat_lookup$to_var)) {
+    lk <- cat_lookup[cat_lookup$to_var == tv, , drop = FALSE]
+    fv <- lk$from_var[1]
+    if (!tv %in% names(cats) || !fv %in% names(cats)) next
+    val <- as.character(lk$to_level)[match(cats[[fv]], as.character(lk$from_level))]
+    miss <- is.na(val)
+    if (any(miss)) {
+      val[miss] <- .h_draw_cat(sum(miss), cat_stats[cat_stats$variable == tv, , drop = FALSE])
+    }
+    cats[[tv]] <- val
+  }
+  cats
+}
+
+
+#' Generate a mock FADN panel (farms followed over several years)
+#'
+#' Extends \code{h_generate_mock_data()} with (1) dependence between variables
+#' and (2) a rotating panel reproducing national FADN sampling plans, in which
+#' most farms stay in the sample from one year to the next.
+#'
+#' Marginal distributions are those of \code{h_generate_mock_data()} (same
+#' descriptive statistics, same per-group/per-year mean matching). Values are
+#' obtained by inverse-CDF transformation of latent normal scores built by
+#' \code{.h_mock_latent()} (Gaussian copula on core variables, latent farm-size
+#' score and product-family factors for the others).
+#'
+#' Panel dynamics, for each group and year after the first: each farm stays
+#' in the sample with probability \code{retention}; leaving farms are
+#' replaced by new farms so that the group size stays constant. Latent scores
+#' of staying farms follow a stationary AR(1) process
+#' \code{z_t = rho z_{t-1} + sqrt(1 - rho^2) eta_t} (per-variable
+#' \code{autocorr}, \code{size_autocorr} for the size score). Categorical
+#' variables keep their previous level with probability
+#' \code{cat_persistence}, and nested classifications are re-derived from
+#' \code{cat_lookup} so that they stay consistent (e.g. NUTS2 inside NUTS1).
+#' Group membership (e.g. \code{TF8 x COUNTRY}) is kept fixed for each farm.
+#'
+#' @param n Number of farms per year (all groups together).
+#' @param years Integer vector of simulated years.
+#' @param continuous_stats,categorical_stats,group_cols,group_weights As in
+#'   \code{h_generate_mock_data()}.
+#' @param dependence Either one dependence list applied to every group, or a
+#'   named list of such lists, named by the values of \code{dependence_by}.
+#'   A dependence list may contain (all optional, all dimensionless):
+#'   \describe{
+#'     \item{retention}{Probability (0-1) that a farm in the sample in year
+#'       t is still in it in year t+1. Default 0 (independent cross-sections).}
+#'     \item{cor_core}{Correlation matrix (with dimnames) of the latent normal
+#'       scores of core continuous variables.}
+#'     \item{size_loading}{Correlation of non-core variables with the size
+#'       score (scalar, or named vector with optional \code{.default}).}
+#'     \item{family_cor}{Latent correlation shared by non-core variables of
+#'       the same family (scalar in [0, 1)).}
+#'     \item{family}{Optional family of each variable (named character
+#'       vector, or one string putting all variables in the same family).}
+#'     \item{autocorr}{Year-to-year correlation of latent scores (scalar or
+#'       named vector).}
+#'     \item{size_autocorr}{Year-to-year correlation of the size score.}
+#'     \item{cat_persistence}{Probability (0-1) of keeping the previous level
+#'       of a categorical variable (scalar or named vector).}
+#'     \item{ordinal_loading}{Named vector: categorical variables with numeric
+#'       ordered levels (e.g. economic size class \code{SIZC}) driven by the
+#'       size score, with this latent correlation.}
+#'   }
+#' @param dependence_by Name of the column of \code{group_cols} used to pick
+#'   the dependence list (e.g. \code{"COUNTRY"}), or \code{NULL}.
+#' @param cat_lookup Optional data.frame with columns \code{from_var},
+#'   \code{from_level}, \code{to_var}, \code{to_level} describing nested
+#'   classifications, applied in row order.
+#' @param id_prefix Prefix of generated farm identifiers.
+#' @param id_col,year_col Names of the identifier and year columns.
+#' @param seed Random seed.
+#' @return A data.frame with one row per farm and year (variables in the
+#'   units of the descriptive statistics), plus \code{id_col} and
+#'   \code{year_col}. Attribute \code{"latent"}: data.frame
+#'   (\code{id_col}, \code{year_col}, \code{.size}) giving the latent
+#'   standard-normal size score of each farm-year, used by
+#'   \code{h_generate_mock_child_panel()}.
+#' @keywords internal
+h_generate_mock_panel <- function(n,
+                                  years,
+                                  continuous_stats = NULL,
+                                  categorical_stats = NULL,
+                                  group_cols = NULL,
+                                  group_weights = NULL,
+                                  dependence = NULL,
+                                  dependence_by = NULL,
+                                  cat_lookup = NULL,
+                                  id_prefix = "FARM_",
+                                  id_col = "ID",
+                                  year_col = "YEAR",
+                                  seed = 42) {
+  set.seed(seed)
+  years <- sort(unique(years))
+
+  no_group <- is.null(group_cols)
+  if (no_group) {
+    group_cols <- ".group"
+    if (!is.null(continuous_stats)) continuous_stats$.group <- 1
+    if (!is.null(categorical_stats)) categorical_stats$.group <- 1
+  }
+
+  ref_stats <- if (!is.null(continuous_stats)) continuous_stats else categorical_stats
+  groups_df <- unique(as.data.frame(ref_stats)[, group_cols, drop = FALSE])
+  n_groups <- nrow(groups_df)
+  grp_key <- function(d) do.call(paste, c(unname(as.list(d[group_cols])), sep = "\r"))
+
+  if (is.null(group_weights)) {
+    w <- rep(1, n_groups)
+  } else {
+    weight_col <- intersect(c("count", "weight", "n"), names(group_weights))
+    if (length(weight_col) == 0) stop("group_weights must have a 'weight', 'count', or 'n' column.")
+    w <- as.numeric(group_weights[[weight_col[1]]])[match(grp_key(groups_df), grp_key(group_weights))]
+    w[is.na(w)] <- 0
+  }
+  group_ns <- round(w / sum(w) * n)
+  diff <- n - sum(group_ns)
+  if (diff != 0) {
+    idx <- sample(which(w > 0), abs(diff), replace = abs(diff) > sum(w > 0))
+    for (i in idx) group_ns[i] <- max(group_ns[i] + sign(diff), 0)
+  }
+
+  get_dep <- function(g) {
+    dep <- if (is.null(dependence_by)) {
+      dependence
+    } else {
+      dependence[[as.character(groups_df[[dependence_by]][g])]]
+    }
+    if (is.null(dep)) dep <- list()
+    if (!is.null(dep[["cor_core"]]) && is.null(dep[[".factor"]])) dep[[".factor"]] <- .h_cor_factor(dep[["cor_core"]])
+    dep
+  }
+  scalar <- function(x, default) if (is.null(x) || !is.finite(x[1])) default else x[1]
+
+  next_id <- 0L
+  blocks <- list()
+  latent <- list()
+
+  for (g in seq_len(n_groups)) {
+    ng <- group_ns[g]
+    if (ng <= 0) next
+    grp_vals <- groups_df[g, , drop = FALSE]
+    in_group <- function(st) {
+      if (is.null(st)) return(NULL)
+      mask <- rep(TRUE, nrow(st))
+      for (gc in group_cols) mask <- mask & (st[[gc]] == grp_vals[[gc]])
+      as.data.frame(st[mask, , drop = FALSE])
+    }
+    cont_g <- in_group(continuous_stats)
+    cat_g <- in_group(categorical_stats)
+    cvars <- if (is.null(cont_g)) character(0) else cont_g$variable
+    catvars <- if (is.null(cat_g)) character(0) else unique(cat_g$variable)
+
+    dep <- get_dep(g)
+    retention <- min(max(scalar(dep[["retention"]], 0), 0), 1)
+    rho <- pmin(pmax(.h_dep_param(dep[["autocorr"]], cvars, 0), 0), 0.999)
+    rho_s <- min(max(scalar(dep[["size_autocorr"]], 0), 0), 0.999)
+    p_same <- .h_dep_param(dep[["cat_persistence"]], catvars, 0)
+    ord <- .h_dep_param(dep[["ordinal_loading"]], catvars, NA_real_)
+
+    state <- NULL
+    for (yr in years) {
+      keep <- if (is.null(state)) logical(0) else runif(length(state$ids)) < retention
+      n_keep <- sum(keep)
+      n_new <- ng - n_keep
+
+      fresh <- .h_mock_latent(n_new, cvars, dep)
+      if (n_keep > 0) {
+        inn <- .h_mock_latent(n_keep, cvars, dep)
+        Zk <- sweep(state$Z[keep, , drop = FALSE], 2, rho, `*`) +
+          sweep(inn$Z, 2, sqrt(1 - rho^2), `*`)
+        Sk <- rho_s * state$S[keep] + sqrt(1 - rho_s^2) * inn$S
+      } else {
+        Zk <- fresh$Z[0, , drop = FALSE]
+        Sk <- numeric(0)
+      }
+      Z <- rbind(Zk, fresh$Z)
+      S <- c(Sk, fresh$S)
+      ids <- c(if (n_keep > 0) state$ids[keep] else integer(0), next_id + seq_len(n_new))
+      next_id <- next_id + n_new
+
+      cats <- list()
+      for (v in catvars) {
+        val <- .h_draw_cat(ng, cat_g[cat_g$variable == v, , drop = FALSE], S, ord[[v]])
+        if (n_keep > 0 && !is.null(state$cats[[v]])) {
+          prev <- state$cats[[v]][keep]
+          stay <- !is.na(prev) & runif(n_keep) < p_same[[v]]
+          val[seq_len(n_keep)][stay] <- prev[stay]
+        }
+        cats[[v]] <- val
+      }
+      cats <- .h_apply_cat_lookup(cats, cat_lookup, cat_g)
+
+      block <- data.frame(row.names = seq_len(ng))
+      for (i in seq_along(cvars)) {
+        get <- function(col, default = NA_real_) {
+          if (col %in% names(cont_g)) as.numeric(cont_g[[col]][i]) else default
+        }
+        block[[cvars[i]]] <- .h_sim_continuous(
+          ng,
+          mean = get("mean"), sd = get("sd"),
+          min = get("min", -Inf), max = get("max", Inf),
+          p25 = get("p25"), p50 = get("p50"), p75 = get("p75"),
+          p_nonzero = get("p_nonzero"),
+          u = pnorm(Z[, cvars[i]])
+        )
+      }
+      for (v in catvars) block[[v]] <- cats[[v]]
+      for (gc in group_cols) block[[gc]] <- grp_vals[[gc]]
+      block[[".id"]] <- ids
+      block[[year_col]] <- yr
+
+      blocks[[length(blocks) + 1L]] <- block
+      latent[[length(latent) + 1L]] <- data.frame(.id = ids, year = yr, .size = S)
+      state <- list(ids = ids, Z = Z, S = S, cats = cats)
+    }
+  }
+
+  result <- do.call(rbind, blocks)
+  rownames(result) <- NULL
+  width <- nchar(next_id) + 1
+  fmt_id <- function(i) paste0(id_prefix, formatC(i, width = width, flag = "0"))
+  result[[id_col]] <- fmt_id(result$.id)
+  result$.id <- NULL
+  if (no_group) {
+    result$.group <- NULL
+    group_cols <- character(0)
+  }
+  result <- result[, c(group_cols, setdiff(names(result), c(group_cols, id_col, year_col)),
+                       id_col, year_col)]
+
+  lat <- do.call(rbind, latent)
+  lat <- data.frame(fmt_id(lat$.id), lat$year, lat$.size)
+  names(lat) <- c(id_col, year_col, ".size")
+  attr(result, "latent") <- lat
+  result
+}
+
+
+#' Generate a mock child table (several rows per farm) following a farm panel
+#'
+#' For national FADN formats storing crops, animals or products as several
+#' rows per farm (e.g. French RICA \code{veg}, \code{ani}, \code{pan}
+#' tables). Rows belong to a farm of \code{parent_latent} and live as long as
+#' that farm stays in the sample: rows of staying farms are carried over
+#' (AR(1) on latent scores, categorical persistence), new farms receive new
+#' rows. The latent score of every row loads on its farm's size score, so
+#' that bigger farms have larger areas, herds and outputs in every table.
+#'
+#' @param parent_latent data.frame with \code{parent_id_col}, \code{year_col}
+#'   and \code{.size}, as returned in \code{attr(x, "latent")} by
+#'   \code{h_generate_mock_panel()}.
+#' @param rows_per_parent Mean number of rows per farm (dimensionless).
+#' @param continuous_stats,categorical_stats Ungrouped descriptive statistics
+#'   of the table, as in \code{h_generate_mock_data()}.
+#' @param dependence Dependence list (see \code{h_generate_mock_panel()};
+#'   \code{retention} and \code{cor_core} are not used). By default all
+#'   variables of a row belong to one family, so that e.g. area and
+#'   production of a crop row are correlated through \code{family_cor}.
+#' @param parent_id_col,year_col Names of the farm identifier and year columns.
+#' @param min_one_row If \code{TRUE}, every farm gets at least one row
+#'   (otherwise rows are assigned to a subset of farms when
+#'   \code{rows_per_parent < 1}). Farms receive rows with probability
+#'   increasing with their size score.
+#' @param seed Random seed.
+#' @return A data.frame with \code{parent_id_col}, \code{year_col} and the
+#'   simulated variables (units of the descriptive statistics).
+#' @keywords internal
+h_generate_mock_child_panel <- function(parent_latent,
+                                        rows_per_parent,
+                                        continuous_stats = NULL,
+                                        categorical_stats = NULL,
+                                        dependence = NULL,
+                                        parent_id_col = "ID",
+                                        year_col = "YEAR",
+                                        min_one_row = rows_per_parent >= 1,
+                                        seed = 42) {
+  set.seed(seed)
+  dep <- if (is.null(dependence)) list() else dependence
+  dep[[".factor"]] <- NULL
+  if (is.null(dep[["family"]])) dep[["family"]] <- ".row"
+  cont <- if (is.null(continuous_stats)) NULL else as.data.frame(continuous_stats)
+  catst <- if (is.null(categorical_stats)) NULL else as.data.frame(categorical_stats)
+  cvars <- if (is.null(cont)) character(0) else cont$variable
+  catvars <- if (is.null(catst)) character(0) else unique(catst$variable)
+  rho <- pmin(pmax(.h_dep_param(dep[["autocorr"]], cvars, 0), 0), 0.999)
+  p_same <- .h_dep_param(dep[["cat_persistence"]], catvars, 0)
+  lam_rows <- .h_dep_param(dep[["size_loading"]], ".rows", 0)[[1]]
+
+  years <- sort(unique(parent_latent[[year_col]]))
+  state <- NULL
+  blocks <- list()
+  for (yr in years) {
+    par <- parent_latent[parent_latent[[year_col]] == yr, , drop = FALSE]
+    S_par <- stats::setNames(par$.size, par[[parent_id_col]])
+
+    keep <- if (is.null(state)) logical(0) else state$parent %in% names(S_par)
+    n_keep <- sum(keep)
+    new_par <- setdiff(names(S_par), state$parents)
+    n_new_rows <- round(rows_per_parent * length(new_par))
+    new_rows_par <- character(0)
+    if (length(new_par) > 0 && n_new_rows > 0) {
+      w <- exp(lam_rows * S_par[new_par])
+      new_rows_par <- if (min_one_row && n_new_rows >= length(new_par)) {
+        c(new_par, new_par[sample.int(length(new_par), n_new_rows - length(new_par),
+                                      replace = TRUE, prob = w)])
+      } else {
+        new_par[sample.int(length(new_par), min(n_new_rows, length(new_par)), prob = w)]
+      }
+    }
+
+    fresh <- .h_mock_latent(length(new_rows_par), cvars, dep, S = unname(S_par[new_rows_par]))
+    if (n_keep > 0) {
+      kept_par <- state$parent[keep]
+      inn <- .h_mock_latent(n_keep, cvars, dep, S = unname(S_par[kept_par]))
+      Zk <- sweep(state$Z[keep, , drop = FALSE], 2, rho, `*`) +
+        sweep(inn$Z, 2, sqrt(1 - rho^2), `*`)
+    } else {
+      kept_par <- character(0)
+      Zk <- fresh$Z[0, , drop = FALSE]
+    }
+    Z <- rbind(Zk, fresh$Z)
+    parent <- c(kept_par, new_rows_par)
+    n_rows <- length(parent)
+
+    cats <- list()
+    for (v in catvars) {
+      val <- .h_draw_cat(n_rows, catst[catst$variable == v, , drop = FALSE])
+      if (n_keep > 0 && !is.null(state$cats[[v]])) {
+        prev <- state$cats[[v]][keep]
+        stay <- !is.na(prev) & runif(n_keep) < p_same[[v]]
+        val[seq_len(n_keep)][stay] <- prev[stay]
+      }
+      cats[[v]] <- val
+    }
+
+    block <- data.frame(parent, rep(yr, n_rows), stringsAsFactors = FALSE)
+    names(block) <- c(parent_id_col, year_col)
+    for (i in seq_along(cvars)) {
+      get <- function(col, default = NA_real_) {
+        if (col %in% names(cont)) as.numeric(cont[[col]][i]) else default
+      }
+      block[[cvars[i]]] <- .h_sim_continuous(
+        n_rows,
+        mean = get("mean"), sd = get("sd"),
+        min = get("min", -Inf), max = get("max", Inf),
+        p25 = get("p25"), p50 = get("p50"), p75 = get("p75"),
+        p_nonzero = get("p_nonzero"),
+        u = pnorm(Z[, cvars[i]])
+      )
+    }
+    for (v in catvars) block[[v]] <- cats[[v]]
+
+    blocks[[length(blocks) + 1L]] <- block
+    state <- list(parent = parent, parents = names(S_par), Z = Z, cats = cats)
+  }
+  result <- do.call(rbind, blocks)
+  rownames(result) <- NULL
+  result
 }

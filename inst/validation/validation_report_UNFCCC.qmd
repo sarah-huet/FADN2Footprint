@@ -1,37 +1,28 @@
 ---
-title: "FADN2Footprint — Validation Report"
-subtitle: "Comparison of package estimates with national inventoriess"
+title: "FADN2Footprint — UNFCCC CRT 2026 Comparison"
+subtitle: "Package estimates compared with national inventory values"
 author: "Sarah HUET & Valentin BELLASSEN"
 date: today
-format:
-  html:
-    toc: true
-    toc-depth: 2
-    code-fold: true
-    embed-resources: true        
-  pdf:
-    toc: true
-execute:
-  echo: true
-  warning: false
-editor: 
-  markdown: 
+editor:
+  markdown:
     wrap: 150
-bibliography: ../../vignettes/references.bib
-link-citations: true
 ---
 
 # Purpose
 
-This report compares the outputs of `FADN2Footprint` (v`r packageVersion("FADN2Footprint")`)
-against the national inventories.
-An estimate is flagged **in range** if it falls within the literature min–max,
-**within tolerance** if the relative deviation from the literature midpoint is
-below a per-indicator threshold, or **out of range** otherwise.
+This report compares national-level greenhouse-gas estimates from `FADN2Footprint` with the UNFCCC CRT 2026 inventory extract. The package run uses
+its published mock FADN dataset; confidential farm-level data are not loaded or required.
+
+The current direct comparison covers the top-level agriculture categories in Table 3 for enteric fermentation (3.A), manure management (3.B), and
+agricultural soils (3.D), where the package and inventory both report total emissions in CO2 equivalents. Results are shown in kt CO2-eq. They are
+descriptive comparisons, not an independent validation: the package run uses mock data and the FADN and inventory estimates may differ in coverage and
+methodology.
 
 # Setup
 
 ```{r setup}
+#| message: false
+#| warning: false
 
 library(dplyr)
 library(tidyr)
@@ -43,231 +34,729 @@ library(zip)
 
 library(ggplot2)
 
+# pak::pak("sarah-huet/FADN2Footprint")
+# Y
+# library(FADN2Footprint)
 devtools::load_all()
-#library(FADN2Footprint)
+
+wd_path <- "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint"
+
+crt_path <- file.path(wd_path, "AI_agents", "outputs", "crt_variables_long.csv")
+
+fadn_data_path <- file.path(wd_path, "data_raw")
+```
+
+# UNFCCC CRT 2026 data
+
+The long CRT extract is produced from the 2026 submissions using the label-based cell mapping described in
+[`extract_crt_2026.py`](../scripts/extract_crt_2026.py). It retains the country, inventory year, sheet, category label/code, variable label, numeric
+value, notation flag, and unit checks. Source workbooks and extraction methodology are documented at the [UNFCCC inventory
+portal](https://unfccc.int/reports?f%5B0%5D=document_type%3A4593&f%5B1%5D=year%3A2026).
+
+```{r load_crt}
+
+crt_data <- utils::read.csv(
+    crt_path,
+    stringsAsFactors = FALSE,
+    na.strings = c("", "NA"),
+    check.names = FALSE
+) |>
+    # harmonized categories
+    dplyr::mutate(
+        UNFCCC_livcat = dplyr::case_when(
+            stringr::str_detect(category, stringr::regex("non\\s*-?\\s*dairy\\s*-?\\s*cattle", ignore_case = TRUE)) ~ "non_dairy_cattle",
+            stringr::str_detect(category, stringr::regex("dairy\\s*-?\\s*cattle", ignore_case = TRUE)) ~ "dairy_cattle",
+            stringr::str_detect(category, stringr::regex("cattle", ignore_case = TRUE)) ~ "cattle",
+            stringr::str_detect(category, stringr::regex("swine", ignore_case = TRUE)) ~ "swine",
+            stringr::str_detect(category, stringr::regex("poultry", ignore_case = TRUE)) ~ "poultry",
+            stringr::str_detect(category, stringr::regex("sheep", ignore_case = TRUE)) ~ "sheep",
+            TRUE ~ NA_character_
+        ),
+        UNFCCC_crop = dplyr::case_when(
+            stringr::str_detect(category, stringr::regex("wheat", ignore_case = TRUE)) ~ "wheat",
+            stringr::str_detect(category, stringr::regex("barley", ignore_case = TRUE)) ~ "barley",
+            stringr::str_detect(category, stringr::regex("maize", ignore_case = TRUE)) ~ "maize",
+            TRUE ~ NA_character_
+        )
+    )
+
+# crt_data |>
+#  dplyr::filter(iso3 == "SWE", year == 2020) |>
+#  dplyr::select(category, category_code, UNFCCC_livcat, UNFCCC_crop) |>
+#  dplyr::distinct() |>
+#  gt()
+
+#crt_data |>
+#    dplyr::filter(iso3 == "SWE", year == 2020) |>
+#    reactable::reactable(searchable = TRUE, filterable = TRUE)
 
 ```
 
-# UNFCCC data
+Check notation keys: if IE (i.e., included somewhere else), emissions could be accounted for in another category
+Script for analysis and parameter retrieval should flag "IE".
 
-## Extract raw data
+List of variables that is compared between the FADN2Footprint estimation and the UNFCCC reports:
+ - Table3 SECTORAL REPORT FOR AGRICULTURE
+    -   Total GHG emissions of enteric fermentation for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine
+   - Total GHG emissions of manure management for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine
+   - Total GHG emissions of agricultural soils for direct N2O emissions from managed soils, inorganic fertilizers, organic fertilizers and crop residues
+   - Total GHG emissions of agricultural soils for indirect N2O emissions from managed soils
+ - Table3.A Enteric Fermentation
+   - Population size for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine
+   - Average gross energy intake (GE) for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine
+   - Emissions (CH4) for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine
+ - Table3.B(a) CH4 Emissions from Manure Management
+   - Emissions (CH4) for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine
+ - Table3.B(b) N2O Emissions from Manure Management
+   - Total N excreted for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine
+   - Direct Emissions (N2O) for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine
+   - Total N volatilised as NH3, NOx and N2 for Indirect N2O emissions
+   - Indirect Emissions (N2O) due to atmospheric deposition
+   - Indirect Emissions (N2O) due to nitrogen leaching and runoff
+ - Table3.D Direct and indirect N2O emissions from agricultural soils
+   - Activity data value (t N) for Direct N2O emissions from managed soils
+   - Activity data value (t N) for Inorganic N fertilizers
+   - Activity data value (t N) for Organic N fertilizers
+   - Activity data value (t N) for Animal manure applied to soils
+   - Activity data value (t N) for Other organic fertilizers applied to soils
+   - Activity data value (t N) for Urine and dung deposited by grazing animals
+   - Activity data value (t N) for Crop residues
+   - Activity data value (t N) for Indirect N2O Emissions from managed soils
+   - Activity data value (t N) for Atmospheric deposition
+   - Activity data value (t N) for Nitrogen leaching and run-off
+   - Emissions of N2O due to Direct N2O emissions from managed soils
+   - Emissions of N2O due to Inorganic N fertilizers
+   - Emissions of N2O due to Organic N fertilizers
+   - Emissions of N2O due to Animal manure applied to soils
+   - Emissions of N2O due to Other organic fertilizers applied to soils
+   - Emissions of N2O due to Urine and dung deposited by grazing animals
+   - Emissions of N2O due to Crop residues
+   - Emissions of N2O due to Indirect N2O Emissions from managed soils
+   - Emissions of N2O due to Atmospheric deposition
+   - Emissions of N2O due to Nitrogen leaching and run-off
+ - Table3.F Field burning of agricultural residues
+   - Crop production for wheat, barley and maize
+ - Table4.B Cropland
+   - Total cropland area
+ - Table4.C Grassland
+   - Total grassland area
 
-```{r UNFCCC_raw_data, echo=FALSE, message=FALSE}
-
-# Raw UNFCCC files
-folder_path = "C:/Users/srhuet/OneDrive/Research/Data/UNFCCC_ghg_inventories/"
-
-
-# Wrangle UNFCCC files ----
-UNFCCC_data_validation <- list(
-     "Summary1.As2" = tibble(),
-     "Table3" = tibble(),
-     "Table3.D" = tibble()
-)
-
-#for (loop_zip in list.files(folder_path)) {
-loop_zip = list.files(folder_path)[12]
-
-
-loop_files = zip_list(paste0(folder_path,loop_zip))
-loop_data_country = toupper(str_sub(loop_zip,1,3))
-print(loop_data_country)
-
-for (loop_data_year in c("2018", "2019", "2020")) {
-     #loop_data_year = sub(paste0("^",loop_data_country,"_2023_(\\d{4})_.*$"), "\\1", loop_files$filename)[29]
-     print(loop_data_year)
-     
-     
-     loop_unzip <- tempfile()
-     loop_unzip <- utils::unzip(zipfile =  paste0(folder_path,loop_zip),
-                                files = loop_files$filename[grep(paste0("_",loop_data_year,"_"),loop_files$filename)])
-     
-     ## SUMMARY 1.A  SUMMARY REPORT FOR NATIONAL GREENHOUSE GAS INVENTORIES ----
-     #sheet Summary1.As2
-     
-     # read file
-     loop_raw_sheet <- read_excel(loop_unzip,sheet = "Summary1.As2", col_names = F)
-     # select table
-     loop_range <- loop_raw_sheet[seq(which(grepl("Agriculture",loop_raw_sheet$...1)),max(which(is.na(loop_raw_sheet$...1)))-1),]
-     # retrieve column names
-     loop_colnames <- as.character(loop_raw_sheet[which(grepl("SOURCE",loop_raw_sheet$...1)),])
-     colnames(loop_range) <- loop_colnames
-     
-     # frame tibble
-     loop_table <- as_tibble(loop_range) |>
-          # numeric values
-          dplyr::mutate(dplyr::across(
-               .cols = dplyr::all_of(loop_colnames[-1]),
-               .fns = ~ suppressWarnings(as.numeric(.))
-          )) |>
-          # add country and year
-          dplyr::mutate(
-               Country_ISO_3166_1_A3 = loop_data_country,
-               YEAR = as.character(loop_data_year)
-          )
-     
-     UNFCCC_data_validation$Summary1.As2 <- dplyr::bind_rows(UNFCCC_data_validation$Summary1.As2, loop_table)
-     
-     ## TABLE 3 SECTORAL REPORT FOR AGRICULTURE ----
-     #sheet Table3s1 Table3s2
-     
-     # read file
-     loop_raw_sheet <- read_excel(loop_unzip,sheet = "Table3s1", col_names = F)
-     # select table
-     loop_range <- loop_raw_sheet[seq(which(grepl("Total agriculture",loop_raw_sheet$...1)),max(which(is.na(loop_raw_sheet$...1)))-1),]
-     # retrieve column names
-     loop_colnames <- as.character(loop_raw_sheet[which(grepl("SOURCE",loop_raw_sheet$...1)),])
-     colnames(loop_range) <- loop_colnames
-     
-     # frame tibble
-     loop_table <- as_tibble(loop_range) |>
-          # numeric values
-          dplyr::mutate(dplyr::across(
-               .cols = dplyr::all_of(loop_colnames[-1]),
-               .fns = ~ suppressWarnings(as.numeric(.))
-          )) |>
-          # add country and year
-          dplyr::mutate(
-               Country_ISO_3166_1_A3 = loop_data_country,
-               YEAR = as.character(loop_data_year)
-          )
-     
-     UNFCCC_data_validation$Table3 <- dplyr::bind_rows(UNFCCC_data_validation$Table3, loop_table)
-     
-     # read file
-     loop_raw_sheet <- read_excel(loop_unzip,sheet = "Table3s2", col_names = F)
-     # select table
-     loop_range <- loop_raw_sheet[seq(which(grepl("Rice cultivation",loop_raw_sheet$...1)),which(grepl("J.  Other",loop_raw_sheet$...1))),]
-     # retrieve column names
-     loop_colnames <- as.character(loop_raw_sheet[which(grepl("SOURCE",loop_raw_sheet$...1)),])
-     colnames(loop_range) <- loop_colnames
-     
-     # frame tibble
-     loop_table <- as_tibble(loop_range) |>
-          # numeric values
-          dplyr::mutate(dplyr::across(
-               .cols = dplyr::all_of(loop_colnames[-1]),
-               .fns = ~ suppressWarnings(as.numeric(.))
-          )) |>
-          # add country and year
-          dplyr::mutate(
-               Country_ISO_3166_1_A3 = loop_data_country,
-               YEAR = as.character(loop_data_year)
-          )
-     
-     UNFCCC_data_validation$Table3 <- dplyr::bind_rows(UNFCCC_data_validation$Table3, loop_table)
-     
-     ## TABLE 3.D Direct and indirect N2O emissions from agricultural soils ----
-     # sheet Table3.D
-     
-     # read file
-     loop_raw_sheet <- read_excel(loop_unzip,sheet = "Table3.D", col_names = F)
-     # select table
-     loop_range <- loop_raw_sheet[seq(which(grepl("Direct N2O emissions",loop_raw_sheet$...1)),
-                                      which(grepl("Nitrogen leaching and run-off",loop_raw_sheet$...1))),]
-     # retrieve column names
-     loop_colnames <- t(loop_raw_sheet[c( which(grepl("GREENHOUSE GAS",loop_raw_sheet$...1)):
-                                               (which(grepl("GREENHOUSE GAS",loop_raw_sheet$...1))+2)),]) |>
-          transform(V0 = paste(coalesce(V1,""),coalesce(V2,""),coalesce(V3,"")))
-     colnames(loop_range) <- loop_colnames$V0
-     
-     # frame tibble
-     loop_table <- as_tibble(loop_range) |>
-          # numeric values
-          dplyr::mutate(dplyr::across(
-               .cols = dplyr::all_of(loop_colnames$V0[-c(1,2)]),
-               .fns = ~ suppressWarnings(as.numeric(.))
-          )) |>
-          # add country and year
-          dplyr::mutate(
-               Country_ISO_3166_1_A3 = loop_data_country,
-               YEAR = as.character(loop_data_year)
-          )
-     
-     UNFCCC_data_validation$Table3.D <- dplyr::bind_rows(UNFCCC_data_validation$Table3.D, loop_table)
-     
-     
-     
-     unlink(loop_unzip)
-}
-#}
-
-#
-#
-# TABLE 3 SECTORAL BACKGROUND DATA FOR AGRICULTURE
-# 3.A Enteric Fermentation 
-# sheet Table3.As1
-#
-# 3.B(a) CH4 Emissions from Manure Management
-# sheet Table3.B(a)s1
-#
-# 3.B(b) N2O Emissions from Manure Management
-# sheet Table3.B(b)
-#
-
-rm(list = names(.GlobalEnv)[grepl("loop_", names(.GlobalEnv))])
-rm(folder_path)
-
-```
+The catalogue above records the detailed inventory variables under consideration. A detailed FADN-to-CRT match is only reported below when the package
+output exposes an equivalent measure with a compatible unit and aggregation. Notation keys (for example `NO` and `NE`) are retained in the extract and
+are never converted to numeric zero.
 
 # Package output
 
-## Run package
+Here, we use European FADN data for all member states, years 2018–2021, and run the `FADN2Footprint` package to estimate the greenhouse gas emissions.
 
 ```{r load_data, echo=FALSE, message=TRUE, warning=FALSE}
 
 ## Load raw data and run model
-#source("validation_FADN_data.R")
-#source("validation_FADN_data_offline.R")
-## 
-#load("../../data_raw/FADN_FRA_2018_2021_obj_practices.RData")
-load("../../data_raw/FADN_FRA_2018_2021_obj_GHGE.RData")
-#my_object_GHGE <- m_prune_farms(my_object_GHGE,
+# source("validation_FADN_data.R")
+# source("validation_FADN_data_offline.R")
+##
+load(file.path(wd_path, "/data_raw/FADN_EU_17_21_obj_GHGE.RData"))
+# my_object_GHGE <- m_prune_farms(my_object_GHGE,
 #                                YEAR %in% c("2018", "2019", "2020"))
 
-id_cols = my_object_GHGE@traceability$id_cols
+id_cols <- my_object_GHGE@traceability$id_cols
 
 cat("FADN dataset loaded:", nrow(my_object_GHGE@farm), "farm-year observations\n")
 cat("Countries covered:", paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "), "\n")
 cat("Years covered:", paste(sort(unique(my_object_GHGE@farm$YEAR)), collapse = ", "), "\n")
-
-```
-## Agregate outputs
-
-```{r crops}
-
-# a. Direct N2O emissions from managed soils 	
-# 1.   Inorganic N fertilizers(3)	N input from application of inorganic fertilizers to cropland and grassland
-crops_n_min_input <- my_object_GHGE@practices$crops$N_ferti |>
-     # add agregation weight
-     dplyr::left_join(my_object_GHGE@farm |>
-                           dplyr::select(dplyr::all_of(id_cols), SYS02),
-                      by = id_cols) |>
-     # sum up by country and year
-     dplyr::summarise(
-          N_ferti_min = sum(N_ferti_min * area_ha * SYS02, na.rm = TRUE),
-          .by = c(COUNTRY, YEAR)
-     )
-
-
-# 2.   Organic N fertilizers(3)	N input from organic N fertilizers to cropland and grassland
-#       a. Animal manure applied to soils	N input from manure applied to soils
-#       b. Sewage sludge applied to soils	N input from sewage sludge applied to soils
-#       c. Other organic fertilizers applied to soils	N input from application of other organic fertilizers
-# 3.   Urine and dung deposited by grazing animals	N excretion on pasture, range and paddock
-# 4.   Crop residues	N in crop residues returned to soils
-# 5.  Mineralization/immobilization associated with loss/gain of soil organic matter (4)(5)	N in mineral soils that is mineralized in association with loss # of soil C
-# 6.   Cultivation of organic soils (i.e. histosols)(2)	Area of cultivated organic soils
-# 7.   Other	
-
-
-# b. Indirect N2O Emissions from managed soils 	
-# 1.   Atmospheric deposition(6)	Volatilized N from agricultural inputs of N
-# 2.   Nitrogen leaching and run-off	N from fertilizers and other agricultural inputs that is lost through leaching and run-off
-
-
-
 ```
 
+```{r farm_characteristics}
+
+farm_charac <- my_object_GHGE@farm |>
+    dplyr::select(dplyr::all_of(c(id_cols, "SYS02"))) |>
+    # add ISO country names
+    dplyr::left_join(
+        data_extra$country_names |>
+            dplyr::transmute(
+                COUNTRY = country_FADN,
+                iso3 = Country_ISO_3166_1_A3
+            ) |>
+            dplyr::distinct(),
+        by = "COUNTRY"
+    )
+```
+
+# Comparison of F2F with UNFCCC data
+
+## Crop areas and production
+
+```{r area_unfccc}
+
+# cropland area
+crt_crop_area <- crt_data |>
+    dplyr::filter(
+        grepl("Total area", variable),
+        grepl("Total cropland", category)
+    ) |>
+    dplyr::mutate(
+        YEAR = as.character(year)
+    ) |>
+    dplyr::select(iso3, YEAR, UNFCCC_livcat, value) |>
+    dplyr::distinct() |>
+    # values are reported in kha
+    dplyr::summarise(
+        crop_area = sum(value * 1000, na.rm = TRUE),
+        .by = c(iso3, YEAR)
+    )
+# crt_crop_area  |> head() |> gt()
+
+# grassland area
+crt_grassland_area <- crt_data |>
+    dplyr::filter(
+        grepl("Total area", variable),
+        grepl("Total grassland", category)
+    ) |>
+    dplyr::mutate(
+        YEAR = as.character(year)
+    ) |>
+    dplyr::select(iso3, YEAR, UNFCCC_livcat, value) |>
+    dplyr::distinct() |>
+    # values are reported in kha
+    dplyr::summarise(
+        grassland_area = sum(value * 1000, na.rm = TRUE),
+        .by = c(iso3, YEAR)
+    )
+# crt_grassland_area  |> head() |> gt()
+
+# join cropland and grassland area
+crt_area <- dplyr::left_join(
+    crt_crop_area,
+    crt_grassland_area,
+    by = c("iso3", "YEAR")
+) |>
+    dplyr::mutate(
+        total_area = crop_area + grassland_area
+    )
+```
+
+```{r area_f2f_crop}
+
+# Sum of individual crops
+f2f_area_crop <- my_object_GHGE@crop |>
+    # add farm characteristics
+    dplyr::left_join(farm_charac,
+        by = id_cols
+    ) |>
+    dplyr::summarise(
+        total_area = sum(area_ha * SYS02, na.rm = TRUE),
+        .by = c(iso3, YEAR, land_use_type)
+    )
+# f2f_area_crop |> head() |> gt()
+
+# With Total Crop Area variable SE025
+f2f_area_tot <- my_object_GHGE@farm |>
+    dplyr::select(dplyr::all_of(id_cols), SE025) |>
+    # add farm characteristics
+    dplyr::left_join(farm_charac,
+        by = id_cols
+    ) |>
+    dplyr::summarise(
+        total_area = sum(SE025 * SYS02, na.rm = TRUE),
+        .by = c(iso3, YEAR)
+    )
+```
+
+TODO: for the ratio, add fallow and other land to f2f areas
 
 
+
+
+We distinguish grassland and cropland.
+
+### Cropland
+
+```{r comp_crop_area_unfccc_f2f_crop}
+
+# Shared countries and years
+shared_cat <- dplyr::intersect(
+    f2f_area_crop |> dplyr::select(iso3, YEAR),
+    crt_crop_area |> dplyr::select(iso3, YEAR)
+)
+# shared_cat |> gt()
+
+# Compare value per livestock category and per year
+# Filter to shared countries and years
+comp_crop_area <- dplyr::bind_rows(
+    f2f_area_crop  |> 
+      dplyr::filter(land_use_type == "arable") |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR")) |>
+        dplyr::mutate(source = "f2f"),
+    crt_crop_area |>
+      dplyr::rename(total_area = crop_area) |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR")) |>
+        dplyr::mutate(source = "crt")
+)
+# comp_crop_area |> reactable::reactable(searchable = T, filterable = T)
+
+## plot
+p <- comp_crop_area |>
+    dplyr::mutate(
+        country_year = paste0(iso3, "_", YEAR)
+    ) |>
+    ggplot2::ggplot() +
+    ggplot2::aes(x = country_year, y = total_area, fill = source) +
+    ggplot2::geom_col(position = "dodge") +
+    ggplot2::coord_flip() +
+    ggplot2::labs(
+        title = "Comparison of Crop Area",
+        x = "Country & Year",
+        y = "Crop Area (ha)",
+        fill = "Source"
+    ) +
+    ggplot2::theme_minimal()
+p
+```
+
+### Grassland
+
+```{r comp_grassland_area_unfccc_f2f_crop}
+
+# Shared countries and years
+shared_cat <- dplyr::intersect(
+    f2f_area_crop |> dplyr::select(iso3, YEAR),
+    crt_grassland_area |> dplyr::select(iso3, YEAR)
+)
+# shared_cat |> gt()
+
+# Compare value per livestock category and per year
+# Filter to shared countries and years
+comp_crop_area <- dplyr::bind_rows(
+    f2f_area_crop  |> 
+      dplyr::filter(land_use_type == "grassland") |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR")) |>
+        dplyr::mutate(source = "f2f"),
+    crt_grassland_area |>
+      dplyr::rename(total_area = grassland_area) |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR")) |>
+        dplyr::mutate(source = "crt")
+)
+# comp_crop_area |> reactable::reactable(searchable = T, filterable = T)
+
+## plot
+p <- comp_crop_area |>
+    dplyr::mutate(
+        country_year = paste0(iso3, "_", YEAR)
+    ) |>
+    ggplot2::ggplot() +
+    ggplot2::aes(x = country_year, y = total_area, fill = source) +
+    ggplot2::geom_col(position = "dodge") +
+    ggplot2::coord_flip() +
+    ggplot2::labs(
+        title = "Comparison of Grassland Area",
+        x = "Country & Year",
+        y = "Grassland Area (ha)",
+        fill = "Source"
+    ) +
+    ggplot2::theme_minimal()
+p
+```
+
+### All land use
+
+```{r comp_area_unfccc_f2f_crop}
+
+# Shared countries and years
+shared_cat <- dplyr::intersect(
+    f2f_area_crop |> dplyr::select(iso3, YEAR),
+    crt_area |> dplyr::select(iso3, YEAR)
+)
+# shared_cat |> gt()
+
+# Compare value per livestock category and per year
+# Filter to shared countries and years
+comp_crop_area <- dplyr::bind_rows(
+    f2f_area_crop |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR")) |>
+        dplyr::mutate(source = "f2f"),
+    crt_area |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR")) |>
+        dplyr::mutate(source = "crt")
+)
+# comp_crop_area |> reactable::reactable(searchable = T, filterable = T)
+
+## plot
+p <- comp_crop_area |>
+    dplyr::mutate(
+        country_year = paste0(iso3, "_", YEAR)
+    ) |>
+    ggplot2::ggplot() +
+    ggplot2::aes(x = country_year, y = total_area, fill = source) +
+    ggplot2::geom_col(position = "dodge") +
+    ggplot2::coord_flip() +
+    ggplot2::labs(
+        title = "Comparison of Crop and Grassland Area",
+        x = "Country & Year",
+        y = "Crop + Grassland Area (ha)",
+        fill = "Source"
+    ) +
+    ggplot2::theme_minimal()
+p
+```
+
+```{r area_ratio}
+
+area_ratio <- crt_area |>
+    dplyr::left_join(f2f_area_crop, by = c("iso3", "YEAR"), suffix = c("_crt", "_f2f")) |>
+    dplyr::mutate(
+        ratio = total_area_crt / total_area_f2f
+    )
+# area_ratio |> head() |> gt()
+```
+
+## Livestock population
+
+```{r pop_size_UNFCCC}
+
+# UNFCCC
+crt_pop_size <- crt_data |>
+    dplyr::filter(grepl("Population size", variable)) |>
+    dplyr::mutate(
+        YEAR = as.character(year)
+    ) |>
+    dplyr::select(iso3, YEAR, UNFCCC_livcat, value) |>
+    dplyr::distinct() |>
+    dplyr::summarise(
+        pop_size = sum(value * 1000, na.rm = TRUE),
+        .by = c(iso3, YEAR, UNFCCC_livcat)
+    )
+# crt_pop_size  |> reactable::reactable(searchable = TRUE, filterable = TRUE)
+```
+
+The retrieved UNFCCC data are comparable to FAO data (https://www.fao.org/faostat/en/#data/QCL).
+
+```{r pop_size_f2f_herd}
+# F2F
+f2f_pop_size <- my_object_GHGE@herd |>
+    # add farm characteristics
+    dplyr::left_join(farm_charac,
+        by = id_cols
+    ) |>
+    dplyr::mutate(
+        UNFCCC_livcat = dplyr::case_when(
+            FADN_code_letter == "LCOWDAIR" ~ "dairy_cattle",
+            species == "cattle" ~ "non_dairy_cattle",
+            .default = species
+        )
+    ) |>
+    dplyr::summarise(
+        # pop_size = sum(Qobs * livestock_unit_coef * SYS02, na.rm = TRUE),
+        pop_size = sum(Qobs * SYS02, na.rm = TRUE),
+        .by = c(iso3, YEAR, UNFCCC_livcat)
+    )
+# f2f_pop_size |> head() |> gt()
+```
+
+
+```{r comp_pop_size_unfccc_f2f_herd}
+
+# Shared countries and years
+shared_cat <- dplyr::intersect(
+    f2f_pop_size |> dplyr::select(iso3, YEAR, UNFCCC_livcat),
+    crt_pop_size |> dplyr::select(iso3, YEAR, UNFCCC_livcat)
+)
+# shared_cat |> gt()
+
+# Compare value per livestock category and per year
+
+# table of comparison
+comp_pop_sum_crt_f2f <- crt_pop_size |>
+  dplyr::semi_join(shared_cat, by = c("iso3", "YEAR", "UNFCCC_livcat")) |>
+    dplyr::rename(pop_size_crt = pop_size) |>
+  dplyr::left_join(
+    f2f_pop_size |>
+      dplyr::semi_join(shared_cat, by = c("iso3", "YEAR", "UNFCCC_livcat")) |>
+    dplyr::rename(pop_size_f2f = pop_size),
+    by = c("iso3", "YEAR", "UNFCCC_livcat")
+  ) |>
+  dplyr::mutate(
+    rel_diff = (pop_size_crt - pop_size_f2f) / pop_size_crt
+  )
+# comp_pop_sum_crt_f2f |> reactable::reactable(searchable = T, filterable = T)
+
+
+# scatterplot comparison of livestock population between CRT and F2F output
+comp_pop_sum_crt_f2f |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = pop_size_crt, y = pop_size_f2f) +
+  #ggplot2::geom_col(position = "dodge") +
+  ggplot2::geom_point(aes(color = iso3, fill = factor(YEAR)),
+                      shape = 21, size = 3, stroke = 2) +
+  ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  paletteer::scale_color_paletteer_d("palettesForR::Tango") +
+  paletteer::scale_fill_paletteer_d("khroma::smoothrainbow") +
+  ggplot2::labs(
+    title = "Comparison of Livestock Population between CRT and F2F output",
+    x = "Livestock Population from CRT",
+    y = "Livestock Population from F2F output",
+    color = "Country",
+    fill = "Year"
+  ) +
+  ggplot2::facet_wrap(~UNFCCC_livcat, scales = "free") +
+  ggplot2::theme_minimal()
+
+# plot heatmap of relative difference in livestock population
+comp_pop_sum_crt_f2f |>
+  ggplot2::ggplot() +
+  ggplot2::geom_tile(aes(x = YEAR, y = iso3, fill = rel_diff)) +
+  ggplot2::scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B"
+  ) +
+  ggplot2::facet_wrap(~UNFCCC_livcat, nrow = 2) +
+  ggplot2::labs(
+    x = "Year",
+    y = "Country",
+    fill = "Relative Difference"
+  ) +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = -0.1)
+  )
+
+```
+
+As the FADN does not capture all the livestock population, we calculate a ratio to rescale livestock activity and emissions based on the comparison of population sizes between the F2F and UNFCCC data.
+
+```{r pop_ratio}
+
+pop_ratio <- crt_pop_size |>
+    dplyr::left_join(f2f_pop_size, by = c("iso3", "YEAR", "UNFCCC_livcat"), suffix = c("_crt", "_f2f")) |>
+    dplyr::mutate(
+        ratio = pop_size_crt / pop_size_f2f
+    )
+# pop_ratio |> head() |> gt()
+```
+
+## National activity data
+
+List of activity variables that is compared between the FADN2Footprint estimation and the UNFCCC reports: 
+- Table3.A Enteric Fermentation 
+   - Population size for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine 
+   - Average gross energy intake (GE) for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine 
+- Table3.B(b) N2O Emissions from Manure Management 
+   - Total N excreted for cattle, dairy cattle (LCOWDAIR in FADN), non dairy cattle, swine 
+- Table3.D Direct and indirect N2O emissions from agricultural soils 
+   - Activity data value (t N) for Direct N2O emissions from managed soils 
+   - Activity data value (t N) for Inorganic N fertilizers 
+   - Activity data value (t N) for Organic N fertilizers 
+   - Activity data value (t N) for Animal manure applied to soils 
+   - Activity data value (t N) for Other organic fertilizers applied to soils 
+   - Activity data value (t N) for Urine and dung deposited by grazing animals 
+   - Activity data value (t N) for Crop residues 
+   - Activity data value (t N) for Indirect N2O Emissions from managed soils 
+   - Activity data value (t N) for Atmospheric deposition 
+   - Activity data value (t N) for Nitrogen leaching and run-off 
+- Table3.F Field burning of agricultural residues 
+   - Crop production for wheat, barley and maize 
+- Table4.B Cropland 
+   - Total cropland area 
+- Table4.C Grassland 
+   - Total grassland area
+
+### Average gross energy intake
+
+```{r avrg_GE}
+# Average gross energy intake (GE) (MJ/head/day)
+
+# UNFCCC
+crt_avrg_GE <- crt_data |>
+    dplyr::filter(grepl("gross energy", variable)) |>
+    dplyr::mutate(
+        YEAR = as.character(year)
+    ) |>
+    dplyr::select(iso3, YEAR, UNFCCC_livcat, value) |>
+    dplyr::distinct() |>
+    dplyr::summarise(
+        avrg_GE = mean(value, na.rm = TRUE),
+        .by = c(iso3, YEAR, UNFCCC_livcat)
+    )
+# crt_avrg_GE  |> view()
+
+# F2F
+f2f_avrg_GE <- my_object_GHGE@practices$herding$feed$feed_intake$total |>
+    # add farm characteristics
+    dplyr::left_join(farm_charac,
+        by = id_cols
+    ) |>
+    dplyr::mutate(
+        UNFCCC_livcat = dplyr::case_when(
+            FADN_code_letter == "LCOWDAIR" ~ "dairy_cattle",
+            species == "cattle" ~ "non_dairy_cattle",
+            .default = species
+        )
+    ) |>
+    dplyr::summarise(
+        avrg_GE = weighted.mean(GE_MJ_anim / 365, w = SYS02, na.rm = TRUE),
+        .by = c(iso3, YEAR, UNFCCC_livcat)
+    )
+# f2f_avrg_GE |> head() |> gt()
+
+# Shared countries and years
+shared_cat <- dplyr::intersect(
+    f2f_avrg_GE |> dplyr::select(iso3, YEAR, UNFCCC_livcat),
+    crt_avrg_GE |> dplyr::select(iso3, YEAR, UNFCCC_livcat)
+)
+# shared_cat |> reactable::reactable(searchable = TRUE, filterable = TRUE)
+
+# Compare value per livestock category and per year
+# Filter to shared countries and years
+comp_avrg_GE <- dplyr::bind_rows(
+    f2f_avrg_GE |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR", "UNFCCC_livcat")) |>
+        dplyr::mutate(source = "f2f"),
+    crt_avrg_GE |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR", "UNFCCC_livcat")) |>
+        dplyr::mutate(source = "crt")
+)
+# comp_avrg_GE |> reactable::reactable(searchable = TRUE, filterable = TRUE)
+
+## plot
+p <- comp_avrg_GE |>
+    dplyr::mutate(
+        country_year = paste0(iso3, "_", YEAR)
+    ) |>
+    ggplot2::ggplot() +
+    ggplot2::aes(x = country_year, y = avrg_GE, fill = source) +
+    ggplot2::geom_col(position = "dodge") +
+    ggplot2::facet_wrap(~UNFCCC_livcat, scales = "free_x") +
+    ggplot2::coord_flip() +
+    ggplot2::theme_minimal() +
+    ggplot2::labs(
+        title = "Comparison of Average Gross Energy Intake",
+        x = "Country & Year",
+        y = "Average GE (MJ/head/day)"
+    )
+p
+```   
+
+### Nitrogen excretion and fertilizers
+
+```{r tot_N_excr}
+# Total N excreted (kg N/yr)
+
+# UNFCCC
+crt_tot_N_excr <- crt_data |>
+    dplyr::filter(grepl("Total N excreted", variable, ignore.case = TRUE)) |>
+    dplyr::mutate(
+        YEAR = as.character(year)
+    ) |>
+    dplyr::select(iso3, YEAR, UNFCCC_livcat, value) |>
+    dplyr::distinct() |>
+    dplyr::summarise(
+        tot_N_excr = sum(value, na.rm = TRUE),
+        .by = c(iso3, YEAR, UNFCCC_livcat)
+    )
+# crt_tot_N_excr  |> dplyr::filter(iso3 == "FRA", YEAR == "2016") |> gt()
+
+# F2F
+f2f_tot_N_excr <- my_object_GHGE@practices$herding$N_excretion |>
+    lapply(function(x) {
+        x |>
+            # add farm characteristics
+            dplyr::left_join(farm_charac,
+                by = id_cols
+            ) |>
+            dplyr::mutate(
+                UNFCCC_livcat = dplyr::case_when(
+                    FADN_code_letter == "LCOWDAIR" ~ "dairy_cattle",
+                    species == "cattle" ~ "non_dairy_cattle",
+                    .default = species
+                )
+            ) |>
+            dplyr::summarise(
+                tot_N_excr = sum(Nex_kgN_livcat_y * SYS02, na.rm = TRUE),
+                .by = c(iso3, YEAR, UNFCCC_livcat)
+            )
+    }) |>
+    dplyr::bind_rows()
+# f2f_tot_N_excr |> head() |> gt()
+
+# Shared countries and years
+shared_cat <- dplyr::intersect(
+    f2f_tot_N_excr |> dplyr::select(iso3, YEAR, UNFCCC_livcat),
+    crt_tot_N_excr |> dplyr::select(iso3, YEAR, UNFCCC_livcat)
+)
+# shared_cat |> gt()
+
+# Compare value per livestock category and per year
+# Filter to shared countries and years
+comp_tot_N_excr <- dplyr::bind_rows(
+    f2f_tot_N_excr |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR", "UNFCCC_livcat")) |>
+        dplyr::mutate(source = "f2f"),
+    crt_tot_N_excr |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR", "UNFCCC_livcat")) |>
+        dplyr::mutate(source = "crt")
+)
+# comp_tot_N_excr |> reactable::reactable(searchable = T, filterable = T)
+
+## plot
+p <- comp_tot_N_excr |>
+    dplyr::mutate(
+        country_year = paste0(iso3, "_", YEAR)
+    ) |>
+    ggplot2::ggplot() +
+    ggplot2::aes(x = country_year, y = tot_N_excr, fill = source) +
+    ggplot2::geom_col(position = "dodge") +
+    ggplot2::facet_wrap(~UNFCCC_livcat, scales = "free_x") +
+    ggplot2::coord_flip() +
+    ggplot2::labs(
+        title = "Comparison of Total N excreted",
+        x = "Country & Year",
+        y = "Total N excreted (kg N/yr)"
+    ) +
+    ggplot2::theme_minimal()
+p
+```
+
+```{r tot_N_excr_rescaled}
+
+# Apply population ratio to F2F extimation
+f2f_tot_N_excr_rescaled <- f2f_tot_N_excr |>
+    dplyr::left_join(pop_ratio, by = c("iso3", "YEAR", "UNFCCC_livcat")) |>
+    dplyr::mutate(
+        tot_N_excr = tot_N_excr * ratio
+    )
+# f2f_tot_N_excr_rescaled |> head() |> gt()
+
+# Compare value per livestock category and per year
+# Filter to shared countries and years
+comp_tot_N_excr_rescaled <- dplyr::bind_rows(
+    f2f_tot_N_excr_rescaled |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR", "UNFCCC_livcat")) |>
+        dplyr::mutate(source = "f2f"),
+    crt_tot_N_excr |>
+        dplyr::semi_join(shared_cat, by = c("iso3", "YEAR", "UNFCCC_livcat")) |>
+        dplyr::mutate(source = "crt")
+)
+# comp_tot_N_excr_rescaled |> reactable::reactable(searchable = T, filterable = T)
+
+## plot
+p <- comp_tot_N_excr_rescaled |>
+    dplyr::mutate(
+        country_year = paste0(iso3, "_", YEAR)
+    ) |>
+    ggplot2::ggplot() +
+    ggplot2::aes(x = country_year, y = tot_N_excr, fill = source) +
+    ggplot2::geom_col(position = "dodge") +
+    ggplot2::facet_wrap(~UNFCCC_livcat, scales = "free_x") +
+    ggplot2::coord_flip() +
+    ggplot2::labs(
+        title = "Comparison of Total N excreted (Rescaled)",
+        x = "Country & Year",
+        y = "Total N excreted (kg N/yr)"
+    ) +
+    ggplot2::theme_minimal()
+p
+```
+
+```{r N_ferti_min}
+
+```

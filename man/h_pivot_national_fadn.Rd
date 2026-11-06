@@ -14,7 +14,15 @@ h_pivot_national_fadn(
 \arguments{
 \item{raw_tables}{Named list of raw national FADN data frames.}
 
-\item{dict_conversion}{A \code{fadn_dictionary} object from \code{read_dictionary()}.}
+\item{dict_conversion}{A \code{fadn_dictionary} object from \code{read_dictionary()}.
+Optional \code{value_mappings} recode categorical values after renaming;
+unmapped non-missing codes cause an error. Units otherwise remain those
+specified by the dictionary's unit conversions.
+Numeric \code{manual_matches} mapping to the same FADN variable are summed
+by farm-year after each source's unit conversion, including across tables.
+Missing numeric values are ignored (an all-missing source group sums to
+zero), and absent source columns produce a warning.
+Repeated categorical destinations are rejected rather than summed.}
 
 \item{table_config}{Named list mapping product groups to table/code_col.}
 
@@ -24,6 +32,10 @@ and used as grouping keys during pivoting.}
 }
 \value{
 A single wide data frame in EU FADN format (one row per farm).
+  Categorical codes are dimensionless; measurement units follow the dictionary.
+  French purchased grazing-feed values are in EUR: \code{AUTAC + HERAC}
+  yields \code{IGRFEDCNCTRPUR_V}, and \code{AUTAG + HERAG} yields
+  \code{IGRFEDCRSPUR_V} when specified in the conversion dictionary.
 }
 \description{
 Pivot and convert a national FADN to EU FADN format

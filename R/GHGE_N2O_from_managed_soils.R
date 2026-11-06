@@ -26,10 +26,10 @@
 #'   \item Nitrogen fertilization data from \code{\link{f_n_ferti}}:
 #'     synthetic N (\eqn{F_{SN}}) and organic N (\eqn{F_{ON}} or
 #'     \eqn{F_{PRP}}) per crop and farm.
-#'   \item Country- and year-specific emission factors from UNFCCC submissions
-#'     (\code{\link{UNFCCC_data}}\code{$EF_managed_soils}), matched by
-#'     \code{Country_ISO_3166_1_A3} and \code{YEAR}; cross-country means are
-#'     used as fallback when values are missing.
+#'   \item Country- and inventory-year-specific emission factors from UNFCCC
+#'     submissions (\code{\link{UNFCCC_data}}\code{$EF_managed_soils}), matched
+#'     by \code{Country_ISO_3166_1_A3} and \code{YEAR}.
+#'     Missing values are replaced by the mean of available factors.
 #'   \item IPCC crop-specific parameters (Tables 11.1 & 11.2) from
 #'     \code{\link{data_extra}}\code{$IPCC_default_values}, matched via
 #'     \code{condition_species}; generic values are applied when
@@ -241,10 +241,8 @@ f_GHGE_n2o_msoils <- function(object,
     ) |>
     # add EF from UNFCCC data
     dplyr::left_join(
-      UNFCCC_data$EF_managed_soils |>
-        dplyr::select(-YEAR),
-      by = c('Country_ISO_3166_1_A3')
-      #TODO: by = c('Country_ISO_3166_1_A3', 'YEAR')
+      UNFCCC_data$EF_managed_soils,
+      by = c('Country_ISO_3166_1_A3', 'YEAR')
     ) |>
     ## replace NAs by EF mean
     dplyr::mutate(
@@ -427,7 +425,5 @@ f_GHGE_n2o_msoils <- function(object,
   return(N2O_MS)
 
 }
-
-
 
 

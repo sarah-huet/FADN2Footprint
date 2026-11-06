@@ -26,7 +26,7 @@ f_herd_rearing_param_swine <- function(object){
 
   ## Steps:
   ## 1. Retrieve observed herd structure
-  ### We considered the observed animal stock as the mean between average, opening, and closing variables
+  ### Observed animal stock is the mean of average animal number and ALU-derived count
   ## 2. Modeling farm rearing process
   ### 2.1. Estimate animal flows between livestock categories
   ### 2.2. Estimate rearing parameters
@@ -217,4 +217,3 @@ f_herd_rearing_param_swine <- function(object){
   return(herd_rearing_param_swine)
 
 }
-

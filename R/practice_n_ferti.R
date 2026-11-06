@@ -50,8 +50,8 @@
 #'       \item **Mineral N**: Applied based on theoretical values, but set to 0 for organic farms.
 #'       \item **Organic N**: Determined by livestock N excretion. If livestock is present,
 #'         the amount of N excreted is used, capped by estimated EPK N thresholds
-#'         (minimum and maximum; stored in \code{data_extra$PKGC_N_ferti_org_thresholds}). If no livestock is present, the EPK average organic N
-#'         is used.
+#'         (minimum and maximum; stored in \code{data_extra$PKGC_N_ferti_org_thresholds}). If no livestock is present, the average organic N
+#'         input for farms that do not produce manure is used.
 #'     }
 #'   \item **Output Formatting**: Selects and returns the relevant N fertilization
 #'     variables. Messages are printed to the console to inform about the number of
@@ -154,6 +154,7 @@ f_n_ferti <- function(object, overwrite = FALSE) {
       values_from = c(Norg_avrg, Norg_thrhld_min, Norg_thrhld_max)
     ) |>
     dplyr::mutate(
+      EPK_Norg_no_manure = Norg_avrg_FALSE,
       Norg_thrhld_min = pmin(
         Norg_avrg_FALSE,
         Norg_thrhld_min_TRUE,
@@ -200,6 +201,7 @@ f_n_ferti <- function(object, overwrite = FALSE) {
         dplyr::summarise(
           EPK_Nmin = mean(EPK_Nmin, na.rm = T),
           EPK_Norg = mean(EPK_Norg, na.rm = T),
+          EPK_Norg_no_manure = mean(EPK_Norg_no_manure, na.rm = T),
           Norg_thrhld_min = min(Norg_thrhld_min, na.rm = T),
           Norg_thrhld_max = max(Norg_thrhld_max, na.rm = T),
           .by = c(species, ORGANIC)
@@ -212,6 +214,11 @@ f_n_ferti <- function(object, overwrite = FALSE) {
     dplyr::mutate(
       EPK_Nmin = ifelse(is.na(EPK_Nmin), mean(EPK_Nmin, na.rm = T), EPK_Nmin),
       EPK_Norg = ifelse(is.na(EPK_Norg), mean(EPK_Norg, na.rm = T), EPK_Norg),
+      EPK_Norg_no_manure = ifelse(
+        is.na(EPK_Norg_no_manure),
+        mean(EPK_Norg_no_manure, na.rm = T),
+        EPK_Norg_no_manure
+      ),
       Norg_thrhld_min = ifelse(
         is.na(Norg_thrhld_min),
         mean(Norg_thrhld_min, na.rm = T),
@@ -328,7 +335,7 @@ f_n_ferti <- function(object, overwrite = FALSE) {
       ### estimate N org
       N_ferti_org = case_when(
         ### if no livestock
-        livestock == F ~ EPK_Norg,
+        livestock == F ~ EPK_Norg_no_manure,
         ### if livestock: N excreted from livestock
         livestock == T &
           livestock_enough == T &
@@ -355,7 +362,7 @@ f_n_ferti <- function(object, overwrite = FALSE) {
         dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |>
         distinct()
     ),
-    " observations have no livestock. They receive the average national value as a standard value (see Methods)."
+    " observations have no livestock. They receive the average organic N input for farms that do not produce manure (see Methods)."
   )
   message(
     nrow(

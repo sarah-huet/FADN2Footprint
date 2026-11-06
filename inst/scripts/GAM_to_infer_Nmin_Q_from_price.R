@@ -17,7 +17,8 @@ my_data <- my_FADN_data |>
         N_min_ferti_Q = "INUSE_Q", # Quantity of N used in mineral fertilisers Quantity	in tonnes
         N_min_ferti_V = "SE295", # SE295	Purchased fertilisers and soil improvers (excluding those used for forests).
         TF14,
-        SIZC
+        SIZC,
+        SIZEUR
     ) |>
     dplyr::mutate(
         TF14 = as.factor(TF14),
@@ -54,13 +55,31 @@ comp <- my_data_Nmin_Q_pred |>
         )
     )
 
+mean_N_min_ferti_Q_estim_EUROSTAT <- mean(
+    comp$N_min_ferti_Q_estim_EUROSTAT,
+    na.rm = TRUE
+)
+sd_N_min_ferti_Q_estim_EUROSTAT <- sd(
+    comp$N_min_ferti_Q_estim_EUROSTAT,
+    na.rm = TRUE
+)
+
+# Remove outliers before fitting the GAM regression
+comp <- comp |>
+    dplyr::filter(
+        N_min_ferti_Q_estim_EUROSTAT <=
+            mean_N_min_ferti_Q_estim_EUROSTAT +
+                3 * sd_N_min_ferti_Q_estim_EUROSTAT
+    )
+
 #EUROSTAT_ferti_use_ratio |> view()
 
 # Check summary of relative differences for farms post 2017
-plot(comp$N_min_ferti_Q, comp$N_min_ferti_Q_estim_EUROSTAT)
-abline(a = 0, b = 1, col = "red")
+#plot(comp$N_min_ferti_Q, comp$N_min_ferti_Q_estim_EUROSTAT)
+#abline(a = 0, b = 1, col = "red")
 
 summary(comp$N_min_ferti_Q_rel_diff)
+summary(comp$N_min_ferti_Q_estim_EUROSTAT)
 #hist(comp$N_min_ferti_Q_rel_diff)
 
 # our inference overestimate the quantity of nitrogenous mineral fertilisers
@@ -68,15 +87,57 @@ summary(comp$N_min_ferti_Q_rel_diff)
 # GAM regression to model the relationship between actual and estimated quantity
 library(mgcv)
 # GAM regression
+## fix the smoothing parameter by hand (large sp = very smooth)
 gam_reg <- gam(
-    N_min_ferti_Q ~ s(N_min_ferti_Q_estim_EUROSTAT) + COUNTRY + TF14 + SIZC,
+    N_min_ferti_Q ~ s(N_min_ferti_Q_estim_EUROSTAT, sp = 10) +
+        COUNTRY +
+        TF14 +
+        SIZC,
     family = tw(),
     method = "REML",
     data = comp
 )
+#gam_reg2 <- gam(
+#    N_min_ferti_Q ~ s(N_min_ferti_Q_estim_EUROSTAT, sp = 10) + COUNTRY + TF14,
+#    family = tw(),
+#    method = "REML",
+#    data = comp
+#)
+#gam_reg <- gam_reg2
+
+#gam_reg3 <- gam(
+#    N_min_ferti_Q ~ s(N_min_ferti_Q_estim_EUROSTAT) + TF14,
+#    family = tw(),
+#    method = "REML",
+#    data = comp
+#)
+#gam_reg <- gam_reg3
+
+#gam_reg4 <- gam(
+#    N_min_ferti_Q ~ s(N_min_ferti_Q_estim_EUROSTAT, sp = 10),
+#    family = tw(),
+#    method = "REML",
+#    data = comp
+#)
+#gam_reg <- gam_reg4
+
+#load('data/N_min_inference_GAM.rda')
+#gam_reg <- N_min_inference_GAM
+
 summary(gam_reg)
-gam.check(gam_reg) # k suffisant ? résidus corrects ?
+#gam.check(gam_reg) # k suffisant ? résidus corrects ?
 gam_reg$family$getTheta(TRUE) # paramètre p de Tweedie, doit être entre 1 et 2
+
+plot(
+    gam_reg,
+    pages = 1,
+    shade = TRUE,
+    trans = exp,
+    shift = coef(gam_reg)[1],
+    seWithMean = TRUE,
+    residuals = FALSE
+)
+
 
 # use intercept and slope from the regression to adjust the estimated quantity
 p <- predict(gam_reg, newdata = comp, type = "link", se.fit = TRUE)
@@ -97,7 +158,15 @@ comp_adj <- comp |>
 
 
 # Check summary of relative differences for farms post 2017
-plot(comp_adj$N_min_ferti_Q, comp_adj$N_min_ferti_Q_estim_adjusted)
+plot(
+    comp_adj$N_min_ferti_Q_estim_EUROSTAT,
+    comp_adj$N_min_ferti_Q_estim_adjusted
+)
+abline(a = 0, b = 1, col = "red")
+plot(
+    comp_adj$N_min_ferti_Q,
+    comp_adj$N_min_ferti_Q_estim_adjusted
+)
 abline(a = 0, b = 1, col = "red")
 
 # Performance metrics

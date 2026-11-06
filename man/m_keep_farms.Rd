@@ -22,6 +22,14 @@ are retained across all data slots (farm, crop, herd, inputs, practices,
 footprints, etc.). It automatically handles nested lists and updates the
 traceability slot to log discarded farms (those NOT kept).
 }
+\details{
+This function filters a FADN2Footprint object so that ONLY the specified farms
+are retained across all data slots (farm, crop, herd, inputs, practices,
+footprints, etc.). It automatically handles nested lists and updates the
+traceability slot to log discarded farms (those NOT kept).
+
+Additionally, this function updates the traceability slot to log discarded farms.
+}
 \examples{
 \dontrun{
 # Define farms to keep (e.g., a study subset)

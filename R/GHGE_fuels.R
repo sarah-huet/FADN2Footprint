@@ -4,7 +4,7 @@
 #' Estimates greenhouse gas (GHG) emissions from the combustion of liquid fuels
 #' used on the farm, covering diesel (machinery and field operations) and
 #' heating fuels (buildings and facilities). Emission factors are country- and
-#' year-specific, sourced from UNFCCC national inventory submissions, following
+#' inventory-year-specific, sourced from UNFCCC national inventory submissions, following
 #' IPCC stationary and mobile combustion methodology.
 #'
 #' @details
@@ -20,11 +20,13 @@
 #' }
 #'
 #' ## Emission Factors
-#' Country- and year-specific CO2 emission factors (\eqn{EF_{fuel,CO2}},
+#' Country-specific CO2 emission factors (\eqn{EF_{fuel,CO2}},
 #' t CO2 TJ\eqn{^{-1}}) are sourced from UNFCCC submissions
-#' (\code{\link{UNFCCC_data}}\code{$EF_fuel}), matched by
-#' \code{Country_ISO_3166_1_A3} and \code{YEAR}. Cross-country means are
-#' used as fallback when country- or year-specific values are missing.
+#' (\code{\link{UNFCCC_data}}\code{$EF_fuel}) and matched by
+#' \code{Country_ISO_3166_1_A3} and \code{YEAR}.
+#' Missing values are replaced by the mean of available factors in the
+#' farm-joined data, so the fallback is weighted by farm rows rather than
+#' being an unweighted European average.
 #'
 #' Emission factors are converted to kg CO2 MJ\eqn{^{-1}} for calculation:
 #' \deqn{EF_{fuel,CO2} \; [\text{kg CO}_2 \text{ MJ}^{-1}] =
@@ -162,10 +164,8 @@ f_GHGE_fuels <- function(object,
     ) |>
     # add EF
     dplyr::left_join(
-      UNFCCC_data$EF_fuel |>
-        dplyr::select(-YEAR),
-      by = c('Country_ISO_3166_1_A3')
-      #TODO: by = c('Country_ISO_3166_1_A3','YEAR')
+      UNFCCC_data$EF_fuel,
+      by = c('Country_ISO_3166_1_A3', 'YEAR')
     ) |>
     ## replace NAs by EF mean
     dplyr::mutate(

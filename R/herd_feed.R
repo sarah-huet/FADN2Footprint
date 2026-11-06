@@ -116,7 +116,7 @@ f_herd_feed <- function(object,
 
   ## Steps:
   ## 1. Retrieve observed herd structure
-  ### We considered the observed animal stock as the mean between average, opening, and closing variables
+  ### Observed animal stock is the mean of average animal number and ALU-derived count
   ## 2. Estimate livestock intake of feed (both produced and purchased)
   ## 3. Combine herd structure with feed
 

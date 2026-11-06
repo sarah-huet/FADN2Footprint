@@ -26,7 +26,7 @@ f_herd_rearing_param_cattle <- function(object){
 
   ## Steps:
   ## 1. Retrieve observed herd structure
-  ### We considered the observed animal stock as the mean between average, opening, and closing variables
+  ### Observed animal stock is the mean of average animal number and ALU-derived count
   ## 2. Modeling farm rearing process
   ### 2.1. Estimate animal flows between livestock categories
   ### 2.2. Estimate rearing parameters
@@ -437,4 +437,3 @@ tmp_var = setdiff(colnames(herd_cattle_process),
 
 utils::globalVariables(c('land_use_type', 'sales_t', 'sales_kg','GE_MJ_kg', 'QVENT3'))
 # this is to avoid a note in check package (the issue is from the use of dplyr)
-

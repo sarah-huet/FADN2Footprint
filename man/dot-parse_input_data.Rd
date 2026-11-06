@@ -29,6 +29,11 @@ expenditure for grazing livestock (EUR yr\eqn{^{-1}}).}
 feed expenditure for pigs (EUR yr\eqn{^{-1}}).}
 \item{feed_purch_concent_poultry}{\code{numeric}. Purchased concentrate
 feed expenditure for poultry (EUR yr\eqn{^{-1}}).}
+\item{sales_contract_cattle, sales_contract_sheepgoat,
+sales_contract_pigs, sales_contract_poultry}{\code{numeric}, optional.
+Sales values of animals reared under contract (EUR yr\eqn{^{-1}}),
+present only when the corresponding \code{PCNTR*_SV} variables exist
+in the input data.}
 \item{N_min_ferti_Q}{\code{numeric}. Mineral nitrogen fertiliser
 quantity (kg N yr\eqn{^{-1}}).}
 \item{pesticides_v}{\code{numeric}. Pesticide expenditure
@@ -71,6 +76,12 @@ concentrates for pigs (\code{IPIGFEDPUR_V}) and poultry
 \item \strong{Fuel quantities} (litres, optional): \code{IFULS_Q} and
 \code{IHFULS_Q} are included where available, otherwise set to
 \code{NA}.
+\item \strong{Contract rearing sales} (EUR, optional): sales values of
+animals reared under contract (\code{PCNTRCATL_SV},
+\code{PCNTRSHEPGOAT_SV}, \code{PCNTRPIG_SV}, \code{PCNTRPLTR_SV}),
+included where available as \code{sales_contract_*} columns. They are
+used by \code{\link{f_feed_offfarm_animals_under_contract}} to impute
+purchased feed supplied by the integrator.
 }
 }
 
@@ -107,6 +118,11 @@ for diesel and light heating fuel).
 }
 Intermediate price columns (\code{PFUEL_*}, \code{final_price_*}) are
 dropped from the output.
+Nitrogen GAM predictions are restricted to positive fertiliser expenditure
+before 2017. By maintainer instruction (2026-11-06), TF14 46 and 47 use
+the TF14 45 coefficients for prediction only; recorded farm classifications
+are preserved. This grouping is an explicit assumption, not a refitted
+model. Other unsupported factor levels raise an error.
 }
 }
 \references{

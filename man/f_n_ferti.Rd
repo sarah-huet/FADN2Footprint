@@ -60,8 +60,8 @@ based on EPK averages and farm area (stored in \code{data_extra$PKGC_N_ferti}). 
 \item \strong{Mineral N}: Applied based on theoretical values, but set to 0 for organic farms.
 \item \strong{Organic N}: Determined by livestock N excretion. If livestock is present,
 the amount of N excreted is used, capped by estimated EPK N thresholds
-(minimum and maximum; stored in \code{data_extra$PKGC_N_ferti_org_thresholds}). If no livestock is present, the EPK average organic N
-is used.
+(minimum and maximum; stored in \code{data_extra$PKGC_N_ferti_org_thresholds}). If no livestock is present, the average organic N
+input for farms that do not produce manure is used.
 }
 \item \strong{Output Formatting}: Selects and returns the relevant N fertilization
 variables. Messages are printed to the console to inform about the number of

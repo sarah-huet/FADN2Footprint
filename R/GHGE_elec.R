@@ -1,3 +1,55 @@
+.estimate_electricity_activity <- function(data_elec, electricity_prices,
+                                           emission_factors) {
+  mean_finite_or_stop <- function(values, label) {
+    values <- values[is.finite(values)]
+    if (length(values) == 0L) {
+      stop(
+        paste0("No finite reference values are available for ", label, "."),
+        call. = FALSE
+      )
+    }
+    mean(values)
+  }
+
+  price_mean <- mean_finite_or_stop(
+    electricity_prices$euro_kWh,
+    "EUROSTAT electricity prices"
+  )
+  ef_mean <- mean_finite_or_stop(
+    emission_factors$EF_elec,
+    "electricity emission factors"
+  )
+  ef_mean_by_year <- emission_factors |>
+    dplyr::group_by(YEAR) |>
+    dplyr::summarise(
+      EF_elec_year_mean = {
+        values <- EF_elec[is.finite(EF_elec)]
+        if (length(values) == 0L) NA_real_ else mean(values)
+      },
+      .groups = "drop"
+    )
+
+  data_elec |>
+    dplyr::left_join(
+      electricity_prices,
+      by = c("Country_ISO_3166_1_A3", "YEAR")
+    ) |>
+    dplyr::mutate(
+      euro_kWh = dplyr::coalesce(euro_kWh, price_mean),
+      elec_kWh = elec_V / euro_kWh
+    ) |>
+    dplyr::left_join(
+      emission_factors,
+      by = c("Country_ISO_3166_1_A3", "YEAR")
+    ) |>
+    dplyr::left_join(ef_mean_by_year, by = "YEAR") |>
+    dplyr::mutate(
+      EF_elec = dplyr::coalesce(EF_elec, EF_elec_year_mean, ef_mean),
+      farm_ghg_elec_kgCO2e = elec_kWh * EF_elec
+    ) |>
+    dplyr::select(-EF_elec_year_mean)
+}
+
 #' Estimate GHG Emissions from On-Farm Electricity Consumption
 #'
 #' @description
@@ -24,9 +76,8 @@
 #'     from EUROSTAT table \code{NRG_PC_205}, matched by country ISO code
 #'     (\code{Country_ISO_3166_1_A3}) and survey year (\code{YEAR})
 #' }
-#' When country- and year-specific electricity prices are missing, the
-#' cross-country mean price is used as a fallback (TODO: replace with
-#' EU-27 average price).
+#' When a country- and year-specific electricity price is missing, the mean
+#' of available EUROSTAT country-year prices is used as a fallback.
 #'
 #' ## GHG Emission Estimation
 #' Total GHG emissions from electricity use are estimated as:
@@ -35,8 +86,10 @@
 #' factor (kg CO2-eq kWh\eqn{^{-1}} = t CO2 MWh\eqn{^{-1}}), sourced from
 #' \code{\link{EF_electricity}}.
 #'
-#' When country- and year-specific emission factors are missing, the
-#' cross-country mean emission factor is substituted.
+#' When a country- and year-specific emission factor is missing, the mean
+#' across available European factors for that year is used. If no factors are
+#' available for that year, the mean across all available country-year factors
+#' is used.
 #'
 #' @note
 #' \itemize{
@@ -46,9 +99,9 @@
 #'     \code{\link{f_GHGE_livestock}} using economic allocation keys.
 #'   \item The FADN variable \code{IELE_V} represents total farm electricity
 #'     expenditure and does not distinguish between end-uses.
-#'   \item When EUROSTAT prices are unavailable for a given country-year
-#'     combination, missing values are currently replaced by the cross-country
-#'     mean; replacement with the EU-27 average price is planned (TODO).
+#'   \item If no finite price or emission-factor reference values are available,
+#'     the function stops with an error rather than returning emissions with
+#'     missing fallback inputs.
 #' }
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
@@ -84,12 +137,10 @@
 #' \code{\link{f_GHGE_fuels()}}, \code{\link{f_GHGE_crops()}},
 #' \code{\link{f_GHGE_herd()}}, \code{\link{FADN2Footprint-class}}
 #'
-#' @importFrom dplyr select left_join mutate across starts_with if_else join_by distinct
+#' @importFrom dplyr select left_join mutate coalesce join_by distinct
 #'
 #' @concept footprint-ghge
 #' @export
-
-
 f_GHGE_elec <- function(object,
                       account_pseudoherd = FALSE,
                       ...){
@@ -99,9 +150,6 @@ f_GHGE_elec <- function(object,
   }
 
   id_cols = object@traceability$id_cols
-
-  # Emission factor ----
-  EF_elec <- EF_electricity # EF for CO2 expressed in tCO2/MWh = kg CO2 / kWh
 
   # Activity data ----
   data_elec <- object@input |>
@@ -115,29 +163,19 @@ f_GHGE_elec <- function(object,
       by = dplyr::join_by(COUNTRY == country_FADN)
     ) |>
     # add EUROSTAT data
-    dplyr::left_join(
-      EUROSTAT_elec_price,
-      by = join_by(Country_ISO_3166_1_A3, YEAR)
-      # TODO: check for replacing NAs with price from "European Union - 27 countries (from 2020)"
-    ) |>
-    ## replace NAs by EF or price mean
-    dplyr::mutate(
-      dplyr::across(
-        .cols = dplyr::matches("EF_elec|elec_kWh"),
-        .fns = ~ dplyr::if_else(is.na(.), mean(., na.rm = TRUE), .)
-      )
-    ) |>
-    # estimate elec quantity in kWh
-    dplyr::mutate(
-      elec_kWh = (elec_V/ euro_kWh)
-    )
+    dplyr::select(dplyr::all_of(c(
+      object@traceability$id_cols,
+      "elec_V",
+      "Country_ISO_3166_1_A3"
+    )))
 
   # Estimate total emissions ----
 
-  GHGE_elec <- data_elec |>
-    dplyr::left_join(EF_elec, by = c('Country_ISO_3166_1_A3','YEAR')) |>
-    # kg CO2 with an economic allocation to the crop
-    dplyr::mutate(farm_ghg_elec_kgCO2e = elec_kWh * EF_elec)
+  GHGE_elec <- .estimate_electricity_activity(
+    data_elec,
+    EUROSTAT_elec_price,
+    EF_electricity
+  )
 
   # Allocate emissions ----
 

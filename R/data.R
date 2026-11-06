@@ -662,47 +662,59 @@
 "EF_electricity"
 
 # UNFCCC National Inventories ----
-#' UNFCCC Sectoral Background Data for Agriculture and Energy
+#' UNFCCC CRT 2026 Reference Data for Agriculture and Energy
 #'
 #' @name UNFCCC_data
 #'
 #' @description
-#' A dataset containing selected Sectoral Background Data tables from UNFCCC
-#' National Inventory Reports (CRF tables). These tables provide activity data
-#' and implied emission factors required for calculating the carbon footprint
-#' of agricultural activities.
+#' A dataset containing selected country- and inventory-year-specific data
+#' extracted from the UNFCCC Common Reporting Tables (CRT) 2026 submission
+#' files. These data provide activity data and implied emission factors used
+#' in the agricultural footprint calculations.
 #'
 #' @format A named list containing 7 data frames (tibbles):
 #' \describe{
 #'   \item{table3As2}{**Table 3.A (Sheet 2 of 2): Enteric Fermentation.**
-#'   Contains Implied Emission Factors (IEF) for methane emissions from enteric fermentation per livestock category.}
+#'   Contains live weights (kg per head) by livestock category, country, and
+#'   inventory year.}
 #'
 #'   \item{table3Bas1}{**Table 3.B(a) (Sheet 1 of 2): CH4 Emissions from Manure Management.**
-#'   Contains data on manure management system allocation (MMS) and nitrogen excretion rates.}
+#'   Contains livestock population, typical animal mass, volatile-solids
+#'   excretion, and methane-producing capacity by country, year, and category.}
 #'
 #'   \item{table3Bas2}{**Table 3.B(a) (Sheet 2 of 2): CH4 Emissions from Manure Management.**
-#'   Contains Implied Emission Factors (IEF) for methane from manure management.}
+#'   Contains animal-waste-management-system allocations and methane
+#'   conversion factors by country, year, livestock category, climate region,
+#'   and manure management system.}
 #'
 #'   \item{table3Bb}{**Table 3.B(b): N2O Emissions from Manure Management.**
-#'   Contains Nitrogen excretion data and N2O Implied Emission Factors per manure management system.}
+#'   Contains directly reported N2O implied emission factors by country, year,
+#'   and manure management system. Factors are in kg N2O-N per kg N handled;
+#'   missing reported values remain missing for the runtime IPCC fallback.}
 #'
 #'   \item{table3D}{**Table 3.D: Agricultural Soils.**
-#'   Contains fractions and activity data for direct and indirect N2O emissions from managed soils (fertilizers, crop residues, etc.).}
+#'   Contains the long-form reported Table 3.D data, including activity,
+#'   emissions, and implied emission factors.}
 #'
 #'   \item{EF_managed_soils}{**Derived Emission Factors for Soils.**
-#'   A subset or processed version of Table 3.D focusing specifically on emission factors for direct/indirect soil emissions.}
+#'   Reported implied emission factors from Table 3.D, keyed by country and
+#'   inventory year. The factors retain the units reported for each soil
+#'   process.}
 #'
 #'   \item{EF_fuel}{**Table 1.A(a) (Sheet 4 of 4): Fuel combustion activities.**
-#'   Contains Implied Emission Factors of Liquid fuels for CO2, CH4, and N2O from fuel combustion in the agriculture/forestry/fisheries sector (in t CO2 TJ-1, kg CH4 TJ-1, and kg N2O TJ-1).}
+#'   Contains implied emission factors for liquid-fuel combustion in the
+#'   agriculture/forestry/fishing sector, keyed by country and inventory year:
+#'   CO2 in t CO2/TJ, CH4 in kg CH4/TJ, and N2O in kg N2O/TJ.}
 #' }
 #'
 #' @details
-#' These tables are derived from the Common Reporting Format (CRF) used by Annex I Parties
-#' to report to the UNFCCC. They allow for the calculation of specific emission factors
-#' adapted to national contexts.
+#' Country and year are retained as keys; individual table coverage varies by
+#' Party and reporting year. The Danish legacy annex duplicate is excluded in
+#' the data build so that each CRT cell contributes only once.
 #'
-#' @source United Nations Framework Convention on Climate Change (UNFCCC) Greenhouse Gas Inventory Data.
-#' Available at: \url{https://unfccc.int/process-and-meetings/transparency-and-reporting/greenhouse-gas-data}
+#' @source United Nations Framework Convention on Climate Change (UNFCCC),
+#' 2026 Common Reporting Tables. See
+#' \url{https://unfccc.int/process-and-meetings/transparency-and-reporting/greenhouse-gas-data}
 #'
 #' @docType data
 #' @keywords datasets
@@ -811,4 +823,3 @@
 #' str(ref_fuel_wob)
 #' head(ref_fuel_wob)
 "ref_fuel_wob"
-

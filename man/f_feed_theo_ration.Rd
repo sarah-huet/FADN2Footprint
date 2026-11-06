@@ -11,11 +11,13 @@ f_feed_theo_ration(object)
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}
 }
 \value{
-a list with the following dataframes:
+A list with the following data frames:
 \itemize{
 \item AROPAJ_ref_ration: reference total amount of feed per livestock category (in ton of dry matter per livestock unit per year)
 \item Sailley_ref_feed_allocation: reference total amount of feed per crop and herd orientation (e.g., milk, meat) (in ton of dry matter per year)
+\item feed_value: reference feed price information (see th_feed_value)
 \item th_feed_ration: the theoretical ration of each farm herd (for each crop, in total ton of dry matter per year and in ton of dry matter per livestock unit per year)
+\item th_feed_value: the theoretical feed value per crop and feed type
 }
 }
 \description{

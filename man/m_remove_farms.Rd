@@ -21,6 +21,13 @@ This function filters out specific farms from all data slots (farm, crop, herd,
 inputs, practices, footprints, etc.) of a FADN2Footprint object. It automatically
 handles nested lists and updates the traceability slot to log discarded farms.
 }
+\details{
+This function filters out specific farms from all data slots (farm, crop, herd,
+inputs, practices, footprints, etc.) of a FADN2Footprint object. It automatically
+handles nested lists and updates the traceability slot to log discarded farms.
+
+Additionally, this function updates the traceability slot to log discarded farms.
+}
 \examples{
 \dontrun{
 # Define farms to remove (e.g., outliers)

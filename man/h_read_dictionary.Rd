@@ -15,6 +15,8 @@ A list with elements:
 \item{variable_pattern}{Tibble of suffix mappings by group}
 \item{category_pattern}{Tibble of product code mappings}
 \item{manual_matches}{Tibble of farm-level variable mappings}
+\item{value_mappings}{Optional categorical code crosswalks with columns
+fadn_variable, national_value and fadn_value (dimensionless codes).}
 \item{unit_conversion}{Tibble of code-specific unit conversions}
 }
 }

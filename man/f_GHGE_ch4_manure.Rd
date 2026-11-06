@@ -18,31 +18,13 @@ cached GHGE results are ignored and computations are re-run.}
 }
 \value{
 A \code{\link[tibble]{tibble}} containing one row per farm-livestock
-category combination, with the following columns (among others):
+category combination, with the following columns:
 \describe{
 \item{...}{Traceability identifier columns as defined in
 \code{object@traceability$id_cols} (e.g., farm ID, year, NUTS2 region).}
 \item{FADN_code_letter}{\code{character}. FADN livestock category code.}
 \item{species}{\code{character}. Livestock species.}
-\item{IPCC_mix_cat}{\code{character}. IPCC mixed livestock category.}
-\item{UNFCCC_cat}{\code{character}. UNFCCC livestock category used to match
-national inventory parameters.}
 \item{Qobs}{\code{numeric}. Observed number of animals (heads).}
-\item{GE}{\code{numeric}. Gross energy intake (MJ head\eqn{^{-1}}
-day\eqn{^{-1}}).}
-\item{VS}{\code{numeric}. Volatile solid excretion rate (kg VS head\eqn{^{-1}}
-day\eqn{^{-1}}).}
-\item{Bo}{\code{numeric}. Maximum methane producing capacity
-(m\eqn{^3} CH4 kg\eqn{^{-1}} VS), population-weighted country average.}
-\item{sum_MCF_AWMS}{\code{numeric}. Population-weighted sum of
-\eqn{MCF \times AWMS} products across manure management systems and
-climate regions (dimensionless).}
-\item{DE}{\code{numeric}. Feed digestibility (\\%), from country-specific
-UNFCCC submissions or cross-country fallback.}
-\item{EF}{\code{numeric}. Annual CH4 emission factor
-(kg CH4 head\eqn{^{-1}} yr\eqn{^{-1}}).}
-\item{CH4_MM}{\code{numeric}. Total CH4 emissions from manure management
-(kg CH4 yr\eqn{^{-1}}).}
 \item{CH4_MM_kgCO2e_livcat}{\code{numeric}. Total CH4 emissions from manure
 management expressed in kg CO2 equivalents per year.}
 }
@@ -56,11 +38,11 @@ The function follows a five-step approach:
 \item Retrieval of the observed herd structure from the \code{FADN2Footprint}
 object, enriched with IPCC and UNFCCC category codes and country ISO codes.
 \item Estimation of livestock feed intake (both on-farm produced and purchased
-feed), including dry matter (DM), gross energy (GE), crude protein (CP),
-and ash content.
-\item Collection of country-specific volatile solid (VS) excretion rates and
-maximum methane producing capacity (Bo) from UNFCCC national submissions
-(Table 3.B(a)s1).
+feed), including dry matter (DM), digestibility (DE), gross energy (GE), crude protein (CP),
+and ash content (see \code{\link{f_herd_feed}}).
+\item Calculation of volatile solid (VS) excretion rates per animal per day
+\item Collection of country-specific maximum methane producing capacity (Bo)
+from UNFCCC national submissions (Table 3.B(a)s1).
 \item Derivation of effective methane conversion factors (MCF) weighted by
 animal waste management system fractions (AWMS) per country and UNFCCC
 livestock category (Table 3.B(a)s2).
@@ -72,16 +54,20 @@ emissions, converted to CO2 equivalents using the GWP of CH4.
 \subsection{Volatile Solid Excretion (Equation 10.24)}{
 
 Volatile solid excretion per animal per day is estimated as:
-\deqn{VS = \left(GE \times \left(1 - \frac{DE}{100}\right) + UE \times GE\right)
+\deqn{VS = \left(GE \times \left(1 - \frac{DE}{100}\right) + UE_{GE}\right)
   \times \frac{1 - ASH}{18.45}}
 where:
 \itemize{
 \item \eqn{GE} = gross energy intake (MJ head\eqn{^{-1}} day\eqn{^{-1}})
-\item \eqn{DE} = digestibility of feed (\\%), sourced from UNFCCC national
-submissions (Table 3.A s2), weighted by livestock population size; fallback
-to the cross-country weighted mean when country-specific values are missing
-\item \eqn{UE} = urinary energy fraction of GE (default = 0.04 for ruminants;
-reduced to 0.02 for animals fed ≥ 85\\% grain or for swine)
+(see \code{\link{f_herd_feed}})
+\item \eqn{DE} = digestibility of feed (\\%)  (see \code{\link{f_herd_feed}})
+\item \eqn{UE_{GE}} = urinary energy as a dimensionless fraction
+is set to 0.04 by default (IPCC 2019, Eq. 10.24).
+It is reduced to 0.02 for swine, or for any
+livestock category whose concentrate feed share (dry matter basis)
+is ≥ 85\% of the total diet, following the IPCC guidance for
+grain-fed animals. The concentrate share is computed from the
+detail-level feed intake table (\code{feed_type == "feed_concent"}).
 \item \eqn{ASH} = ash content of feed as a fraction of dry matter intake,
 estimated from feed composition data
 \item 18.45 = conversion factor for dietary GE per kg of dry matter
@@ -142,6 +128,23 @@ UNFCCC livestock category.
 against UNFCCC reported values are included as internal comments for
 validation purposes.
 }
+
+\itemize{
+\item The urinary energy fraction \eqn{UE_{GE}} is currently hardcoded
+to 0.02 for swine and 0.04 for all other livestock categories;
+the IPCC-recommended adjustment to 0.02 for animals fed ≥ 85\\% grain
+is not yet implemented.
+\item The ash content is derived from feed composition data via the
+column \code{Ash_p100} (percentage), converted to a fraction
+(\code{ASH = Ash_p100 / 100}).
+\item Gross energy is originally retrieved from the feed module as
+\code{GE_MJ_anim} (MJ animal\eqn{^{-1}} yr\eqn{^{-1}}) and converted to
+daily units by dividing by 365.
+\item Digestibility \code{DE_pc} is expressed as a percentage and is
+divided by 100 in the VS equation to match the IPCC fractional form.
+\item Country-specific Bo, VS, MCF, AWMS, and DE values are sourced from
+UNFCCC national inventory submissions compiled in
+\code{\link{UNFCCC_data}}.
 }
 \references{
 IPCC (2006). \emph{2006 IPCC Guidelines for National Greenhouse Gas Inventories,

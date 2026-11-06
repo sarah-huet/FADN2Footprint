@@ -17,22 +17,20 @@ implementation.}
 \item{...}{Additional arguments.}
 }
 \value{
-A \code{\link[tibble]{tibble}} containing one row per farm
-observation, with the following columns:
+A \strong{list} with two tibble elements:
 \describe{
-\item{...}{Traceability identifier columns as defined in
-\code{object@traceability$id_cols} (e.g., farm ID, year, NUTS2 region).}
-\item{elec_V}{\code{numeric}. Electricity expenditure from FADN (€).}
-\item{Country_ISO_3166_1_A3}{\code{character}. Country ISO 3166-1 alpha-3
-code.}
-\item{euro_kWh}{\code{numeric}. National average electricity price
-(€ kWh\eqn{^{-1}}), from EUROSTAT \code{NRG_PC_205}.}
-\item{elec_kWh}{\code{numeric}. Estimated electricity consumption (kWh
-yr\eqn{^{-1}}).}
-\item{EF_elec}{\code{numeric}. Country- and year-specific electricity
-emission factor (kg CO2-eq kWh\eqn{^{-1}}).}
-\item{ghg_elec_kgCO2e}{\code{numeric}. Total GHG emissions from electricity
-consumption (kg CO2-eq yr\eqn{^{-1}}).}
+\item{total_GHGE_electricity}{\code{tibble}. One row per farm (identified by the
+traceability columns). Columns include:\cr
+\code{elec_V} (electricity expenditure, €),\cr
+\code{euro_kWh} (national electricity price, € kWh⁻¹),\cr
+\code{elec_kWh} (estimated electricity consumption, kWh yr⁻¹),\cr
+\code{EF_elec} (electricity emission factor, kg CO₂‑eq kWh⁻¹),\cr
+\code{farm_ghg_elec_kgCO2e} (total electricity‑related GHG, kg CO₂‑eq yr⁻¹).}
+\item{alloc_GHGE_electricity}{\code{tibble}. Same traceability identifiers plus
+output‑level variables (e.g., \code{activity}, \code{species}, \code{output},
+\code{FADN_code_letter}, \code{FADN_code_letter_output}) and the column
+\code{ghg_elec_kgCO2e_output}, which is the electricity‑related GHG
+allocated to each output (kg CO₂‑eq yr⁻¹).}
 }
 }
 \description{
@@ -60,9 +58,8 @@ in euros)
 from EUROSTAT table \code{NRG_PC_205}, matched by country ISO code
 (\code{Country_ISO_3166_1_A3}) and survey year (\code{YEAR})
 }
-When country- and year-specific electricity prices are missing, the
-cross-country mean price is used as a fallback (TODO: replace with
-EU-27 average price).
+When a country- and year-specific electricity price is missing, the mean
+of available EUROSTAT country-year prices is used as a fallback.
 }
 
 \subsection{GHG Emission Estimation}{
@@ -73,8 +70,10 @@ where \eqn{EF_{elec}} is the country- and year-specific electricity emission
 factor (kg CO2-eq kWh\eqn{^{-1}} = t CO2 MWh\eqn{^{-1}}), sourced from
 \code{\link{EF_electricity}}.
 
-When country- and year-specific emission factors are missing, the
-cross-country mean emission factor is substituted.
+When a country- and year-specific emission factor is missing, the mean
+across available European factors for that year is used. If no factors are
+available for that year, the mean across all available country-year factors
+is used.
 }
 }
 \note{
@@ -85,9 +84,9 @@ handled downstream in \code{\link{f_GHGE_crops}} and
 \code{\link{f_GHGE_livestock}} using economic allocation keys.
 \item The FADN variable \code{IELE_V} represents total farm electricity
 expenditure and does not distinguish between end-uses.
-\item When EUROSTAT prices are unavailable for a given country-year
-combination, missing values are currently replaced by the cross-country
-mean; replacement with the EU-27 average price is planned (TODO).
+\item If no finite price or emission-factor reference values are available,
+the function stops with an error rather than returning emissions with
+missing fallback inputs.
 }
 }
 \references{

@@ -17,6 +17,10 @@ object@output, etc.).}
 the function returns
 the cached object and no recomputation is performed. If TRUE, existing
 cached GHGE results are ignored and computations are re-run.}
+
+\item{account_pseudoherd}{Logical (default TRUE). If TRUE, the function also
+computes and stores pseudo‑herd GHGE impacts; if FALSE, pseudo‑herd
+calculations are skipped.}
 }
 \value{
 The input FADN2Footprint S4 object updated with GHGE footprints:
@@ -42,18 +46,17 @@ The function performs the following steps:
 \itemize{
 \item validates that the supplied object inherits from the S4 class
 "FADN2Footprint";
-\item if cached GHGE results already exist in object@footprints$GHGE and
-overwrite = FALSE, the function returns the cached results (with a
+\item if cached GHGE results already exist in \code{object@footprints$GHGE} and
+\code{overwrite = FALSE}, the function returns the cached results (with a
 message) and no further computation is performed;
 \item otherwise the function:
 \enumerate{
 \item calls f_GHGE_crops(object) to compute per‑farm / per‑activity crop
 greenhouse gas emissions and stores the returned table in
-object@footprints$GHGE$GHGE_crops;
+\code{object@footprints$GHGE$GHGE_crops};
 \item calls f_GHGE_herd_output(object) to compute GHGE allocated to herd
-outputs and stores the milk result in
-object@footprints$GHGE$GHGE_milk (the herd function may return a
-list with multiple elements for milk/meat/eggs);
+outputs (milk, meat, eggs) and stores the results in
+\code{object@footprints$GHGE$GHGE_milk}, \verb{$GHGE_meat}, and \verb{$GHGE_eggs};
 }
 \item finally the updated FADN2Footprint object (with added/updated footprints)
 is returned.

@@ -214,7 +214,7 @@ f_pseudoherd_output_off_farm <- function(object,
                                 dplyr::filter(!is.na(UNFCCC_cat)) |>
                                 dplyr::summarise(
                                         live_weight_kg = mean(Weight, na.rm = TRUE),
-                                        .by = c(species,UNFCCC_cat,Country_ISO_3166_1_A3)
+                                        .by = c(species, UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)
                                 ),
                         by = 'UNFCCC_cat',
                         relationship = "many-to-many"
@@ -243,7 +243,7 @@ f_pseudoherd_output_off_farm <- function(object,
                 # add animal live weights
                 dplyr::left_join(
                         livestock_weights,
-                        by = c("FADN_code_letter", 'species', 'Country_ISO_3166_1_A3')) |>
+                        by = c("FADN_code_letter", 'species', 'Country_ISO_3166_1_A3', 'YEAR')) |>
                 # define output
                 dplyr::mutate(
                         # Categorize Output

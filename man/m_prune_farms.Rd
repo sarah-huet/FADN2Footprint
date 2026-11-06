@@ -32,6 +32,8 @@ The function performs a cascading filter operation:
 \item Then filters all other data slots to only include data for the remaining farms
 \item Handles both simple data.frame slots and nested list structures
 }
+
+Additionally, this function updates the traceability slot to log discarded farms.
 }
 \examples{
 # Filter to keep only farms from France

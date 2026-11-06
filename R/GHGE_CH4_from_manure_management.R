@@ -219,12 +219,12 @@ feed_intake <- feed_intake_total |>
 
   # TODO: adapt for overseas territories and by climate regions
 
-  # which country have more than one climate region?
+  # which country-year combinations have more than one climate region?
   UNFCCC_data$table3Bas2 |>
     dplyr::filter(AWMS >0) |>
     dplyr::summarise(
       nb_climate_reg = length(unique(climate_region)),
-      .by = c(Country_ISO_3166_1_A3)) |>
+      .by = c(Country_ISO_3166_1_A3, YEAR)) |>
     dplyr::filter(nb_climate_reg >1)
   # for now, I use the climate region allocation in UNFCCC_MMS_Bo
 
@@ -264,8 +264,8 @@ feed_intake <- feed_intake_total |>
         dplyr::summarise(
           #VS = weighted.mean(`VS(2)_daily_excretion_(average)`, Population__size),
           Bo = weighted.mean(`CH4_producing_potential_(Bo)(2)_(average)`, Population__size),
-          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3)),
-      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3')
+          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)),
+      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3', 'YEAR')
     ) |>
 
     # sum of MCF weighted by AWMS
@@ -277,11 +277,11 @@ feed_intake <- feed_intake_total |>
         dplyr::summarise(
           Population__size = unique(Population__size),
           sum_MCF_AWMS = sum(MCF/100 * AWMS/100, na.rm = T),
-          .by = c(Animal_cat,UNFCCC_cat, Country_ISO_3166_1_A3)) |>
+          .by = c(Animal_cat, UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)) |>
         dplyr::summarise(
           sum_MCF_AWMS = weighted.mean(sum_MCF_AWMS, Population__size),
-          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3)),
-      by = dplyr::join_by(UNFCCC_cat, Country_ISO_3166_1_A3)) |>
+          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)),
+      by = dplyr::join_by(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)) |>
 
     # estimate
     dplyr::mutate(
@@ -362,5 +362,3 @@ feed_intake <- feed_intake_total |>
   return(CH4_MM)
 
 }
-
-

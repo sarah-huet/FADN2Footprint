@@ -11,7 +11,9 @@ f_feed_value(object)
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}
 }
 \value{
-a list of two tables
+a list with two elements:
+item{feed_price_country_year}{Data frame with feed price per country and year.}
+item{feed_price_year}{Data frame with average feed price per year across countries.}
 }
 \description{
 Function to estimate feed value

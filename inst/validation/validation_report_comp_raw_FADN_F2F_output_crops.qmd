@@ -1,0 +1,334 @@
+---
+title: "FADN2Footprint — Validation Report Comparing FADN raw data to F2F output"
+subtitle: "Comparison of the raw FADN data to F2F output"
+author: "Sarah HUET & Valentin BELLASSEN"
+date: today
+editor:
+  markdown:
+    wrap: 150
+---
+
+# Setup
+
+```{r setup}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(gt)
+
+library(readxl)
+library(zip)
+
+library(ggplot2)
+
+devtools::load_all()
+#library(FADN2Footprint)
+
+wd_path <- "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint"
+```
+
+# Purpose
+
+This report compares the outputs of `FADN2Footprint` (v`r packageVersion("FADN2Footprint")`)
+against the raw FADN data.
+An estimate is flagged **in range** if it falls within the literature min–max,
+**within tolerance** if the relative deviation from the literature midpoint is
+below a per-indicator threshold, or **out of range** otherwise.
+
+# Load raw FADN data
+
+```{r load_raw_FADN_data}
+load(paste0(wd_path, "/data_raw/raw_FADN_EU_17_21.RData"))
+
+raw_fadn <- my_FADN_data |>
+  dplyr::mutate(ID = as.character(ID), YEAR = as.character(YEAR))
+rm(my_FADN_data)
+```
+
+# Run package
+
+```{r load_f2f_output_data, echo=FALSE, message=TRUE, warning=FALSE}
+load(paste0(wd_path, "/data_raw/FADN_EU_17_21_obj_GHGE.RData"))
+
+object <- my_object_GHGE
+id_cols <- object@traceability$id_cols
+
+cat(
+  "FADN dataset loaded:",
+  nrow(object@farm),
+  "farm-year observations\n"
+)
+cat(
+  "Countries covered:",
+  paste(unique(object@farm$COUNTRY), collapse = ", "),
+  "\n"
+)
+cat(
+  "Years covered:",
+  paste(sort(unique(object@farm$YEAR)), collapse = ", "),
+  "\n"
+)
+```
+
+```{r farm_characteristics}
+farm_charac <- object@farm |>
+  dplyr::select(dplyr::all_of(c(id_cols, "SYS02"))) |>
+  # add ISO country names
+  dplyr::left_join(
+    data_extra$country_names |>
+      dplyr::transmute(COUNTRY = country_FADN, iso3 = Country_ISO_3166_1_A3) |>
+      dplyr::distinct(),
+    by = "COUNTRY"
+  )
+```
+
+# Crop areas
+
+## Comparison of sum of individual crop areas to total area variable
+
+First, I want to check if I can recalculate the total utilised agricultural area variable (SE025) from the sum of crop areas with raw data.
+
+```{r raw_crop_areas_sum}
+# Extraction & Pivoting
+# Filter, Pivot Long, and Split Code/Variable in one pass using tidyr::extract
+raw_areas_crop <- raw_fadn |>
+  dplyr::mutate(ID = as.character(ID), YEAR = as.character(YEAR)) |>
+  dplyr::select(
+    ID,
+    COUNTRY,
+    YEAR,
+    SYS02,
+    # keep only area (TA) variables
+    #                  dplyr::matches("^C") & dplyr::matches("_TA$"),
+    # keep only area (A) variables
+    dplyr::matches("^C") & dplyr::matches("_A$|_TA$"),
+    -dplyr::matches("^CTOT")
+  ) |>
+  # Pivot longer to handle all herd variables at once
+  tidyr::pivot_longer(
+    cols = -c("ID", "COUNTRY", "YEAR", "SYS02"),
+    names_to = "raw_variable",
+    values_to = "value"
+  ) |>
+  # keep only variable with observed values
+  dplyr::filter(value > 0) |>
+  # Remove the "_TA" suffix from the raw variable names
+  dplyr::mutate(
+    FADN_code_letter = sub("_TA$|_A$", "", raw_variable),
+    area_var = stringr::str_extract(raw_variable, "TA$|A$")
+  ) |>
+  # pivot variables
+  tidyr::pivot_wider(
+    id_cols = c("ID", "COUNTRY", "YEAR", "SYS02", "FADN_code_letter"),
+    names_from = area_var,
+    values_from = value
+  ) |>
+  # estimate max area
+  dplyr::mutate(
+    area_ha = pmax(A, TA, na.rm = TRUE)
+  )
+
+
+raw_areas_crop$FADN_code_letter |> unique() |> sort()
+```
+
+- 10300 Potatoes (including early potatoes and seed potatoes) Includes early and seed potatoes (i.e. propagation material).
+- 10310 - of which potatoes for starch To be entered if details are available in the holding’s accounts.
+- 10390 - of which other potatoes
+- 40101 Pome fruits Pome fruits such as apples, pears, quinces or medlars.
+- 40111 - of which apples Due to a limited number of subcategories, the sum of subcategories’ values might be less than the values in the main category.
+- 40112 - of which pears
+- 40102 Stone fruits Stone fruits, such as peaches and nectarines, apricots, sweet and sour cherries, plums and other stone fruits not elsewhere classified.
+- 40113 - of which peaches and nectarines
+- 40200 Citrus fruits
+- 40210 - of which oranges
+- 40230 - of which lemons
+- 40600 Other permanent crops Includes osier willow, bamboo, rush, rattan, carob-tree, tea, coffee and truffles. Excludes asparagus (to be entered under ► Category 10790 – Other vegetables').
+- 40610 - of which Christmas trees
+- 50200 Wooded area
+- 50210 - of which short rotation coppices
+
+```{r comp_raw_areas_crop_sum_SE025}
+
+crops_of_which <- data_extra$crops |>
+  dplyr::filter(grepl(
+    "10310|10390|40111|40112|40113|40210|40230|40610|50210",
+    FADN_code_number
+  )) |>
+  dplyr::pull(FADN_code_letter)
+
+# « Sub-Categories of 'Fresh vegetables, melons and strawberries' and 'Flowers and ornamental plants (excluding nurseries):
+# • For ► sub-categories 10731 – 10790 and 10830 – 10850, the total cropped areas of each of the successive crops are recorded;
+# • The Utilised Agricultural Area (UAA) is entered under the parent ► Categories 10711, 10712, 10720 and 10810 and 10820;
+# • Where successive crops are cultivated, the sum of the areas of ►subcategories 10731 – 10790 and 10830 – 10850 will be equal or greater than the sum of the UAA of the parent ► Categories 10711, 10712, 10720 and 10810 and 10820. »
+# (“Farm Return Data Definitions - From accounting year 2023”, 2024, p. 70)
+crops_sub_cat <- data_extra$crops |>
+  dplyr::filter(grepl(
+    paste(c(seq(10731, 10790, 1), seq(10830, 10850, 1)), collapse = "|"),
+    FADN_code_number
+  )) |>
+  dplyr::pull(FADN_code_letter)
+
+raw_areas_crop_sum <- raw_areas_crop |>
+  dplyr::filter(
+    # remove mushroom, unused land, other land and rented out land
+    !grepl("CMUSH|CUNUSEDLND|CLNDOTH|CRENTOUTLND", FADN_code_letter),
+    # crops of which and sub-categories are removed
+    !FADN_code_letter %in% crops_of_which,
+    !FADN_code_letter %in% crops_sub_cat
+  ) |>
+  # remove aberrant bulgarian farm
+  dplyr::filter(ID != "92300000037351") |>
+  dplyr::summarise(
+    crop_area_sum = sum(area_ha, na.rm = TRUE),
+    .by = c(COUNTRY, YEAR, ID)
+  )
+
+raw_areas_SE025 <- raw_fadn |>
+  dplyr::mutate(ID = as.character(ID), YEAR = as.character(YEAR)) |>
+  dplyr::select(ID, COUNTRY, YEAR, SYS02, SE025) |>
+  dplyr::filter(SE025 > 0)
+
+# plot
+comp_raw_crop_sum_SE025 <- raw_areas_SE025 |>
+  dplyr::left_join(
+    raw_areas_crop_sum,
+    by = c("COUNTRY", "YEAR", "ID")
+  ) |>
+  dplyr::mutate(rel_diff = (SE025 - dplyr::coalesce(crop_area_sum, 0)) / SE025)
+#comp_raw_crop_sum_SE025 |> reactable::reactable(searchable = TRUE, filterable = TRUE)
+
+#hist(comp_raw_crop_sum_SE025$rel_diff)
+
+comp_raw_crop_sum_SE025 |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = SE025, y = crop_area_sum) +
+  #ggplot2::geom_col(position = "dodge") +
+  ggplot2::geom_point(aes(color = COUNTRY, shape = factor(YEAR)), size = 2.5) +
+  ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  paletteer::scale_color_paletteer_d("palettesForR::Tango") +
+  ggplot2::labs(
+    title = "Comparison of Crop Area between sum of individual crops and total variable (SE025)",
+    x = "Total Area Variable (SE025)",
+    y = "Sum of Crop Area (ha)",
+    color = "Country",
+    shape = "Year"
+  ) +
+  ggplot2::theme_minimal()
+#ggplot2::scale_x_log10(labels = scales::label_log()) +
+#ggplot2::scale_y_log10(labels = scales::label_log()) +
+```
+
+The greastest discrepencies between sum of individual crops and SE025 are mostly related to the vegetable areas:
+
+```{r high_rel_diff}
+high_rel_diff <- comp_raw_crop_sum_SE025 |>
+  dplyr::arrange(dplyr::desc(abs(rel_diff))) |>
+  dplyr::slice_head(n = 15)
+#high_rel_diff |> view()
+
+high_rel_diff_farms <- raw_areas_crop |>
+  dplyr::filter(
+    # remove mushroom, unused land, other land and rented out land
+    !grepl("CMUSH|CUNUSEDLND|CLNDOTH|CRENTOUTLND", FADN_code_letter),
+    # crops of which and sub-categories are removed
+    !FADN_code_letter %in% crops_of_which,
+    !FADN_code_letter %in% crops_sub_cat
+  ) |>
+
+  dplyr::filter(ID %in% high_rel_diff$ID)
+#high_rel_diff_farms |> view()
+
+# plot crops
+high_rel_diff_farms |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = FADN_code_letter, y = area_ha) +
+  ggplot2::geom_col(aes(fill = COUNTRY)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme_minimal()
+```
+
+```{r diff_A_TA}
+# Compare _A and _TA variables
+object@crop |>
+  ggplot2::ggplot() +
+  ggplot2::geom_point(ggplot2::aes(
+    x = A,
+    y = TA,
+    color = COUNTRY,
+    shape = factor(YEAR)
+  )) +
+  paletteer::scale_color_paletteer_d("palettesForR::Tango") +
+  ggplot2::theme_minimal()
+```
+
+Should we ask for TA variable as well?
+
+## Comparison of sum of individual crop areas between raw data and F2F output
+
+Then, I want to estimate the share of arable and grassland removed from the package filter by comparing the sum of areas for each land use from the raw data and the F2F output.
+
+```{r raw_crop_areas_sum_LU}
+raw_areas_crop_LU <- raw_areas_crop |>
+  # add land use
+  dplyr::left_join(
+    data_extra$crops |>
+      dplyr::select(FADN_code_letter, land_use_type),
+    by = 'FADN_code_letter'
+  )
+
+raw_areas_crop_sum_LU <- raw_areas_crop_LU |>
+  # sum
+  dplyr::summarise(
+    crop_area_sum_raw = sum(area_ha, na.rm = TRUE),
+    .by = c(dplyr::all_of(id_cols), land_use_type)
+  )
+```
+
+```{r f2_crop_areas_sum_LU}
+f2f_areas_crop_sum_LU <- my_object_GHGE@crop |>
+  # sum
+  dplyr::summarise(
+    crop_area_sum_f2f = sum(area_ha, na.rm = TRUE),
+    .by = c(dplyr::all_of(id_cols), land_use_type)
+  )
+```
+
+```{r comp_crop_sum_raw_f2f}
+# table of comparison
+comp_crop_sum_raw_f2f <- raw_areas_crop_sum_LU |>
+  dplyr::filter(crop_area_sum_raw > 0) |>
+  dplyr::left_join(
+    f2f_areas_crop_sum_LU,
+    by = c(id_cols, 'land_use_type')
+  ) |>
+  dplyr::mutate(
+    rel_diff = (crop_area_sum_raw - dplyr::coalesce(crop_area_sum_f2f, 0)) /
+      crop_area_sum_raw
+  )
+#comp_raw_crop_sum_SE025 |> reactable::reactable(searchable = TRUE, filterable = TRUE)
+print(mean(comp_crop_sum_raw_f2f$rel_diff, na.rm = T))
+print(quantile(comp_crop_sum_raw_f2f$rel_diff, na.rm = T))
+hist(comp_crop_sum_raw_f2f$rel_diff)
+
+# plot comparison of crop area between raw FADN and F2F output
+comp_crop_sum_raw_f2f |>
+  dplyr::filter(land_use_type %in% c("arable", "grassland")) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = crop_area_sum_raw, y = crop_area_sum_f2f) +
+  #ggplot2::geom_col(position = "dodge") +
+  ggplot2::geom_point(aes(color = COUNTRY, shape = factor(YEAR))) +
+  ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  paletteer::scale_color_paletteer_d("palettesForR::Tango") +
+  ggplot2::labs(
+    title = "Comparison of Crop Area between raw FADN and F2F output",
+    x = "Sum of Crop Area from raw FADN (ha)",
+    y = "Sum of Crop Area from F2F output (ha)",
+    color = "Country",
+    shape = "Year"
+  ) +
+  ggplot2::facet_wrap(~land_use_type, scales = "free") +
+  ggplot2::theme_minimal()
+#ggplot2::scale_x_log10(labels = scales::label_log()) +
+#ggplot2::scale_y_log10(labels = scales::label_log()) +
+```

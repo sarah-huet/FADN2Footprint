@@ -18,11 +18,17 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Sarah Huet \email{sarah.huet@inrae.fr}
+\strong{Maintainer}: Sarah Huet \email{huetsarah49@live.fr} (\href{https://orcid.org/0000-0002-5449-6959}{ORCID})
 
 Authors:
 \itemize{
-  \item Sarah Huet \email{sarah.huet@inrae.fr}
+  \item Sarah Huet \email{huetsarah49@live.fr} (\href{https://orcid.org/0000-0002-5449-6959}{ORCID})
+  \item Valentin Bellassen \email{valentin.bellassen@inrae.fr} (\href{https://orcid.org/0000-0001-8581-2814}{ORCID})
+}
+
+Other contributors:
+\itemize{
+  \item INRAE [copyright holder]
 }
 
 }

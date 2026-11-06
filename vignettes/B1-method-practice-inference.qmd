@@ -33,7 +33,8 @@ from UNFCCC (@tbl-practice-list).
 |                | survey & feed  | (farm level)   | GHGIs (yearly  |
 |                | tables for     |                | national       |
 |                | allocation     |                | averages) and  |
-|                | keys)          |                | other sources  |
+|                | keys)          |                | other reference|
+|                | data           |
 +----------------+----------------+----------------+----------------+
 | Crop practices | N fertilizer   | Hedge density  |                |
 |                | quantity,      |                |                |
@@ -48,9 +49,9 @@ from UNFCCC (@tbl-practice-list).
 |                |                |                |                |
 |                | Yields         |                |                |
 +----------------+----------------+----------------+----------------+
-| Grassland      | N Fertilizer   | Hedge density  | Yield (XX      |
-| practices      | quantity,      |                | source to      |
-|                | organic and    |                | define)        |
+| Grassland      | N Fertilizer   | Hedge density  | Yield          |
+| practices      | quantity,      |                | (Agreste SAA   |
+|                | organic and    |                | 2020)          |
 |                | mineral        |                |                |
 |                |                |                |                |
 |                | Livestock      |                |                |
@@ -130,29 +131,54 @@ FADN variables used to infer agricultural practices
 
 ## Tillage {#sec-method-practices-tillage}
 
-Tillage intensity (expressed in L of diesel used for tillage/ha) is
-estimated from the farm’s off-road diesel consumption, which is
-allocated to the different crops according to their area. Then, we
-subtract the average amount of off-road diesel per hectare used by farms
-which practice direct seeding, i.e., cultivate crops without tillage (54
-L/ha, Chenu and Butault, 2015). The implicit assumption is that the
-average off-road diesel use in these farms broadly corresponds to the
-amount of diesel used for other interventions than tillage. Note that
-tillage generally represents *43*% of off-road diesel consumption due to
-mechanization in cereal fields (Chenu and Butault, 2015), so even the
-total consumption is already highly correlated with tillage intensity.
-Tillage intensity cannot be negative so it is set to zero if off-road
-diesel consumption is lower than the reference value for direct seeding.
+Tillage intensity (L diesel ha⁻¹) is estimated from farm-level off-road
+diesel consumption. The direct-seeding reference is 54 L/ha, calculated
+as the mean of the values for wheat (60 L/ha), maize (48 L/ha), and a
+wheat–maize rotation (54 L/ha) reported by Chenu (2013). This reference
+is multiplied by the farm's total recorded crop area, including grassland.
+Any positive excess is divided by the farm's arable area to obtain the
+tillage intensity assigned to arable crops; negative excess is set to
+zero. Grassland is assigned a tillage intensity of zero. For arable crop
+records with positive area on farms with arable area, missing or
+non-positive off-road diesel consumption results in a missing tillage
+intensity.
+
+The implicit assumption is that average off-road diesel use on farms
+practicing direct seeding broadly corresponds to diesel used for other
+interventions than tillage. Tillage generally represents *43*% of
+off-road diesel consumption due to mechanization in cereal fields
+(Chenu and Butault, 2015), so total consumption is already highly
+correlated with tillage intensity.
 
 ## Nitrogen fertilization {#sec-method-practices-Nferti}
 
 The intensity of nitrogen fertilization is estimated for both mineral
 and organic fertilizers. For mineral fertilizers, the amount of mineral
-nitrogen brought to the farm, directly reported in the FADN, is
-allocated to the different crops using the French average mineral
-nitrogen input per crop as a distribution key (Ministère De
-L’Agriculture - SSP, 2019) (see “PKGC_N_ferti” sheet of Appendix C in
-Huet et al., 2026).
+nitrogen brought to the farm is allocated to the different crops using
+the French average mineral nitrogen input per crop as a distribution key
+(Ministère De L’Agriculture - SSP, 2019) (see “PKGC_N_ferti” sheet of
+Appendix C in Huet et al., 2026). The farm-level quantity is taken from
+the FADN quantity variable where it is available (from 2017 onward).
+For earlier years, it is inferred in two steps. First, mineral-N quantity
+is estimated from fertiliser expenditure (SE295) using a country- and
+year-specific ratio derived from FADN quantity-to-expenditure ratios and
+Eurostat fertiliser price indices. This preliminary estimate is then
+calibrated with a generalized additive model (GAM) fitted to FADN
+observations from 2017 onward, when both expenditure and reported
+quantity are available. The Tweedie GAM predicts reported quantity from
+a smooth of the preliminary estimate, with country, farm type (TF14),
+and economic size class (SIZC) as categorical effects; it is fitted by
+REML with the smoothness parameter fixed at 10. Training observations
+whose preliminary estimate exceeds its mean by more than three standard
+deviations are excluded.
+
+For pre-2017 farms with positive fertiliser expenditure, the model's
+prediction on the log scale is exponentiated to give the inferred
+quantity. If expenditure is not positive, the inferred quantity is set
+to zero. From 2017 onward, the reported quantity is used directly where
+available; it is not replaced by a model prediction when missing. During
+prediction, TF14 classes 46 and 47 are mapped to class 45 to use the
+fitted GAM coefficients; the recorded farm classification is unchanged.
 
 For organic fertilizers, as the FADN variable is not well-informed, we
 estimate these inputs in two different ways, depending on whether or not
@@ -176,10 +202,12 @@ with IPCC recommendations (Calvo Buendia et al., 2019; Eggleston et al.,
 2006). 
 
 The allocation of excreted nitrogen to crops and grasslands uses the
-national averages of organic nitrogen input per hectare of farms
-producing their own manure as a distribution key,
-distinguishing between organic and conventional farms
-(Ministère De L’Agriculture - SSP, 2019; see `data_extra$PKGC_N_ferti_org`).
+all-farm average organic nitrogen input per hectare as a distribution key,
+distinguishing between organic and conventional farms (Ministère De
+L’Agriculture - SSP, 2019; see `data_extra$PKGC_N_ferti`). Averages and
+confidence bounds for farms producing their own manure are used separately
+to help define the lower and upper allocation thresholds (see
+`data_extra$PKGC_N_ferti_org`).
 
 If the resulting amount of the allocation for a given crop or grassland is smaller
 than the lowest value between i) the French average organic nitrogen input for farms that do not produce
@@ -452,8 +480,13 @@ While stocks are registered in the FADN for each livestock category
 of animals transiting through each livestock category are unknown. We
 considered the observed animal stock as:
 
-$$Q_l = \frac{Q_l^{average} + Q_l^{opening} + Q_l^{closing}}{3}$$
+$$Q_l = \frac{Q_l^{average} + ALU_l / LU_l}{2}$$
 {#eq-Qobs}
+
+where $Q_l^{average}$ is the average animal number reported in FADN, $ALU_l$
+is the livestock-unit quantity, and $LU_l$ is the conversion coefficient from
+animals to livestock units for category $l$. Opening and closing animal
+numbers are not used in this calculation.
 
 #### Estimation of flows
 
@@ -482,8 +515,8 @@ $opening$, $closing$, $purchases$, or $sales$).
 
 Note that some farms can experience animal losses, resulting in negative
 flows. Losses are not recorded, so they are generally assumed to be
-null. The exception is when this assumption leads to negative inflows:
-this is impossible, so inflow is then set to zero.
+null. When the resulting calculation produces negative inflows or
+outflows, these are set to zero.
 
 #### Estimation of rearing parameters {#sec-method-practices-rearing-param}
 
@@ -519,8 +552,10 @@ associated rearing parameters. When the rearing parameter is not
 available or infinite, we replace the missing value by a reference value
 based on our data. We estimate reference values for each rearing
 parameter as the median in farms of the same NUTS2 where the species is
-present, or, if less than 3 farms are registered for the NUTS2, the
-median farm where the species is present in the same NUTS1. 
+present when at least 15 reference farms are available. Otherwise, we
+use the overall reference median for that parameter. If no overall
+reference median is available, the later current-sample fallback
+described below is used.
 
 We also estimate thresholds below and above which a value is considered aberrant 
 (see `pseudoherd_reference_table.R`). Lower and upper thresholds correspond to 1st, 
@@ -549,15 +584,28 @@ opening, closing, and purchases) in these mixed categories, we
 distinguish animals going to be fattened from those going to be breeders
 based on their proportion in the downward flow of animals (see Eq.
 @eq-mixed_cat for an example calculation of the observed number of
-animals for fattening).
+animals for fattening). For the mixed category LBOV1_2F, the downward
+fattening flow consists of slaughter sales from that category plus the
+inflow to LHEIFFAT not explained by purchases. The downward breeder flow
+is the remaining outflow from LBOV1_2F.
 
 $$
-\bar{Q}_{F,l} = \bar{Q}_{l} \cdot \frac{F_{B,out}}{F_{B,out} + F_{F,out}} \\
-= \bar{Q}_{l} \cdot \frac{\sum (\bar{Q}_{F,l+1} \cdot \frac{1}{t_{F,l+1}})}{ \sum (\bar{Q}_{F,l+1} \cdot \frac{1}{t_{F,l+1}}) + \sum (\bar{Q}_{B,l+1} \cdot \frac{1}{t_{B,l+1}}) }
+\begin{aligned}
+F_{F,l}^{down} &= Q_{l,\mathrm{slaughter}}^{sales}
+  + F_{l+1}^{in} - Q_{l+1}^{purchases} \\
+F_{B,l}^{down} &= F_l^{out} - F_{F,l}^{down} \\
+\bar{Q}_{F,l} &= \bar{Q}_{l} \cdot
+  \frac{F_{F,l}^{down}}{F_{F,l}^{down} + F_{B,l}^{down}} \\
+\bar{Q}_{B,l} &= \bar{Q}_{l} \cdot
+  \frac{F_{B,l}^{down}}{F_{F,l}^{down} + F_{B,l}^{down}}
+\end{aligned}
 $$ {#eq-mixed_cat}
 
-where $F,l$ are fattening animals and $B,l$ are breeders in category
-$l$.
+where $F_{F,l}^{down}$ and $F_{B,l}^{down}$ are inferred downward flows
+from mixed category $l$ into the fattening and breeder pathways,
+respectively. For LBOV1_2F, $l+1$ is LHEIFFAT. The observed stocks are
+split in proportion to these flows; this allocation does not use
+downstream stocks divided by residence times.
 
 ### Estimation of pseudo-herd {#sec-method-practices-pseudoherd}
 
@@ -606,15 +654,11 @@ To estimate the total number of both on- and off-farm animals involved
 in the rearing process, we compute what would be the herd at equilibrium
 based on the actual stock in each rearing stage (i.e., juveniles ,
 fattening or breeders), and the rearing parameters estimated (@sec-method-practices-rearing-param).
-For cattle specifically, such estimation of the equilibrium quantities assumes that all calves reach
-the next rearing stage. However, some calves are sold for slaughter and
-produce veal, hence never reach downward stages. To account for
-slaughtered calves, we remove the number of calves sold for slaughter
-from the equilibrium quantities estimated for fattening animals
-(@tbl-pseudo#tbl-pseudoherd_eqherd_eq). Conversely, we add the number
-of calves sold for slaughter to equilibrium quantities of calves
-estimated from the observed fattening animals
-(@tbl-pseudo#tbl-pseudoherd_eqherd_eq).
+For cattle, equilibrium fattening quantities estimated from the juvenile
+or breeder stage are multiplied by the ratio of calves sold for rearing
+to total juvenile outflow,
+$Q_{LBOV1}^{rearing} / F_{LBOV1}^{out}$, when juvenile outflow is
+positive (@tbl-pseudoherd_eq).
 
 ::: {#tbl-pseudoherd_eq}
 ```{r tbl-pseudoherd_eq, echo=FALSE, message=FALSE, warning=FALSE}
@@ -640,7 +684,7 @@ allocation_data <- data.frame(
         "$$t_f \\cdot \\bar{Q}_{b} \\cdot \\text{Offsprings}$$"
     ),
     col_b = c(
-        "$$\\frac{\\bar{Q}_{j}}{t_j} \\cdot \\frac{1}{\\text{Offsprings}}$$",
+        "$$\\frac{\\bar{Q}_{j}}{t_j} \\cdot \\frac{1}{\\text{Offsprings}} - Q_{LCOWDAIR}$$",
         "$$\\frac{\\bar{Q}_{f}}{t_f} \\cdot \\frac{1}{\\text{Offsprings}}$$",
         "—"
     ),
@@ -705,8 +749,12 @@ allocation_data |>
     ) |>
     # Footnotes
     tab_footnote(
-        footnote  = md("Specifically for cattle, multiplied by the ratio of calves sold for slaughter: $\\frac{\\bar{Q}_{LBOV1}^{slaughter}}{F^{out}_{LBOV1}}$."),
+        footnote  = md("For cattle, equilibrium fattening quantities estimated from juveniles or breeders are multiplied by the ratio of calves not sold for slaughter to total juvenile outflow: $\\frac{(F_{LBOV1}^{out} - Q_{LBOV1}^{slaughter})}{F_{LBOV1}^{out}}$, when juvenile outflow is positive."),
         locations = cells_body(columns = col_f, rows = c(1, 3))
+    ) |>
+    tab_footnote(
+        footnote = md("For cattle, subtract observed dairy cows ($Q_{LCOWDAIR}$) from breeder equilibrium estimated from juveniles because dairy cows are included in the breeder quantity."),
+        locations = cells_body(columns = col_b, rows = 1)
     ) |>
     tab_source_note(
         source_note = md(
@@ -829,7 +877,8 @@ animals constitute the off-farm part of the dairy pseudo-herd.
 **Swine.** For swine, we consider that all animals are involved in the meat activity.
 We infer the number of animals at equilibrium as for the cattle meat activity,
 with the juvenile stage ($j$) being the single category `LPIGLET`, the fattening stage
-($f$) being the single category `LPIGFAT`, and the breeders stage ($b$) being the single category `LSOWBRE`.
+($f$) being the single category `LPIGFAT`, and the breeder stage ($b$)
+including `LSOWBRE` and `LPIGOTH`; `LPIGOTH` is treated as male breeders and cull sows.
 
 **Poultry.** For poultry, we consider breeders of broilers and juveniles of laying
 hens as negligible, hence equilibrium quantities equaling observed
@@ -907,7 +956,7 @@ they are not recomputed from the farms being processed.
 #### Pseudo-herd feed and associated practices
 
 For each off-farm animal, we add the NUTS2 average of feed quantity and
-quality estimated from our test data set (ref xxx; see Section Feed).
+quality estimated from our test data set (see Section Feed).
 
 ## Feed intake reconstruction {#sec-method-practices-feed}
 

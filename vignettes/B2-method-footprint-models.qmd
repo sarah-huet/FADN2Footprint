@@ -73,7 +73,7 @@ emissions_data <- data.frame(
     "CO2 - indirect"
   ),
   ipcc_equations = c(
-    "Equations 10.21, 10.21A",
+    "Equation 10.21",
     "Equations 10.23, 10.24",
     "Equation 10.25",
     "Equations 10.26, 10.28",
@@ -163,7 +163,7 @@ Methane (CH~4~) emissions from enteric fermentation were estimated following the
 procedure consisted of three sequential steps:
 
 1.  retrieval of the observed herd structure from farm accounting data ([Method
-    article](articles/practice-inference.html#sec-method-practices-tillage))
+    article](articles/practice-inference.html#sec-method-practices-herd-struct))
 
 2.  estimation of livestock feed intake from both on-farm produced and purchased feed,
 
@@ -177,8 +177,11 @@ to CH~4~), yielding an emission factor (kg CH~4~ head⁻¹ yr^-1^) computed as (
 
 $$EF = \frac{GE \times (Y_m / 100)}{55.65}$$
 
-where *GE* is the gross energy intake (MJ head⁻¹ day⁻¹; @sec-method-practices-feed-qty-qlty), *Ym* is the methane conversion factor derived from IPCC,
-and *55.65 MJ kg⁻¹ CH~4~* is the energy content of methane.
+where *GE* is the annual gross energy intake (MJ head⁻¹ yr⁻¹;
+@sec-method-practices-feed-qty-qlty), *Ym* is the methane conversion
+factor derived from IPCC, and *55.65 MJ kg⁻¹ CH~4~* is the energy content
+of methane. The feed-intake input is annual, so no additional factor of
+365 is applied in this implementation.
 
 The total cattle CH~4~ emission is calculated as:
 
@@ -212,8 +215,8 @@ Methane (CH~4~) emissions from manure management were estimated for all livestoc
 
 2.  estimation of livestock feed intake,
 
-3.  collection of country-specific volatile solid (VS) excretion rates and maximum methane producing capacity (B₀) from UNFCCC national inventory
-    submissions (Table 3.B(a)s1),
+3.  retrieval of country-specific maximum methane producing capacity (B₀) from UNFCCC national inventory submissions (Table 3.B(a)s1), and
+    calculation of daily VS excretion from feed intake using IPCC Equation 10.24,
 
 4.  derivation of effective methane conversion factors (MCF) weighted by animal waste management system fractions (AWMS) per country and UNFCCC
     livestock category (Table 3.B(a)s2),
@@ -286,8 +289,9 @@ Total nitrogen excretion ($N_{ex}$, kg N animal^-1^ yr^-1^) is derived from the 
 
 ### Manure Management System Fractions
 
-Country- and category-specific manure management system (MMS) fractions ($AWMS_{T,S}$) were derived from UNFCCC national inventory submissions (Table
-3.B(a)s2, `UNFCCC_data$table3Bas2`). Population-weighted MMS fractions were computed per UNFCCC livestock category $T$ and country as:
+Country-, inventory-year-, and category-specific manure management system (MMS) fractions ($AWMS_{T,S}$) were derived from UNFCCC national inventory
+submissions (Table 3.B(a)s2, `UNFCCC_data$table3Bas2`). Population-weighted MMS fractions were computed per UNFCCC livestock category $T$, country,
+and inventory year as:
 
 $$AWMS_{T,S} = \frac{N_T \times AWMS_{T,S}^{raw}}{\sum_S N_T \times AWMS_{T,S}^{raw}}$$
 
@@ -300,11 +304,26 @@ reported in UNFCCC submissions.
 
 Direct N~2~O emissions from manure management were estimated following IPCC Equation 10.25:
 
-$$N_2O_{D,MM} = \sum_{T,S} N_{ex,T} \times AWMS_{T,S} \times EF3_S \times \frac{44}{28}$$
+$$N_2O_{D,MM} = \sum_{T,S} N_T \times N_{ex,T} \times AWMS_{T,S} \times EF3_S \times \frac{44}{28}$$
 
-where $EF3_S$ is the direct N~2~O emission factor for manure management system $S$ (kg N~2~O-N kg⁻¹ N). Emission factors were sourced from UNFCCC
-national inventory submissions (`UNFCCC_data$table3Bb`), dividing column X (direct N~2~O emission) by column R (total N excreted). When
-country-specific values were absent, IPCC default values (`data_extra$IPCC_default_values`, parameter `"EF3"`) were used as fallback. The ratio
+where $N_T$ is the observed number of animals in livestock category $T$ (`Qobs`), and $EF3_S$ is the direct N~2~O emission factor for manure
+management system $S$ (kg N~2~O-N kg⁻¹ N). Emission factors were taken directly from the country- and inventory-year-specific implied emission factor
+(IEF) values reported in UNFCCC Table 3.B(b) (`UNFCCC_data$table3Bb`). Missing factors use IPCC (2019), Volume 4, Chapter 10,
+Table 10.21 (pp. 10.91-10.93), with one selected factor per broad manure-management system:
+
+- Solid storage: 0.010; dry lot: 0.020; pit storage below animal confinement: 0.002.
+- Deep bedding: active mixing, 0.070. This cattle/swine factor is explicitly extrapolated to other non-poultry species.
+- Liquid/slurry: natural crust or cover, 0.005.
+- Composting: windrow, 0.005.
+- Anaerobic digester: 0.0006; uncovered anaerobic lagoon and daily spread: 0.
+- Other systems: assumed natural-aeration aerobic treatment, 0.010; this is a modelling assumption, not a universal IPCC factor for unclassified systems.
+- Poultry solid storage and deep bedding: 0.001, using the poultry-manure factors with or without litter.
+
+All factors are in kg N~2~O-N per kg N handled. These subtype choices are fallback assumptions, not inferred farm practices;
+reported country-year factors, including zero, retain priority. Pasture/range/paddock and manure burned for fuel or as waste
+have zero direct contribution in this module because Table 10.21 assigns their emissions to managed soils, fuel combustion,
+or waste incineration; this does not mean they have zero total emissions. A positive manure allocation without a finite,
+non-negative factor raises an explicit error rather than being omitted from the sum. The ratio
 $\frac{44}{28}$ converts kg N~2~O-N to kg N~2~O.
 
 #### Indirect N~2~O Emissions from Volatilisation
@@ -312,10 +331,9 @@ $\frac{44}{28}$ converts kg N~2~O-N to kg N~2~O.
 Nitrogen lost through volatilisation of NH₃ and NO~x~ from manure management systems was estimated following IPCC Equations 10.26 and 10.28. The
 amount of nitrogen volatilised was first calculated as:
 
-$$N_{vol,MMS} = \sum_{T,S} N_{ex,T} \times AWMS_{T,S} \times Frac_{gasMS,T,S}$$
+$$N_{vol,MMS} = \sum_{T,S} N_T \times N_{ex,T} \times AWMS_{T,S} \times Frac_{gasMS,T,S}$$
 
-where $Frac_{gasMS,T,S}$ is the fraction of managed manure nitrogen that volatilises as NH₃ and NO~x~ from management system $S$ for livestock
-category $T$ (IPCC Table 10.22). The resulting indirect N~2~O emissions were then computed as:
+where $N_T$ is the observed number of animals in livestock category $T$ (`Qobs`), and $Frac_{gasMS,T,S}$ is the fraction of managed manure nitrogen that volatilises as NH₃ and NO~x~ from management system $S$ for livestock category $T$ (IPCC Table 10.22). The resulting indirect N~2~O emissions were then computed as:
 
 $$N_2O_{G,mm} = N_{vol,MMS} \times EF_4 \times \frac{44}{28}$$
 
@@ -327,10 +345,9 @@ default values.
 Nitrogen lost through leaching and runoff from manure management systems was estimated following IPCC Equations 10.27 and 10.29. The amount of
 nitrogen leached was first calculated as:
 
-$$N_{leach,MMS} = \sum_{T,S} N_{ex,T} \times AWMS_{T,S} \times Frac_{leachMS,T,S}$$
+$$N_{leach,MMS} = \sum_{T,S} N_T \times N_{ex,T} \times AWMS_{T,S} \times Frac_{leachMS,T,S}$$
 
-where $Frac_{leachMS,T,S}$ is the fraction of managed manure nitrogen lost through leaching and runoff from management system $S$ for livestock
-category $T$ (IPCC Table 10.22), taken from IPCC default values. The resulting indirect N~2~O emissions were then computed as:
+where $N_T$ is the observed number of animals in livestock category $T$ (`Qobs`), and $Frac_{leachMS,T,S}$ is the fraction of managed manure nitrogen lost through leaching and runoff from management system $S$ for livestock category $T$ (IPCC Table 10.22), taken from IPCC default values. The resulting indirect N~2~O emissions were then computed as:
 
 $$N_2O_{L,mm} = N_{leach,MMS} \times EF_5 \times \frac{44}{28}$$
 
@@ -354,10 +371,10 @@ Direct and indirect nitrous oxide (N~2~O) emissions from managed soils (cropland
 
 ### Activity Data Assembly
 
-Activity data were assembled by joining crop-level information (area, yield, land use type, species) with nitrogen fertilisation data, country- and
-year-specific emission factors from UNFCCC national inventory submissions, and IPCC crop-specific parameters (Tables 11.1 and 11.2). When
-country-specific emission factors were unavailable for a given country–year combination, cross-country means were used as fallback. Similarly, when
-crop-specific IPCC parameters could not be matched to a given species, generic default values were applied.
+Activity data were assembled by joining crop-level information (area, yield, land use type, species) with nitrogen fertilisation data and
+country- and inventory-year-specific emission factors from UNFCCC national inventory submissions, matched by country ISO code and survey year.
+Missing emission-factor values were replaced by the mean of available factors. IPCC crop-specific parameters (Tables 11.1 and 11.2) were also
+joined; when crop-specific parameters could not be matched to a given species, generic default values were applied.
 
 ### Nitrogen Input Variables
 
@@ -403,8 +420,7 @@ $$N_2O\text{-}N_d = F_{SN} \times EF_{SN} + F_{ON} \times EF_{ON} + F_{CR} \time
 $$N_2O_d = N_2O\text{-}N_d \times \frac{44}{28}$$
 
 where $EF_{SN}$, $EF_{ON}$, $EF_{CR}$, $EF_{SOM}$, $EF_{OS}$, and $EF_{PRP}$ are the direct N~2~O emission factors (kg N~2~O-N kg⁻¹ N) for each
-nitrogen source, sourced from country- and year-specific UNFCCC submissions (Table 3.D), dividing column F (direct N~2~O emissions) by column D
-(nitrogen input). The ratio $\frac{44}{28}$ converts kg N~2~O-N to kg N~2~O.
+nitrogen source, taken from the reported implied-emission-factor column in UNFCCC Table 3.D. The ratio $\frac{44}{28}$ converts kg N~2~O-N to kg N~2~O.
 
 ### Indirect N~2~O Emissions from Volatilisation
 
@@ -439,19 +455,21 @@ volatilisation), and $N_2O_L$ (indirect leaching), all expressed in kg CO~2~-eq 
 ### Fuel Combustion
 
 Greenhouse gas emissions from the combustion of liquid fuels used on the farm were estimated following IPCC stationary and mobile combustion
-methodology [@IPCC2006energy], using country- and year-specific emission factors from UNFCCC national inventory submissions.
+methodology [@IPCC2006energy], using country- and inventory-year-specific emission factors from UNFCCC national inventory submissions. Factors are
+matched by country ISO code and survey year.
 
 #### Activity Data
 
 On-farm fuel consumption was distinguished into two categories: - "motor fuels" (diesel consumed by farm machinery and field operations), - "heating
 fuels" consumed in farm buildings and livestock facilities. Fuel quantities, expressed in both litres and megajoules (MJ), were retrieved from the
-FADN, with the conversion from litres to MJ performed upstream during the farm practices inference step (`infer_practices`).
+FADN, with the conversion from litres to MJ performed during input parsing by `data_4FADN2Footprint()` using a factor of 37.9 MJ/L.
 
 #### Emission Factors
 
-Country- and year-specific CO~2~ emission factors ($EF_{fuel,CO_2}$, t CO~2~ TJ^-1^) were sourced from UNFCCC national inventory submissions and
-matched by country ISO code and year. When country- or year-specific values were unavailable, the European average value was used. Emission factors
-were converted from t CO~2~ TJ^-1^ to kg CO~2~ MJ^-1^ for calculation:
+Country- and inventory-year-specific CO~2~ emission factors ($EF_{fuel,CO_2}$, t CO~2~ TJ^-1^) were sourced from UNFCCC national inventory submissions
+and matched by country ISO code and survey year. Missing values are replaced by the mean of available factors in the farm-joined data, so the fallback
+is weighted by farm rows rather than being an unweighted European average. Emission factors were converted from t CO~2~ TJ^-1^ to kg CO~2~ MJ^-1^ for
+calculation:
 
 $$EF_{fuel,CO_2} \; [\text{kg CO}_2 \text{ MJ}^{-1}] = EF_{fuel,CO_2} \; [\text{t CO}_2 \text{ TJ}^{-1}] \times 10^{-3}$$
 
@@ -485,7 +503,7 @@ national average electricity prices for non-household consumers sourced from EUR
 $$elec_{kWh} = \frac{elec_V}{euro_{kWh}}$$
 
 where $elec_V$ is the electricity expenditure reported in FADN (€ yr^-1^) and $euro_{kWh}$ is the national average electricity price (€ kWh^-1^),
-matched by country and survey year. When country- and year-specific prices were unavailable, the cross-country mean price was used as fallback.
+matched by country and survey year. When a country-year price was unavailable, the mean of available EUROSTAT country-year prices was used as fallback.
 
 #### Emission Calculation
 
@@ -494,8 +512,8 @@ Total GHG emissions from electricity use were estimated as:
 $$ghg_{elec} = elec_{kWh} \times EF_{elec}$$
 
 where $EF_{elec}$ is the country- and year-specific electricity emission factor (kg CO~2~-eq kWh^-1^), reflecting the carbon intensity of the national
-electricity grid (Bastos et al., 2024). When country- and year-specific emission factors were missing, the European average emission factor was
-substituted.
+electricity grid (Bastos et al., 2024). When a country-year factor was unavailable, the mean factor across available European countries for that year
+was substituted. If no factors were available for that year, the mean across all available country-year factors was used.
 
 Emissions were expressed in kg CO~2~-eq yr^-1^ at the whole-farm level. Allocation of electricity emissions to specific farm activities (crops or
 livestock) was not performed at this stage but handled downstream using economic allocation keys.
@@ -528,8 +546,9 @@ double-counted. Field-level N₂O emissions from fertiliser application were est
 
 ## Conversion to CO~2~ Equivalents
 
-All CH~4~ and N~2~O emission estimates (kg CH~4~ head⁻¹ yr^-1^) were multiplied by their global warming potential (GWP) from Myhre, G., et al. (2013),
-to obtain emissions expressed in kg CO~2~ equivalents per year (kg CO~2~e yr^-1^).
+CH~4~ and N~2~O mass emissions, expressed in kg gas yr^-1^, were multiplied by their respective global warming potentials (GWP) from Myhre, G., et al.
+(2013), to obtain emissions expressed in kg CO~2~-eq yr^-1^. Where the underlying emission factor is per head, it is first multiplied by the number of
+animals.
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -542,7 +561,7 @@ milk production (ref Huet).
 ## BVIAS model
 
 To aggregate the impact of farming practices into a synthetic biodiversity value, the BVIAS model first considers their normalized intensity values in
-the interval \[0.1\]. To exclude possible outliers, the 95th percentile of observed intensity is set as the function maximum limit (i.e., a threshold
+the interval \[0,1\]. To exclude possible outliers, the 95th percentile of observed intensity is set as the function maximum limit (i.e., a threshold
 above which values are truncated). The contribution to the biodiversity value of each practice is then calculated by applying a response function
 specific to each parameter @eq-BVC.
 
@@ -553,11 +572,21 @@ $$ {#eq-BVC}
 where $BVC$ is the biodiversity value contribution (without dimension, 1 = maximum contribution of practice, 0 = minimum contribution) of a practice v
 for each observation $i$ in a land use type $l$, $x$ is the normalized practice intensity, and $[\alpha, \beta, \delta, \epsilon, \gamma, \sigma]$ are
 the contribution function constants. Whereas the original BVI model uses a simple average of BVCs to calculate the land use specific biodiversity
-value (BVLU), BVIAS relies on a weighted average of BVCs (@eq-BVLU, where $z$ is the practice weight), based on their relative importance as a driver
-of biodiversity loss (@sec-model-calibration).
+value (BVLU), BVIAS rescales the BVC values before aggregation, separately for each practice $v$ and land-use type $l$:
 
 $$
-BV_{LU} = \sum z_{l,v} \cdot BVC_{i,l,v}
+BVC^{scaled}_{i,l,v} = \frac{BVC_{i,l,v} - \min_i(BVC_{i,l,v})}{\max_i(BVC_{i,l,v}) - \min_i(BVC_{i,l,v})}
+$$
+
+The minimum and maximum are calculated across observations in the current sample, so the rescaled values can change when the sample changes. If this
+rescaling is non-finite at normalized intensity $x=0$ or $x=1$, the endpoint score is set according to the response direction: 0 then 1 for increasing
+functions, and 1 then 0 for decreasing functions.
+
+BVIAS then relies on a weighted average of the rescaled BVC values (@eq-BVLU, where $z$ is the practice weight), based on their relative importance as
+a driver of biodiversity loss (@sec-model-calibration).
+
+$$
+BV_{LU} = \frac{\sum_v z_{l,v} \cdot BVC^{scaled}_{i,l,v}}{\sum_v z_{l,v}}
 $$ {#eq-BVLU}
 
 As mentioned above, $BV_{LU}$ is then projected into the range of possible biodiversity values ($[LU_{min,l};LU_{max,l}]$) for this particular land
@@ -771,9 +800,7 @@ the model (@tbl-practice-BVloc).
 
 #### The case of grassland
 
-In our modeling framework, since grasslands are not ploughed nor receive pesticides, we do not use these variables to calibrate the set of grassland
-parameters. Similarly, the crop diversity does not apply to grassland. We also considered that the effects of hedges and parcel size are negligible
-for grasslands. These five variables will therefore be weighted to zero for the calculation of the BVIAS of grasslands.
+In our modeling framework, the effect of tillage, pesticides, crop diversity, and mean field size on grassland biodiversity is considered negligeable and therefore null grassland weights are assigned to these metrics.
 
 ### Model calibration
 

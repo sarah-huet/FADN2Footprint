@@ -1,6 +1,8 @@
 test_that("about 90% of EU mock farms pass infer_practices", {
   data(mock_data)
   mock_farms <- mock_data$fadn_fict
+  expect_true("SE295" %in% names(mock_farms))
+  expect_true(all(c("ACHEN", "OTEXE") %in% names(mock_data$rica_fict$rica)))
 
   object <- data_4FADN2Footprint(mock_farms)
   inferred <- infer_practices(object, overwrite = TRUE)
@@ -41,6 +43,8 @@ test_that("French mock Excel files (year/table) have ~90% farms passing", {
     stats::setNames(lapply(files, readxl::read_excel), tabs)
   })
   names(yearly) <- years
+  expect_true(all(vapply(yearly, function(x) "ACHEN" %in% names(x$rica), logical(1))))
+  expect_true(all(vapply(yearly, function(x) "OTEXE" %in% names(x$rica), logical(1))))
 
   dict_path <- "../../vignettes/dictionary_conversion_filled_FRA.xlsx"
   skip_if_not(file.exists(dict_path))

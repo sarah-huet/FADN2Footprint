@@ -61,6 +61,7 @@ infer_practices <- function(
       )
     )
   object@practices$crops$N_ferti <- N_ferti
+  #ToDo: store the message related to N_ferti calculation in a slot of the object for later reference
 
   share_Nmin_ferti <- f_share_Nmin_ferti(object, overwrite = overwrite) |>
     dplyr::mutate(
@@ -144,23 +145,6 @@ infer_practices <- function(
 
   # Remove farms with aberrant gross energy values for their main livestock category
 
-  ## GE thresholds from FADN_averages$GE_MJ_anim_day
-  tmp_mean_GE <- FADN_averages$GE_MJ_anim_day |>
-    #dplyr::summarise(
-    #  mean_GE_MJ_anim_day = mean(mean_GE_MJ_anim_day, na.rm = T),
-    #  sd_GE_MJ_anim_day = mean(sd_GE_MJ_anim_day, na.rm = T),
-    #  .by = FADN_code_letter
-    #) |>
-    # define thresholds
-    dplyr::mutate(
-      threshold_up = mean_GE_MJ_anim_day + 3 * sd_GE_MJ_anim_day,
-
-      threshold_down = dplyr::case_when(
-        FADN_code_letter == "LCOWDAIR" ~ 0.25 * mean_GE_MJ_anim_day,
-        .default = 0.10 * mean_GE_MJ_anim_day
-      )
-    )
-
   ## main livestock category
   tmp_max_cat <- object@herd |>
     # estimate LU
@@ -174,20 +158,56 @@ infer_practices <- function(
       by = dplyr::all_of(id_cols)
     ) |>
     # select columns
-    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter) |>
-    # add thresholds
-    dplyr::left_join(
-      tmp_mean_GE,
-      #by = 'FADN_code_letter'
-      # TODO: restore by country when good enough data
-      by = c('FADN_code_letter', 'COUNTRY')
-    )
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter)
 
-  ## retrieve farms with aberrant values
+  ## GE thresholds from FADN_averages$GE_MJ_anim_day
+  tmp_GE_thrhld <- tmp_max_cat |>
+    #dplyr::left_join(
+    #  FADN_averages$GE_MJ_anim_day$GE_by_country,
+    #  by = c('FADN_code_letter', 'COUNTRY')
+    #) |>
+    # add european value fallback
+    dplyr::left_join(
+      FADN_averages$GE_MJ_anim_day$GE_by_europe,
+      #suffix = c("", "_europe"),
+      by = c('FADN_code_letter')
+    ) |>
+    # define thresholds
+    # Mean FADN filter
+    dplyr::mutate(
+      threshold_up = mean_GE_MJ_anim_day + 3 * sd_GE_MJ_anim_day,
+      threshold_down = dplyr::case_when(
+        FADN_code_letter == "LCOWDAIR" ~ 0.25 * mean_GE_MJ_anim_day,
+        .default = 0.10 * mean_GE_MJ_anim_day
+      )
+    )
+  #dplyr::mutate(
+  #  threshold_up = dplyr::coalesce(
+  #    mean_GE_MJ_anim_day,
+  #    mean_GE_MJ_anim_day_europe
+  #  ) +
+  #    3 * dplyr::coalesce(sd_GE_MJ_anim_day, sd_GE_MJ_anim_day_europe),
+  #  threshold_down = dplyr::case_when(
+  #    FADN_code_letter == "LCOWDAIR" ~ 0.25 *
+  #      dplyr::coalesce(mean_GE_MJ_anim_day, mean_GE_MJ_anim_day_europe),
+  #    .default = 0.10 *
+  #      dplyr::coalesce(mean_GE_MJ_anim_day, mean_GE_MJ_anim_day_europe)
+  #  )
+  #)
+  ### Percentiles FADN filter
+  #    # define thresholds
+  #dplyr::mutate(
+  #  threshold_up = dplyr::coalesce(q99, q99_europe),
+  #  threshold_down = dplyr::coalesce(q01, q01_europe)
+  #)
+  #
+
+  #
+  #  ## retrieve farms with aberrant values
   farms_to_remove <- herd_feed$feed_intake$total |>
     # add thresholds and filter for the main livestock category
     dplyr::inner_join(
-      tmp_max_cat,
+      tmp_GE_thrhld,
       by = c(id_cols, 'FADN_code_letter')
     ) |>
     # filter farms above & below thresholds
@@ -230,8 +250,8 @@ infer_practices <- function(
   #        .default = 0.10 * (th_GE_MJ_LU_y * livestock_unit_coef)
   #      )
   #    )
-  #
-  #  ## main livestock category
+  #  #
+  #  #  ## main livestock category
   #  tmp_max_cat <- object@herd |>
   #    # estimate LU
   #    dplyr::mutate(
@@ -251,7 +271,7 @@ infer_practices <- function(
   #      by = 'FADN_code_letter'
   #    )
   #
-  #  ## retrieve farms with aberrant values
+  #  #  ## retrieve farms with aberrant values
   #  farms_to_remove <- object@practices$herding$feed$feed_intake$total |>
   #    # add thresholds and filter for the main livestock category
   #    dplyr::inner_join(
@@ -318,6 +338,31 @@ infer_practices <- function(
 
   # Add these farms to the farms to remove list
   farms_to_remove <- dplyr::bind_rows(farms_to_remove, aberrant_species)
+
+  # Remove farm with animals under contract
+  farms_under_contract <- object@input |>
+    dplyr::filter(
+      dplyr::if_any(
+        dplyr::any_of(c("sales_contract_cattle", "sales_contract_pigs",
+                       "sales_contract_poultry", "sales_contract_sheepgoat")),
+        ~ .x > 0
+      )
+    ) |>
+    dplyr::select(tidyselect::all_of(id_cols)) |>
+    dplyr::mutate(
+      problem = "animals_under_contract"
+    )
+
+  if (farms_under_contract |> nrow() > 0) {
+    message(
+      paste0(
+        nrow(farms_under_contract),
+        " farm x year observations with animals under contract are removed."
+      )
+    )
+  }
+
+  farms_to_remove <- dplyr::bind_rows(farms_to_remove, farms_under_contract)
 
   #### N excretion ----
 

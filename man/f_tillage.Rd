@@ -13,8 +13,9 @@ package workflow. The object must provide:
 \item object@traceability$id_cols: character vector of farm identifier
 column names,
 \item object@crop: crop activity table with columns FADN_code_letter,
-land_use_type and area_ha,
-\item object@input: farm input table with column diesel_l.
+land_use_type and area_ha (hectares), covering all land use types,
+\item object@input: farm input table with column diesel_l (litres over the
+farm reporting period).
 }}
 
 \item{overwrite}{Logical, default FALSE. If FALSE and
@@ -30,8 +31,9 @@ object@traceability$id_cols.}
 \item{FADN_code_letter}{FADN crop activity code.}
 \item{land_use_type}{Land use type (always "arable" in the output).}
 \item{tillage}{Tillage intensity indicator in litres of diesel per
-hectare above the no-till baseline. 0 indicates no-till or direct
-seeding; NA indicates unreliable diesel data.}
+arable hectare above the whole-farm baseline per reporting period.
+0 indicates no positive excess; NA indicates unreliable diesel data
+or missing/non-positive crop area.}
 }
 }
 \description{
@@ -52,18 +54,21 @@ The no-till baseline is derived from Chenu (2013) as the average diesel
 consumption for wheat (60 L/ha), maize (48 L/ha) and a wheat–maize
 rotation (54 L/ha), giving a baseline of 54 L/ha.
 
-Only arable land use types are considered; permanent grassland, orchards
-and other non-arable land uses are excluded from the output.
+This arable reference is applied uniformly to all recorded land areas,
+including grassland and other non-arable land, to estimate a whole-farm
+non-tillage baseline. This is an allocation assumption, not a validated
+grassland-specific reference. Only arable activities receive the residual
+diesel; non-arable activities are excluded from the output.
 
 The estimation procedure per crop activity is:
 \enumerate{
-\item The farm's total diesel consumption (diesel_l) is allocated to each
-crop in proportion to its share of the farm's total arable area
-(area_ha / sum_area_ha within the same land_use_type group).
-\item The no-till baseline (avrg_diesel_no_tillage × area_ha) is subtracted
-from the allocated diesel.
-\item The result is divided by crop area (area_ha) to express the indicator
-in L/ha.
+\item Multiply the no-till reference by the farm's total recorded area across
+all land use types to estimate baseline diesel consumption in litres.
+\item Subtract this baseline from total farm diesel consumption (diesel_l),
+retaining only positive excess consumption.
+\item Allocate the excess to arable crops in proportion to their arable area
+shares, then divide by crop area. This simplifies to excess consumption
+divided by total arable area, in L/ha, for every positive-area arable crop.
 }
 
 Three cases are handled explicitly:
@@ -72,12 +77,16 @@ Three cases are handled explicitly:
 assigned NA (it is considered implausible that a farm has no diesel
 consumption, so these records are flagged as unreliable and will be
 invalidated by infer_practices).
-\item \strong{Below no-till baseline}: when the allocated diesel is lower than the
-no-till reference, tillage is set to 0 (interpreted as direct seeding /
-no-till practice).
+\item \strong{At or below the whole-farm baseline}: tillage is set to 0, indicating
+no positive excess detected, rather than proof of no-till practice.
 \item \strong{Default}: excess diesel per hectare is returned as the tillage
 intensity indicator.
 }
+
+Arable activities with missing or non-positive area receive NA. Missing
+areas are omitted from farm area totals, so incomplete area records can
+underestimate the baseline. The residual is a proxy, not measured tillage
+fuel; other operations and machinery efficiency can also affect it.
 
 The function returns cached results stored in
 object@practices$crops$tillage when present and \code{overwrite = FALSE}.

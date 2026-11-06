@@ -42,6 +42,10 @@
 #'         variable names cannot be matched to EU-FADN names, so the French mock
 #'         uses the French median parameters (size loading, autocorrelation,
 #'         categorical persistence) and the French retention rate.
+#'   \item The French conversion dictionary's \code{value_mappings} sheet
+#'         uses \code{French_OTEXE-to-EU-TF.xlsx}, sheet \code{OTEXE-TF14}.
+#'         For pre-2017 nitrogen prediction only, TF14 46/47 use the TF14 45
+#'         GAM coefficients, as explicitly approved by the maintainer.
 #' }
 #'
 #' ## Outputs
@@ -430,8 +434,13 @@ usethis::use_data(mock_data, overwrite = T)
 ## Excel files ----
 # EU set: one file per country and year, all in one folder
 eu_dir <- "inst/ext_data/mock_FADN_EU"
-unlink(eu_dir, recursive = TRUE)
-dir.create(eu_dir, recursive = TRUE)
+old_eu_files <- list.files(eu_dir, pattern = "\\.xlsx$", full.names = TRUE)
+if (length(old_eu_files) > 0 && !all(file.remove(old_eu_files))) {
+  stop("Could not remove outdated EU mock Excel files.")
+}
+if (!dir.exists(eu_dir) && !dir.create(eu_dir, recursive = TRUE)) {
+  stop("Could not create the EU mock output directory.")
+}
 for (cty in unique(fadn_fict$COUNTRY)) {
   for (yr in unique(fadn_fict$YEAR[fadn_fict$COUNTRY == cty])) {
     openxlsx::write.xlsx(
@@ -443,9 +452,15 @@ for (cty in unique(fadn_fict$COUNTRY)) {
 
 # French set: one subfolder per year, one file per table
 fr_dir <- "inst/ext_data/mock_FADN_FRA"
-unlink(fr_dir, recursive = TRUE)
+old_fr_files <- list.files(fr_dir, pattern = "\\.xlsx$", recursive = TRUE, full.names = TRUE)
+if (length(old_fr_files) > 0 && !all(file.remove(old_fr_files))) {
+  stop("Could not remove outdated French mock Excel files.")
+}
 for (yr in names(rica_fict_years)) {
-  dir.create(file.path(fr_dir, yr), recursive = TRUE)
+  year_dir <- file.path(fr_dir, yr)
+  if (!dir.exists(year_dir) && !dir.create(year_dir, recursive = TRUE)) {
+    stop("Could not create the French mock output directory for ", yr, ".")
+  }
   for (tb in names(rica_fict_years[[yr]])) {
     openxlsx::write.xlsx(rica_fict_years[[yr]][[tb]],
                          file.path(fr_dir, yr, paste0(tb, ".xlsx")))

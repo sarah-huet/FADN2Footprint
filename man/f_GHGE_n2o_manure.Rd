@@ -20,21 +20,21 @@ cached GHGE results are ignored and computations are re-run.}
 A \code{\link[tibble]{tibble}} with one row per farm observation ×
 livestock category, containing:
 \describe{
-\item{...}{Traceability identifier columns
-(\code{object@traceability$id_cols}).}
-\item{FADN_code_letter}{\code{character}. FADN livestock category code.}
-\item{species}{\code{character}. Livestock species
-(e.g., \code{"cattle"}, \code{"swine"}, \code{"poultry"}).}
-\item{Qobs}{\code{numeric}. Observed number of livestock heads
-(annual average).}
-\item{N2O_D_MM_kgCO2e}{\code{numeric}. Direct N2O emissions from manure
-management (kg CO2-eq yr\eqn{^{-1}}), from IPCC Eq. 10.25.}
-\item{N2O_G_mm_kgCO2e}{\code{numeric}. Indirect N2O emissions from
-atmospheric deposition of volatilised NH3 and NOx (kg CO2-eq
-yr\eqn{^{-1}}), from IPCC Eqs. 10.26 & 10.28.}
-\item{N2O_L_mm_kgCO2e}{\code{numeric}. Indirect N2O emissions from
-nitrogen leaching and runoff (kg CO2-eq yr\eqn{^{-1}}), from IPCC
-Eqs. 10.27 & 10.29.}
+  \item{...}{Traceability identifier columns
+    (\code{object@traceability$id_cols}).}
+  \item{FADN_code_letter}{\code{character}. FADN livestock category code.}
+  \item{species}{\code{character}. Livestock species
+    (e.g., \code{"cattle"}, \code{"swine"}, \code{"poultry"}).}
+  \item{Qobs}{\code{numeric}. Observed number of livestock heads
+    (annual average).}
+  \item{N2O_D_MM_kgCO2e}{\code{numeric}. Direct N2O emissions from manure
+    management (kg CO2-eq yr\eqn{^{-1}}), from IPCC Eq. 10.25.}
+  \item{N2O_G_mm_kgCO2e}{\code{numeric}. Indirect N2O emissions from
+    atmospheric deposition of volatilised NH3 and NOx (kg CO2-eq
+    yr\eqn{^{-1}}), from IPCC Eqs. 10.26 & 10.28.}
+  \item{N2O_L_mm_kgCO2e}{\code{numeric}. Indirect N2O emissions from
+    nitrogen leaching and runoff (kg CO2-eq yr\eqn{^{-1}}), from IPCC
+    Eqs. 10.27 & 10.29.}
 }
 }
 \description{
@@ -43,48 +43,53 @@ management for all livestock categories using IPCC Tier 2/3 methodology
 (IPCC 2006, 2019 Refinements), anchored on country-specific parameters
 reported to the UNFCCC. The function follows a three-step approach:
 \enumerate{
-\item Retrieval of the observed herd structure from the
-\code{FADN2Footprint} object, enriched with IPCC and UNFCCC category
-codes and country ISO codes.
-\item Estimation of livestock nitrogen excretion per head and per
-livestock category via \code{\link{f_n_excr}}.
-\item Calculation of three N2O emission pathways from manure management,
-converted to CO2-equivalents using \code{\link{GWP}}.
+  \item Retrieval of the observed herd structure from the
+    \code{FADN2Footprint} object, enriched with IPCC and UNFCCC category
+    codes and country ISO codes.
+  \item Estimation of livestock nitrogen excretion per head and per
+    livestock category via \code{\link{f_n_excr}}.
+  \item Calculation of three N2O emission pathways from manure management,
+    converted to CO2-equivalents using \code{\link{GWP}}.
 }
 }
 \details{
-\subsection{Nitrogen Excretion}{
-
+## Nitrogen Excretion
 Total nitrogen excretion (\eqn{N_{ex}}, kg N yr\eqn{^{-1}}) per livestock
 category is estimated by \code{\link{f_n_excr}} and joined across all
 livestock species. When species-specific outputs differ in column structure,
 only common columns are retained before row-binding.
-}
 
-\subsection{Manure Management System (MMS) Fractions}{
-
-Country- and category-specific MMS fractions (\eqn{AWMS_{T,S}}) are derived
-from UNFCCC submission data (\code{\link{UNFCCC_data}}\code{$table3Bas2}).
-Population-weighted MMS fractions are computed per UNFCCC livestock category
-and country:
+## Manure Management System (MMS) Fractions
+Country-, year-, and category-specific MMS fractions (\eqn{AWMS_{T,S}}) are
+derived from UNFCCC submission data
+(\code{\link{UNFCCC_data}}\code{$table3Bas2}). Population-weighted MMS
+fractions are computed per UNFCCC livestock category, country, and inventory
+year:
 \deqn{AWMS_{T,S} = \frac{N_T \times AWMS_{T,S}^{raw}}
   {\sum_S N_T \times AWMS_{T,S}^{raw}}}
-}
 
-\subsection{Emission Pathways}{
-\subsection{1. Direct N2O Emissions (IPCC Eq. 10.25)}{
+## Emission Pathways
 
+### 1. Direct N2O Emissions (IPCC Eq. 10.25)
 \deqn{N_2O_{D,MM} = \sum_{T,S} N_{ex,T} \times AWMS_{T,S} \times EF3_S
   \times \frac{44}{28}}
 where \eqn{EF3_S} is the direct N2O emission factor for MMS \eqn{S}
 (kg N2O-N kg\eqn{^{-1}} N), sourced from UNFCCC submissions
-(\code{\link{UNFCCC_data}}\code{$table3Bb}), with IPCC default values
-(\code{\link{data_extra}}\code{$IPCC_default_values}, parameter
-\code{"EF3"}) used as fallback when country-specific values are absent.
-}
+(\code{\link{UNFCCC_data}}\code{$table3Bb}), with defaults from IPCC (2019),
+Table 10.21, used when reported values are absent.
+The broad MMS categories use active-mixing deep bedding (0.070),
+covered/crusted liquid systems (0.005), windrow composting (0.005),
+and natural-aeration treatment for \code{mms_other} (0.010).
+Applying the cattle/swine deep-bedding factor to other non-poultry species
+is an explicit extrapolation, not an IPCC species-specific default.
+Poultry solid storage and deep bedding use the poultry-manure factor
+(0.001). Pasture deposits and manure burned for fuel or as waste have
+no direct emission contribution in this module; Table 10.21 assigns their
+emissions to managed soils, fuel combustion, or waste incineration.
+A positive MMS allocation without a finite, non-negative factor raises
+an error rather than being silently omitted.
 
-\subsection{2. Indirect N2O from Volatilisation (IPCC Eqs. 10.26 & 10.28)}{
-
+### 2. Indirect N2O from Volatilisation (IPCC Eqs. 10.26 & 10.28)
 Nitrogen lost through volatilisation of NH3 and NOx:
 \deqn{N_{vol,MMS} = \sum_{T,S} N_{ex,T} \times AWMS_{T,S}
   \times Frac_{gasMS,T,S}}
@@ -95,10 +100,8 @@ where \eqn{Frac_{gasMS,T,S}} (IPCC Table 10.22) and \eqn{EF_4}
 Species mapping for \eqn{Frac_{gasMS}} follows:
 \code{LCOWDAIR} → dairy cattle; other cattle; swine; poultry;
 all others → other animals.
-}
 
-\subsection{3. Indirect N2O from Leaching (IPCC Eqs. 10.27 & 10.29)}{
-
+### 3. Indirect N2O from Leaching (IPCC Eqs. 10.27 & 10.29)
 Nitrogen lost through leaching and runoff:
 \deqn{N_{leach,MMS} = \sum_{T,S} N_{ex,T} \times AWMS_{T,S}
   \times Frac_{leachMS,T,S}}
@@ -106,25 +109,19 @@ Resulting indirect N2O emissions:
 \deqn{N_2O_{L,mm} = N_{leach,MMS} \times EF_5 \times \frac{44}{28}}
 where \eqn{Frac_{leachMS,T,S}} (IPCC Table 10.22) and \eqn{EF_5}
 (IPCC Chapter 11, Table 11.3) are taken from IPCC default values.
-}
 
-}
-
-\subsection{Conversion to CO2-equivalents}{
-
+## Conversion to CO2-equivalents
 All N2O fluxes are converted to kg CO2-eq using the global warming potential
 for N2O stored in \code{\link{GWP}}\code{[["N20"]]}.
 }
-}
 \note{
 \itemize{
-\item UNFCCC emission factor data (\code{table3Bb}) do not currently
-include a year dimension; a TODO is in place to account for inter-annual
-variability in future versions.
-\item A quality-check routine comparing estimated parameters (VS, Bo,
-weighted MCF × AWMS, and EF) against UNFCCC-reported values is work in
-progress (\code{WIP}).
-\item The \eqn{\frac{44}{28}} ratio converts kg N2O-N to kg N2O.
+  \item Direct manure-management emission factors use reported UNFCCC
+    implied emission factors for the matching country and inventory year.
+  \item A quality-check routine comparing estimated parameters (VS, Bo,
+    weighted MCF × AWMS, and EF) against UNFCCC-reported values is work in
+    progress (\code{WIP}).
+  \item The \eqn{\frac{44}{28}} ratio converts kg N2O-N to kg N2O.
 }
 }
 \references{

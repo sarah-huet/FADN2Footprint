@@ -8,3 +8,4 @@
 ^vignettes/\\.quarto$
 ^vignettes/\\.trackdown$
 ^vignettes/\.*_files$
+^AI_agents$

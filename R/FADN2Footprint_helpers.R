@@ -425,6 +425,8 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
 #'   \item{variable_pattern}{Tibble of suffix mappings by group}
 #'   \item{category_pattern}{Tibble of product code mappings}
 #'   \item{manual_matches}{Tibble of farm-level variable mappings}
+#'   \item{value_mappings}{Optional categorical code crosswalks with columns
+#'     fadn_variable, national_value and fadn_value (dimensionless codes).}
 #'   \item{unit_conversion}{Tibble of code-specific unit conversions}
 #' }
 #'
@@ -450,7 +452,12 @@ h_read_dictionary <- function(dictionary_path) {
     list(
       variable_pattern = variable_pattern,
       category_pattern = category_pattern,
-      manual_matches   = manual_matches
+      manual_matches   = manual_matches,
+      value_mappings = if ("value_mappings" %in% readxl::excel_sheets(dictionary_path)) {
+        readxl::read_excel(dictionary_path, sheet = "value_mappings")
+      } else {
+        NULL
+      }
     ),
     class = "fadn_dictionary"
   )
@@ -586,12 +593,24 @@ h_validate_dictionary <- function(dictionary_path,
 #'
 #' @param raw_tables Named list of raw national FADN data frames.
 #' @param dict_conversion A \code{fadn_dictionary} object from \code{read_dictionary()}.
+#'   Optional \code{value_mappings} recode categorical values after renaming;
+#'   unmapped non-missing codes cause an error. Units otherwise remain those
+#'   specified by the dictionary's unit conversions.
+#'   Numeric \code{manual_matches} mapping to the same FADN variable are summed
+#'   by farm-year after each source's unit conversion, including across tables.
+#'   Missing numeric values are ignored (an all-missing source group sums to
+#'   zero), and absent source columns produce a warning.
+#'   Repeated categorical destinations are rejected rather than summed.
 #' @param table_config Named list mapping product groups to table/code_col.
 #' @param id_cols Character vector. Column name(s) identifying individual farms
 #'   (e.g., \code{c("IDENT")}). These columns are preserved as-is in the output
 #'   and used as grouping keys during pivoting.
 #'
 #' @return A single wide data frame in EU FADN format (one row per farm).
+#'   Categorical codes are dimensionless; measurement units follow the dictionary.
+#'   French purchased grazing-feed values are in EUR: \code{AUTAC + HERAC}
+#'   yields \code{IGRFEDCNCTRPUR_V}, and \code{AUTAG + HERAG} yields
+#'   \code{IGRFEDCRSPUR_V} when specified in the conversion dictionary.
 #'
 #' @concept utils
 #' @export
@@ -625,6 +644,10 @@ h_pivot_national_fadn <- function(raw_tables,
     grp_prefixes <- cp %>%
       dplyr::filter(Group == grp)
 
+    # Excel may remove zero padding from numeric national product codes.
+    tbl[[code_col]] <- sub("^0+(?=[0-9]+$)", "", as.character(tbl[[code_col]]), perl = TRUE)
+    grp_prefixes$national_code <- sub("^0+(?=[0-9]+$)", "",
+                                     as.character(grp_prefixes$national_code), perl = TRUE)
     national_cat <- intersect(grp_prefixes$national_code, unique(as.character(tbl[[code_col]])))
 
     if (length(national_cat) == 0) {
@@ -782,10 +805,35 @@ h_pivot_national_fadn <- function(raw_tables,
         }
 
         src_col <- ft_data[[nat_var]]
+        crosswalk <- dict_conversion$value_mappings
+        if (!is.null(crosswalk)) {
+          crosswalk <- crosswalk[crosswalk$fadn_variable == fadn_var, , drop = FALSE]
+          if (nrow(crosswalk) > 0) {
+            if (fadn_var %in% names(result)) {
+              stop("Cannot aggregate non-numeric mappings for ", fadn_var, ".")
+            }
+            if (anyDuplicated(as.character(crosswalk$national_value))) {
+              stop("Duplicate national codes in value_mappings for ", fadn_var, ".")
+            }
+            idx <- match(as.character(src_col), as.character(crosswalk$national_value))
+            unknown <- unique(as.character(src_col)[!is.na(src_col) & is.na(idx)])
+            if (length(unknown) > 0) {
+              stop("Unmapped national codes for ", fadn_var, ": ",
+                   paste(unknown, collapse = ", "), ".")
+            }
+            vals <- ft_data[, id_cols, drop = FALSE]
+            vals[[fadn_var]] <- crosswalk$fadn_value[idx]
+            if (anyDuplicated(vals[id_cols])) {
+              stop("Categorical mapping for ", fadn_var, " requires unique farm-year IDs.")
+            }
+            result <- dplyr::left_join(result, vals, by = id_cols)
+            next
+          }
+        }
         is_char <- is.character(src_col) || is.factor(src_col)
 
         # Test if supposedly numeric column is actually coercible
-        if (!is_char) {
+        if (!is_char && !is.numeric(src_col)) {
           coerced <- suppressWarnings(as.numeric(src_col))
           if (all(is.na(coerced) | is.na(src_col))) {
             is_char <- TRUE
@@ -813,7 +861,21 @@ h_pivot_national_fadn <- function(raw_tables,
             )
         }
 
-        result <- dplyr::left_join(result, vals, by = id_cols)
+        if (fadn_var %in% names(result)) {
+          if (is_char || !is.numeric(result[[fadn_var]])) {
+            stop("Cannot aggregate non-numeric mappings for ", fadn_var, ".")
+          }
+          incoming <- tail(make.unique(c(names(result), ".manual_value")), 1L)
+          names(vals)[names(vals) == fadn_var] <- incoming
+          result <- dplyr::left_join(result, vals, by = id_cols)
+          both_missing <- is.na(result[[fadn_var]]) & is.na(result[[incoming]])
+          result[[fadn_var]] <- dplyr::coalesce(result[[fadn_var]], 0) +
+            dplyr::coalesce(result[[incoming]], 0)
+          result[[fadn_var]][both_missing] <- NA_real_
+          result[[incoming]] <- NULL
+        } else {
+          result <- dplyr::left_join(result, vals, by = id_cols)
+        }
       }
     }
 

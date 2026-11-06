@@ -107,8 +107,10 @@ object@herd |>
 
 ## Share between categories
 
-To ensure that the pseudoherd is consistent with the observed herd,  we compare the share of each livestock category in the total number of animals in the observed herd and in the pseudoherd.
-We add to the observed herd the number of animals exported, as the pseudoherd is meant to account for all animals involved in the production, including those exported.
+This section descriptively compares the category shares in the observed herd and pseudoherd, after adding exported animals to the observed counts.
+It is not an independent validation of rearing parameters or within-stage redistribution: the pseudoherd calculation itself uses observed
+country-level category shares to distribute stage-level equilibrium residuals, so similarity between the two distributions is partly by construction.
+An independent validation would require an external category-share reference or stage-level reference data; neither is evaluated in this section.
 
 
 ```{r cat_add_export}
@@ -315,5 +317,4 @@ object@footprints$GHGE$GHGE_pseudoherd_meat |>
 
 
 ```
-
 

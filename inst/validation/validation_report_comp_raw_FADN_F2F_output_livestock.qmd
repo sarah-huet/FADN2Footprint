@@ -1,0 +1,652 @@
+---
+title: "FADN2Footprint — Validation Report Comparing FADN raw data to F2F output"
+subtitle: "Comparison of the raw FADN data to F2F output"
+author: "Sarah HUET & Valentin BELLASSEN"
+date: today
+editor:
+  markdown:
+    wrap: 150
+editor_options: 
+  chunk_output_type: console
+---
+
+# Setup
+
+```{r setup}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(gt)
+
+library(readxl)
+library(zip)
+
+library(ggplot2)
+
+devtools::load_all()
+#library(FADN2Footprint)
+
+wd_path <- "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint"
+```
+
+# Purpose
+
+This report compares the outputs of `FADN2Footprint` (v`r packageVersion("FADN2Footprint")`)
+against the raw FADN data.
+An estimate is flagged **in range** if it falls within the literature min–max,
+**within tolerance** if the relative deviation from the literature midpoint is
+below a per-indicator threshold, or **out of range** otherwise.
+
+# Load raw FADN data
+
+```{r load_raw_FADN_data}
+load(paste0(wd_path, "/data_raw/raw_FADN_EU_17_21.RData"))
+
+raw_fadn <- my_FADN_data |>
+  dplyr::mutate(ID = as.character(ID), YEAR = as.character(YEAR))
+rm(my_FADN_data)
+```
+
+# Run package
+
+```{r load_f2f_output_data, echo=FALSE, message=TRUE, warning=FALSE}
+load(paste0(wd_path, "/data_raw/FADN_EU_17_21_obj.RData"))
+load(paste0(wd_path, "/data_raw/FADN_EU_17_21_obj_GHGE.RData"))
+
+object <- my_object_GHGE
+id_cols <- my_object_GHGE@traceability$id_cols
+
+cat(
+  "FADN dataset loaded:",
+  nrow(my_object_GHGE@farm),
+  "farm-year observations\n"
+)
+cat(
+  "Countries covered:",
+  paste(unique(my_object_GHGE@farm$COUNTRY), collapse = ", "),
+  "\n"
+)
+cat(
+  "Years covered:",
+  paste(sort(unique(my_object_GHGE@farm$YEAR)), collapse = ", "),
+  "\n"
+)
+```
+
+```{r farm_characteristics}
+farm_charac <- my_object_GHGE@farm |>
+  dplyr::select(dplyr::all_of(c(id_cols, "SYS02"))) |>
+  # add ISO country names
+  dplyr::left_join(
+    data_extra$country_names |>
+      dplyr::transmute(COUNTRY = country_FADN, iso3 = Country_ISO_3166_1_A3) |>
+      dplyr::distinct(),
+    by = "COUNTRY"
+  )
+```
+
+# Livestock population ----
+
+First we compare the estimate between different Qobs equations
+
+```{r Qobs_estimates}
+  # no ALU, CN, nor ON variable in LAMASUS data so I load LIFT data
+  load(paste0(wd_path, "/data_raw/FADN_EU_16_18.RData"))
+
+  raw_pop <- FADN_16_18 |>
+    dplyr::mutate(ID = as.character(ID), YEAR = as.character(YEAR)) |>
+    dplyr::select(
+      ID,
+      COUNTRY,
+      YEAR,
+      SYS02,
+      dplyr::matches("^L") & dplyr::matches("_AN$|_ALU$|_CN$|_ON$")
+    ) |>
+    # Pivot longer to handle all herd variables at once
+    tidyr::pivot_longer(
+      cols = -c("ID", "COUNTRY", "YEAR", "SYS02"),
+      names_to = "raw_variable",
+      values_to = "value"
+    ) |>
+    # keep only variable with observed values
+    dplyr::filter(value > 0) |>
+    # Remove the suffix from the raw variable names
+    dplyr::mutate(
+      FADN_code_letter = sub("_AN$|_ALU$|_CN$|_ON$", "", raw_variable),
+      pop_var = stringr::str_extract(raw_variable, "AN$|ALU$|CN$|ON$")
+    ) |>
+    # remove LTOT
+    dplyr::filter(!grepl("LTOT", FADN_code_letter)) |>
+    # pivot variables
+    tidyr::pivot_wider(
+      id_cols = c("ID", "COUNTRY", "YEAR", "SYS02", "FADN_code_letter"),
+      names_from = pop_var,
+      values_from = value
+    ) |>
+    # add livestock unit coefficients
+    dplyr::left_join(
+      data_extra$livestock |>
+        dplyr::select(FADN_code_letter, livestock_unit_coef),
+      by = "FADN_code_letter"
+    ) |>
+    # Calculate ALU where missing
+    dplyr::mutate(
+      ALU = dplyr::if_else(
+        is.na(ALU) & !is.na(AN),
+        AN * livestock_unit_coef,
+        ALU
+      )
+    ) |>
+    dplyr::mutate(
+      temp_alu_calc = ALU / livestock_unit_coef
+    ) |>
+    # Calculate Qobs (Observed Quantity of animals in number of head)
+    dplyr::mutate(
+      Qobs_AN = rowMeans(
+        #cbind(AN,temp_alu_calc, ON, CN),
+        cbind(AN, temp_alu_calc),
+        na.rm = TRUE
+      ),
+      Qobs_CN_ON = rowMeans(
+        cbind(AN, temp_alu_calc, ON, CN),
+        na.rm = TRUE
+      ),
+      raw_pop = Qobs_AN
+    )
+
+  # scatterplot comparison of livestock population between Qobs estimates
+  raw_pop |>
+    dplyr::filter(
+      FADN_code_letter %in%
+        data_extra$livestock$FADN_code_letter[
+          data_extra$livestock$species %in% c("cattle", "swine", "poultry")
+        ]
+    ) |>
+    ggplot2::ggplot() +
+    ggplot2::aes(x = Qobs_AN, y = Qobs_CN_ON) +
+    #ggplot2::geom_col(position = "dodge") +
+    ggplot2::geom_point(aes(color = COUNTRY, shape = factor(YEAR))) +
+    ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+    paletteer::scale_color_paletteer_d("palettesForR::Tango") +
+    ggplot2::labs(
+      title = "Comparison of Livestock Population between Qobs estimates",
+      x = "Qobs from AN and computed ALU",
+      y = "Qobs from AN, computed ALU, ON, and CN",
+      color = "Country",
+      shape = "Year"
+    ) +
+    ggplot2::facet_wrap(~FADN_code_letter, scales = "free") +
+    ggplot2::theme_minimal()
+
+  rm(FADN_16_18)
+
+```
+
+There is no huge differences between estimates. As there is no ALU, CN nor ON variable in LAMASUS data, I'll keep the calculation from AN and computed ALU.
+
+We compare raw FADN and F2F output for livestock population.
+
+```{r raw_pop_size}
+
+  # Extraction & Pivoting
+  # Filter, Pivot Long, and Split Code/Variable in one pass using tidyr::extract
+  #raw_pop <- raw_fadn |>
+  #  dplyr::select(
+  #    ID,
+  #    COUNTRY,
+  #    YEAR,
+  #    SYS02,
+  #    dplyr::matches("^L") & dplyr::matches("_AN$")
+  #  ) |>
+  #  # Pivot longer to handle all herd variables at once
+  #  tidyr::pivot_longer(
+  #    cols = -c("ID", "COUNTRY", "YEAR", "SYS02"),
+  #    names_to = "raw_variable",
+  #    values_to = "value"
+  #  ) |>
+  #  # keep only variable with observed values
+  #  dplyr::filter(value > 0) |>
+  #  # Remove the suffix from the raw variable names
+  #  dplyr::mutate(
+  #    FADN_code_letter = sub("_AN$", "", raw_variable),
+  #    pop_var = stringr::str_extract(raw_variable, "AN$")
+  #  ) |>
+  #  # remove LTOT
+  #  dplyr::filter(!grepl("LTOT", FADN_code_letter)) |>
+  #  # pivot variables
+  #  tidyr::pivot_wider(
+  #    id_cols = c("ID", "COUNTRY", "YEAR", "SYS02", "FADN_code_letter"),
+  #    names_from = pop_var,
+  #    values_from = value
+  #  ) |>
+  #  dplyr::mutate(
+  #    raw_pop = AN
+  #  )
+  raw_pop <- my_object@herd |>
+    dplyr::mutate(
+      raw_pop = AN
+    )
+
+  # summarise
+  raw_pop_sum <- raw_pop |>
+    dplyr::summarise(
+      raw_pop_sum = sum(raw_pop, na.rm = TRUE),
+      .by = c(COUNTRY, YEAR, FADN_code_letter)
+    )
+
+```
+
+```{r pop_size_f2f_herd}
+  # F2F
+  f2f_pop <- my_object_GHGE@herd |>
+    dplyr::mutate(f2f_pop = AN)
+
+  f2f_pop_sum <- f2f_pop |>
+    # add farm characteristics
+    dplyr::left_join(farm_charac, by = id_cols) |>
+    dplyr::summarise(
+      f2f_pop_sum = sum(f2f_pop, na.rm = TRUE),
+      .by = c(COUNTRY, YEAR, FADN_code_letter)
+    )
+  #f2f_pop_size |> head() |> gt()
+```
+
+```{r comp_pop_size_raw_f2f_herd}
+
+  # table of comparison
+  comp_pop_sum_raw_f2f <- raw_pop_sum |>
+    dplyr::left_join(
+      f2f_pop_sum,
+      by = c("COUNTRY", "YEAR", "FADN_code_letter")
+    ) |>
+    dplyr::mutate(
+      rel_diff = (raw_pop_sum - dplyr::coalesce(f2f_pop_sum, 0)) / raw_pop_sum
+    )
+  #comp_pop_sum_raw_f2f |> reactable::reactable(searchable = TRUE, filterable = TRUE)
+  print(mean(comp_pop_sum_raw_f2f$rel_diff, na.rm = T))
+  print(quantile(comp_pop_sum_raw_f2f$rel_diff, na.rm = T))
+  hist(comp_pop_sum_raw_f2f$rel_diff)
+
+  # scatterplot comparison of livestock population between raw FADN and F2F output
+  comp_pop_sum_raw_f2f |>
+    dplyr::filter(
+      FADN_code_letter %in%
+        data_extra$livestock$FADN_code_letter[
+          data_extra$livestock$species %in% c("cattle", "swine", "poultry")
+        ]
+    ) |>
+    dplyr::mutate(f2f_pop_sum = dplyr::coalesce(f2f_pop_sum, 0)) |>
+    ggplot2::ggplot() +
+    ggplot2::aes(x = raw_pop_sum, y = f2f_pop_sum) +
+    #ggplot2::geom_col(position = "dodge") +
+    ggplot2::geom_point(aes(color = COUNTRY, shape = factor(YEAR))) +
+    ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+    paletteer::scale_color_paletteer_d("palettesForR::Tango") +
+    #ggplot2::scale_x_log10() +
+    #ggplot2::scale_y_log10() +
+    ggplot2::labs(
+      title = "Comparison of Livestock Population between raw FADN and F2F output",
+      x = "Sum of Livestock Population from raw FADN",
+      y = "Sum of Livestock Population from F2F output",
+      color = "Country",
+      shape = "Year"
+    ) +
+    ggplot2::facet_wrap(~FADN_code_letter, scales = "free") +
+    ggplot2::theme_minimal()
+
+  # plot heatmap of relative difference in livestock population
+  comp_pop_sum_raw_f2f |>
+    dplyr::filter(
+      FADN_code_letter %in%
+        data_extra$livestock$FADN_code_letter[
+          data_extra$livestock$species %in% c("cattle", "swine", "poultry")
+        ]
+    ) |>
+    ggplot2::ggplot() +
+    ggplot2::geom_tile(aes(x = YEAR, y = COUNTRY, fill = rel_diff)) +
+    ggplot2::scale_fill_gradient2(
+      low = "#2166AC",
+      mid = "white",
+      high = "#B2182B"
+    ) +
+    ggplot2::facet_wrap(~FADN_code_letter, nrow = 2) +
+    ggplot2::labs(
+      x = "Livestock category",
+      y = "Country_Year",
+      fill = "Relative Difference"
+    ) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = -0.1)
+    )
+
+```
+
+The greastest discrepencies between raw and f2f output are for poultry
+
+```{r discarded_farms}
+
+  cat("Number of discarded farms:\n")
+  cat(length(unique(my_object_GHGE@traceability$discarded_farms$ID)), "\n")
+
+my_object_GHGE@traceability$discarded_farms |>
+  tidyr::separate_longer_delim(cols = problem, delim = ";") |>
+  ggplot2::ggplot(
+    ggplot2::aes(x = problem, fill = COUNTRY)
+  ) +
+  ggplot2::geom_bar() +
+  paletteer::scale_fill_paletteer_d("palettesForR::Tango") +
+  ggplot2::coord_flip() +
+  ggplot2::labs(
+    x = "Problem",
+    y = "Count",
+    title = "Discarded Farms by Problem"
+  ) +
+  ggplot2::theme_minimal()
+
+```
+
+
+# Poultry farms ----
+
+We loose a lot the poultry population in the F2F output compared to the raw FADN data.
+We will investigate the reasons behind this discrepancy and identify potential issues in the F2F output for poultry population by looking in the raw data at farms with a lot of poultry that were discarded in the F2F processing.
+
+```{r discarded_poultry_farm}
+
+raw_poultry_farms <- raw_pop |>
+  # add species
+  #dplyr::left_join(
+  #  data_extra$livestock |>
+  #    dplyr::select(
+  #      FADN_code_letter,
+  #      species
+  #    ),
+  #  by = c("FADN_code_letter")
+  #) |>
+  dplyr::summarise(
+    sum_AN_poultry = sum(raw_pop[species == "poultry"], na.rm = TRUE),
+    sum_AN_other = sum(raw_pop[species != "poultry"], na.rm = TRUE),
+    .by = dplyr::all_of(id_cols)
+  ) |>
+  dplyr::filter(sum_AN_poultry > 0) |>
+  # add discarded farms information
+  dplyr::left_join(
+    my_object_GHGE@traceability$discarded_farms,
+    by = c(id_cols)
+  ) |>
+  dplyr::mutate(
+    kept_or_not = ifelse(is.na(problem), "kept", "discarded")
+  )
+
+table(raw_poultry_farms$kept_or_not)
+#raw_poultry_farms |> view()
+
+raw_poultry_farms |>
+  dplyr::filter(!is.na(problem)) |>
+  tidyr::separate_longer_delim(cols = problem, delim = ";") |>
+  ggplot2::ggplot(
+    ggplot2::aes(x = problem, fill = COUNTRY)
+  ) +
+  ggplot2::geom_bar() +
+  paletteer::scale_fill_paletteer_d("palettesForR::Tango") +
+  ggplot2::coord_flip() +
+  ggplot2::labs(
+    title = "Discarded Poultry Farms by Problem",
+    x = "Problem",
+    y = "Count"
+  ) +
+  ggplot2::theme_minimal()
+
+```
+
+# Compare GE filters ----
+
+```{r estimate_feed}
+
+
+raw_th_ration <- f_feed_theo_ration(my_object)
+raw_th_ration_sum_feed_DM <- raw_th_ration$th_feed_ration |>
+  dplyr::summarise(
+    sum_DM_t_livcat = sum(th_DMI_t_livcat_y)
+  )
+
+raw_herd_feed <- f_herd_feed(my_object, overwrite = FALSE)
+
+```
+
+```{r apply_filters}
+
+
+tmp_max_cat0 <- my_object@herd |>
+  # estimate LU
+  dplyr::mutate(
+    LU = Qobs * livestock_unit_coef
+  ) |>
+  # filter max LU
+  dplyr::slice_max(
+    order_by = LU,
+    with_ties = FALSE,
+    by = dplyr::all_of(id_cols)
+  ) |>
+  # select columns
+  dplyr::select(dplyr::all_of(id_cols), FADN_code_letter)
+
+### Average FADN filter ----
+tmp_mean_GE <- FADN_averages$GE_MJ_anim_day |>
+  #dplyr::summarise(
+  #     mean_GE_MJ_anim_day = mean(mean_GE_MJ_anim_day, na.rm = T),
+  #     sd_GE_MJ_anim_day = mean(sd_GE_MJ_anim_day, na.rm = T),
+  #     .by = FADN_code_letter
+  #) |>
+  # define thresholds
+  dplyr::mutate(
+    threshold_up = mean_GE_MJ_anim_day + 3 * sd_GE_MJ_anim_day,
+    threshold_down = dplyr::case_when(
+      FADN_code_letter == "LCOWDAIR" ~ 0.25 * mean_GE_MJ_anim_day,
+      .default = 0.10 * mean_GE_MJ_anim_day
+    )
+  )
+
+## main livestock category
+tmp_max_cat <- tmp_max_cat0 |>
+  # add thresholds
+  dplyr::left_join(
+    tmp_mean_GE,
+    #by = 'FADN_code_letter'
+    # TODO: restore by country when good enough data
+    by = c('FADN_code_letter', 'COUNTRY')
+  )
+
+## retrieve farms with aberrant values
+farms_to_remove_GE_filter_avrg_FADN <- raw_herd_feed$feed_intake$total |>
+  # add thresholds and filter for the main livestock category
+  dplyr::inner_join(
+    tmp_max_cat,
+    by = c(id_cols, 'FADN_code_letter')
+  ) |>
+  # filter farms above & below thresholds
+  dplyr::mutate(
+    valid_practice = dplyr::case_when(
+      # between thresholds
+      GE_MJ_anim / 365 >= threshold_down &
+        GE_MJ_anim / 365 <= threshold_up ~ TRUE,
+      # if NAs
+      is.na(GE_MJ_anim) | is.na(threshold_down) | is.na(threshold_up) ~ FALSE,
+      .default = FALSE
+    )
+  )
+
+table(farms_to_remove_GE_filter_avrg_FADN$valid_practice)
+#  FALSE   TRUE 
+# 98 374 124121
+#farms_to_remove_GE_filter_avrg_FADN |> view()
+
+### Percentiles FADN filter ----
+tmp_mean_GE <- FADN_averages$GE_MJ_anim_day |>
+  # define thresholds
+  dplyr::mutate(
+    threshold_up = q99,
+    threshold_down = q01
+  )
+
+# plot(tmp_mean_GE$mean_GE_MJ_anim_day, tmp_mean_GE$median_GE_MJ_anim_day)
+
+## main livestock category
+tmp_max_cat <- tmp_max_cat0 |>
+  # add thresholds
+  dplyr::left_join(
+    tmp_mean_GE,
+    #by = 'FADN_code_letter'
+    # TODO: restore by country when good enough data
+    by = c('FADN_code_letter', 'COUNTRY')
+  )
+
+## retrieve farms with aberrant values
+farms_to_remove_GE_filter_pctl_FADN <- raw_herd_feed$feed_intake$total |>
+  # add thresholds and filter for the main livestock category
+  dplyr::inner_join(
+    tmp_max_cat,
+    by = c(id_cols, 'FADN_code_letter')
+  ) |>
+  # filter farms above & below thresholds
+  dplyr::mutate(
+    valid_practice = dplyr::case_when(
+      # between thresholds
+      GE_MJ_anim / 365 >= threshold_down &
+        GE_MJ_anim / 365 <= threshold_up ~ TRUE,
+      # if NAs
+      is.na(GE_MJ_anim) | is.na(threshold_down) | is.na(threshold_up) ~ FALSE,
+      .default = FALSE
+    )
+  )
+
+table(farms_to_remove_GE_filter_pctl_FADN$valid_practice)
+#FALSE   TRUE 
+# 102 909 119586 
+
+### AROPAj filter ----
+
+AROPAJ_Sailley_filter <- source(file.path(wd_path,"inst/scripts/AROPAJ_Sailley_filter_for_GE.R"))$value
+
+tmp_mean_GE <- AROPAJ_Sailley_filter |>
+  # add livestock unit coefficient
+  dplyr::left_join(
+    data_extra$livestock |>
+      dplyr::select(FADN_code_letter, livestock_unit_coef),
+    by = c('FADN_code_letter')
+  ) |>
+  # define thresholds
+  dplyr::mutate(
+    threshold_up = (th_GE_MJ_LU_y * livestock_unit_coef) * 10,
+    threshold_down = dplyr::case_when(
+      FADN_code_letter == "LCOWDAIR" ~ 0.25 *
+        (th_GE_MJ_LU_y * livestock_unit_coef),
+      .default = 0.10 * (th_GE_MJ_LU_y * livestock_unit_coef)
+    )
+  )
+
+## main livestock category
+tmp_max_cat <- tmp_max_cat0 |>
+  # add thresholds
+  dplyr::left_join(
+    tmp_mean_GE,
+    by = 'FADN_code_letter'
+  )
+
+## retrieve farms with aberrant values
+farms_to_remove_GE_filter_AROPAJ <- raw_herd_feed$feed_intake$total |>
+  # add thresholds and filter for the main livestock category
+  dplyr::inner_join(
+    tmp_max_cat,
+    by = c(id_cols, 'FADN_code_letter')
+  ) |>
+  # filter farms above & below thresholds
+  dplyr::mutate(
+    valid_practice = dplyr::case_when(
+      # between thresholds
+      GE_MJ_anim >= threshold_down &
+        GE_MJ_anim <= threshold_up ~ TRUE,
+      # if NAs
+      is.na(GE_MJ_anim) | is.na(threshold_down) | is.na(threshold_up) ~ FALSE,
+      .default = FALSE
+    )
+  )
+
+table(farms_to_remove_GE_filter_AROPAJ$valid_practice)
+#farms_to_remove_GE_filter_AROPAJ |> view()
+# FALSE   TRUE 
+# 13 187 209308 
+
+```
+
+```{r compare_GE}
+
+## plot average gross energy intake for average FADN filter
+farms_to_remove_GE_filter_avrg_FADN |>
+  #view()
+  ggplot2::ggplot(
+    ggplot2::aes(
+      x = FADN_code_letter,
+      y = GE_MJ_anim,
+      fill = valid_practice
+    )
+  ) +
+  ggplot2::geom_boxplot() +
+  ggplot2::scale_y_continuous(trans = "log10") +
+  ggplot2::labs(
+    title = "Average Gross Energy Intake for Kept and Discarded Farms from average FADN filter",
+    x = "Kept or Discarded",
+    y = "Average Gross Energy Intake (MJ/animal)"
+  ) +
+  ggplot2::coord_flip() +
+  ggplot2::theme_minimal()
+
+## plot average gross energy intake for percentile FADN filter
+farms_to_remove_GE_filter_pctl_FADN |>
+  #view()
+  ggplot2::ggplot(
+    ggplot2::aes(
+      x = FADN_code_letter,
+      y = GE_MJ_anim,
+      fill = valid_practice
+    )
+  ) +
+  ggplot2::geom_boxplot() +
+  ggplot2::scale_y_continuous(trans = "log10") +
+  ggplot2::labs(
+    title = "Average Gross Energy Intake for Kept and Discarded Farms from percentile FADN filter",
+    x = "Kept or Discarded",
+    y = "Average Gross Energy Intake (MJ/animal)"
+  ) +
+  ggplot2::coord_flip() +
+  ggplot2::theme_minimal()
+
+## plot average gross energy intake for Aropaj filter
+farms_to_remove_GE_filter_AROPAJ |>
+  #view()
+  ggplot2::ggplot(
+    ggplot2::aes(
+      x = FADN_code_letter,
+      y = GE_MJ_anim,
+      fill = valid_practice
+    )
+  ) +
+  ggplot2::geom_boxplot() +
+  ggplot2::scale_y_continuous(trans = "log10") +
+  ggplot2::labs(
+    title = "Average Gross Energy Intake for Kept and Discarded Farms from AROPAJ filter",
+    x = "Kept or Discarded",
+    y = "Average Gross Energy Intake (MJ/animal)"
+  ) +
+  #  ggplot2::facet_wrap(~YEAR) +
+  ggplot2::coord_flip() +
+  ggplot2::theme_minimal()
+
+# Poultry have clearly a lower GE in discarded than in kept farms
+
+```
+
+
+
+

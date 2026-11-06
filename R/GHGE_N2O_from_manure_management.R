@@ -23,10 +23,11 @@
 #' only common columns are retained before row-binding.
 #'
 #' ## Manure Management System (MMS) Fractions
-#' Country- and category-specific MMS fractions (\eqn{AWMS_{T,S}}) are derived
-#' from UNFCCC submission data (\code{\link{UNFCCC_data}}\code{$table3Bas2}).
-#' Population-weighted MMS fractions are computed per UNFCCC livestock category
-#' and country:
+#' Country-, year-, and category-specific MMS fractions (\eqn{AWMS_{T,S}}) are
+#' derived from UNFCCC submission data
+#' (\code{\link{UNFCCC_data}}\code{$table3Bas2}). Population-weighted MMS
+#' fractions are computed per UNFCCC livestock category, country, and inventory
+#' year:
 #' \deqn{AWMS_{T,S} = \frac{N_T \times AWMS_{T,S}^{raw}}
 #'   {\sum_S N_T \times AWMS_{T,S}^{raw}}}
 #'
@@ -37,9 +38,19 @@
 #'   \times \frac{44}{28}}
 #' where \eqn{EF3_S} is the direct N2O emission factor for MMS \eqn{S}
 #' (kg N2O-N kg\eqn{^{-1}} N), sourced from UNFCCC submissions
-#' (\code{\link{UNFCCC_data}}\code{$table3Bb}), with IPCC default values
-#' (\code{\link{data_extra}}\code{$IPCC_default_values}, parameter
-#' \code{"EF3"}) used as fallback when country-specific values are absent.
+#' (\code{\link{UNFCCC_data}}\code{$table3Bb}), with defaults from IPCC (2019),
+#' Table 10.21, used when reported values are absent.
+#' The broad MMS categories use active-mixing deep bedding (0.070),
+#' covered/crusted liquid systems (0.005), windrow composting (0.005),
+#' and natural-aeration treatment for \code{mms_other} (0.010).
+#' Applying the cattle/swine deep-bedding factor to other non-poultry species
+#' is an explicit extrapolation, not an IPCC species-specific default.
+#' Poultry solid storage and deep bedding use the poultry-manure factor
+#' (0.001). Pasture deposits and manure burned for fuel or as waste have
+#' no direct emission contribution in this module; Table 10.21 assigns their
+#' emissions to managed soils, fuel combustion, or waste incineration.
+#' A positive MMS allocation without a finite, non-negative factor raises
+#' an error rather than being silently omitted.
 #'
 #' ### 2. Indirect N2O from Volatilisation (IPCC Eqs. 10.26 & 10.28)
 #' Nitrogen lost through volatilisation of NH3 and NOx:
@@ -68,9 +79,8 @@
 #'
 #' @note
 #' \itemize{
-#'   \item UNFCCC emission factor data (\code{table3Bb}) do not currently
-#'     include a year dimension; a TODO is in place to account for inter-annual
-#'     variability in future versions.
+#'   \item Direct manure-management emission factors use reported UNFCCC
+#'     implied emission factors for the matching country and inventory year.
 #'   \item A quality-check routine comparing estimated parameters (VS, Bo,
 #'     weighted MCF × AWMS, and EF) against UNFCCC-reported values is work in
 #'     progress (\code{WIP}).
@@ -208,11 +218,11 @@ f_GHGE_n2o_manure <- function(object,
         # proportion by country and matching category
         dplyr::mutate(
           AWMS = pop_MMS/sum(pop_MMS,na.rm = T),
-          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3)
+          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)
         ) |>
         dplyr::summarise(AWMS = sum(AWMS, na.rm = T),
-                         .by = c(Country_ISO_3166_1_A3, UNFCCC_cat,MMS)),
-      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3'),
+                         .by = c(Country_ISO_3166_1_A3, YEAR, UNFCCC_cat, MMS)),
+      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3', 'YEAR'),
       relationship = "many-to-many") |>
 
     ## EF3
@@ -220,26 +230,11 @@ f_GHGE_n2o_manure <- function(object,
     dplyr::left_join(
       UNFCCC_data$table3Bb |>
         dplyr::filter(!is.na(EF3)) |>
-        # TODO: change when accounting for year in UNFCCC data
-        dplyr::select(-YEAR),
-      by = c('MMS', 'Country_ISO_3166_1_A3'),
+        dplyr::select(MMS, EF3, Country_ISO_3166_1_A3, YEAR),
+      by = c('MMS', 'Country_ISO_3166_1_A3', 'YEAR'),
       relationship = "many-to-many"
     ) |>
-    ### add IPCC default EF for country-specific missing values
-    dplyr::left_join(
-      data_extra$IPCC_default_values |>
-        dplyr::filter(parameter == "EF3") |>
-        dplyr::select(condition_tech,condition_species,value) |>
-        dplyr::rename(MMS = condition_tech,
-                      species = condition_species,
-                      default_EF3 = value) |>
-        tidyr::separate_longer_delim(species,"|"),
-      by = c('species', 'MMS'),
-      relationship = "many-to-many"
-    ) |>
-    dplyr::mutate(
-      EF3 = ifelse(is.na(EF3),default_EF3,EF3)
-    ) |>
+    h_resolve_manure_ef3() |>
 
     # Estimate direct N2O emission from MM per livestock category
     dplyr::group_by(dplyr::across(dplyr::all_of(id_cols)),species,FADN_code_letter,Qobs) |>
@@ -286,11 +281,11 @@ f_GHGE_n2o_manure <- function(object,
         # proportion by country and matching category
         dplyr::mutate(
           AWMS = pop_MMS/sum(pop_MMS,na.rm = T),
-          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3)
+          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)
         ) |>
         dplyr::summarise(AWMS = sum(AWMS, na.rm = T),
-                         .by = c(Country_ISO_3166_1_A3, UNFCCC_cat,MMS)),
-      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3'),
+                         .by = c(Country_ISO_3166_1_A3, YEAR, UNFCCC_cat, MMS)),
+      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3', 'YEAR'),
       relationship = "many-to-many") |>
 
     ## add IPCC default values for country-specific missing parameters:
@@ -369,10 +364,10 @@ f_GHGE_n2o_manure <- function(object,
         # proportion by country and matching category
         dplyr::mutate(
           AWMS = pop_MMS/sum(pop_MMS,na.rm = T),
-          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3)) |>
+          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)) |>
         dplyr::summarise(AWMS = sum(AWMS, na.rm = T),
-                         .by = c(Country_ISO_3166_1_A3, UNFCCC_cat,MMS)),
-      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3'),
+                         .by = c(Country_ISO_3166_1_A3, YEAR, UNFCCC_cat, MMS)),
+      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3', 'YEAR'),
       relationship = "many-to-many") |>
 
     ## add IPCC default values for country-specific missing parameters:
@@ -462,4 +457,52 @@ f_GHGE_n2o_manure <- function(object,
 
   #rm(list = names(.GlobalEnv)[grep("tmp",names(.GlobalEnv))])
 
+}
+
+#' Resolve direct manure-management emission factors
+#'
+#' @param activity Data frame with dimensionless MMS, species and AWMS fields
+#'   and EF3 in kg N2O-N per kg N handled.
+#' @return The input rows and columns, with missing EF3 replaced in
+#'   kg N2O-N per kg N handled. Positive allocations require valid factors.
+#' @noRd
+h_resolve_manure_ef3 <- function(activity) {
+  # IPCC 2019, Vol. 4, Ch. 10, Table 10.21, pp. 10.91-10.93:
+  # https://www.ipcc-nggip.iges.or.jp/public/2019rf/pdf/4_Volume4/19R_V4_Ch10_Livestock.pdf
+  # Maintainer-selected subtypes: active mixing, crust/cover, windrow and
+  # natural aeration. Deep bedding is extrapolated to other non-poultry species.
+  defaults <- c(
+    mms_anaerobic_lagoon = 0,
+    mms_burned_for_fuel_or_as_waste = 0,
+    mms_composting = 0.005,
+    mms_daily_spread = 0,
+    mms_deep_bedding = 0.070,
+    mms_digesters = 0.0006,
+    mms_dry_lot = 0.020,
+    mms_liquid_system = 0.005,
+    mms_other = 0.010,
+    mms_pasture_range_and_paddock = 0,
+    mms_pit_storage = 0.002,
+    mms_solid_storage = 0.010
+  )
+  fallback <- unname(defaults[as.character(activity$MMS)])
+  poultry_storage <- activity$species %in% "poultry" &
+    activity$MMS %in% c("mms_deep_bedding", "mms_solid_storage")
+  fallback[poultry_storage] <- 0.001
+  missing <- is.na(activity$EF3)
+  activity$EF3[missing] <- fallback[missing]
+
+  invalid <- !is.na(activity$AWMS) & activity$AWMS > 0 &
+    (!is.finite(activity$EF3) | activity$EF3 < 0)
+  if (any(invalid)) {
+    systems <- unique(paste(
+      activity$species[invalid], activity$MMS[invalid], sep = "/"
+    ))
+    stop(
+      "No finite EF3 for positive manure allocation: ",
+      paste(systems, collapse = ", "), ".",
+      call. = FALSE
+    )
+  }
+  activity
 }

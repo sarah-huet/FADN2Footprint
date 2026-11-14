@@ -1,5 +1,5 @@
 utils::globalVariables(c(
-     "%", ".", ":=", "A", "A.3.1_all", "A.3.1_NUTS2", "A.3.3_all",
+     "%", ".", ".w", ":=", "A", "A.3.1_all", "A.3.1_NUTS2", "A.3.3_all",
      "A.3.3_NUTS2", "A.4.3_all", "A.4.3_NUTS2", "A.4.5_all", "A.4.5_NUTS2",
      "A.5.1_all", "A.5.1_NUTS2", "activity", "AG_DM_T", "AGR_T", "allocation_key",
      "alpha", "ALU", "AN", "Animal_cat", "area_feed_produced", "area_feed_purchased",
@@ -42,7 +42,9 @@ utils::globalVariables(c(
      "feed_produced_onfarm", "feed_pseudofarm_total_ghg_crop_kgCO2e_livcat",
      "feed_purch_t_livcat", "feed_purch_value", "feed_purch_value_contract", "feed_purch_value_share",
      "feed_t", "feed_t_crop_total", "feed_t_DM", "feed_tables", "feed_type", "feed_var",
-     "final_price_heat", "final_price_road", "first_common", "frac_Gas_MS",
+     "final_price_heat", "final_price_road", "first_common", "forage_reference_yield",
+     "forage_type", "forage_yield", "forage_yield_nuts2", "forage_yield_nuts3",
+     "frac_Gas_MS",
      "Frac_GASF", "Frac_GASM", "Frac_leach_H", "frac_leach_MS", "Frac_renew_T",
      "from_livestock_category", "GE", "GE_grazed", "GE_IPCC_MJ_anim_day",
      "GE_kcal_kg", "GE_kcal_livcat", "GE_MJ_anim", "GE_MJ_livcat",

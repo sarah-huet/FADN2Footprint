@@ -4,7 +4,7 @@
 \alias{f_GHGE_n2o_msoils}
 \title{Calculate N2O Emissions from Managed Soils}
 \usage{
-f_GHGE_n2o_msoils(object, overwrite = FALSE, ...)
+f_GHGE_n2o_msoils(object, overwrite = FALSE, return_components = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}
@@ -13,6 +13,10 @@ f_GHGE_n2o_msoils(object, overwrite = FALSE, ...)
 the function returns
 the cached object and no recomputation is performed. If TRUE, existing
 cached GHGE results are ignored and computations are re-run.}
+
+\item{return_components}{Logical (default FALSE). If TRUE, return emissions
+and diagnostic calculation tables; N inputs are in kg N/year, raw N2O
+emissions in kg N2O/year, and CO2-equivalent emissions in kg CO2-eq/year.}
 
 \item{...}{Additional arguments.}
 }
@@ -34,6 +38,8 @@ from IPCC Eq. 11.11.}
 \item{N2O_L_kgCO2e}{\code{numeric}. Indirect N2O emissions from N
 leaching and runoff (kg CO2-eq yr\eqn{^{-1}}), from IPCC Eq. 11.10.}
 }
+With \code{return_components = TRUE}, returns a list named \code{emissions},
+\code{activity}, \code{direct}, and \code{indirect}, instead of the tibble.
 }
 \description{
 Estimates direct and indirect nitrous oxide (N2O) emissions from managed

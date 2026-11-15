@@ -162,17 +162,11 @@ f_GHGE_fuels <- function(object,
       diesel_tillage_tot_MJ = dplyr::coalesce(diesel_MJ * ( diesel_tillage_tot_l/ diesel_l), 0),
       diesel_remain_MJ = diesel_MJ - diesel_tillage_tot_MJ
     ) |>
-    # add EF
-    dplyr::left_join(
+    # add EF (CRT units); missing country-years fall back to the country mean
+    # across years, then to the mean across all countries and years
+    h_unfccc_fallback(
       UNFCCC_data$EF_fuel,
-      by = c('Country_ISO_3166_1_A3', 'YEAR')
-    ) |>
-    ## replace NAs by EF mean
-    dplyr::mutate(
-      dplyr::across(
-        .cols = dplyr::starts_with("EF"),
-        .fns = ~ dplyr::if_else(is.na(.), mean(., na.rm = TRUE), .)
-      )
+      values = c("EF_fuel_CO2", "EF_fuel_CH4", "EF_fuel_N2O")
     ) |>
     # convert EF from t CO2 TJ-1 to kg CO2 MJ-1
     dplyr::mutate(

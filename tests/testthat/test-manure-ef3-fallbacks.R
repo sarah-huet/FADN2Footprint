@@ -92,7 +92,7 @@ test_that("manure emissions include fallback factors for missing reported IEFs",
   allocation <- subset(
     reference$table3Bas2,
     Country_ISO_3166_1_A3 == "FRA" & YEAR == "2018" &
-      UNFCCC_cat == "dairy_cattle" & AWMS > 0
+      FADN_code_letter == "LCOWDAIR" & AWMS > 0
   )
   factors <- c(
     mms_anaerobic_lagoon = 0, mms_burned_for_fuel_or_as_waste = 0,

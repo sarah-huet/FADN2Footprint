@@ -34,7 +34,7 @@
 #' Total cattle CH4 emissions are estimated using the Ym method (Equation 10.21):
 #' \deqn{CH4_{enteric} = Q_{obs} \times EF_{Ym}}
 #' Note: The MY method (Equation 10.21A) is calculated but not used in the final output.
-#' 
+#'
 #' ## Sheep (Tier 2)
 #' For sheep, a fixed methane conversion factor \eqn{Y_m = 6.7\%} (IPCC Table 10.13)
 #' is used with the Ym method (IPCC Equation 10.21):
@@ -46,12 +46,12 @@
 #' is used with the Ym method (IPCC Equation 10.21):
 #' \deqn{EF_{Ym} = \frac{GE \times (Y_m / 100)}{55.65}}
 #' \deqn{CH4_{enteric} = Q_{obs} \times EF_{Ym}}
-#' 
+#'
 #' ## Swine (Tier 1)
-#' For swine, a default emission factor of 1.25 kg CH4 head\eqn{^{-1}} yr\eqn{^{-1}} 
+#' For swine, a default emission factor of 1.25 kg CH4 head\eqn{^{-1}} yr\eqn{^{-1}}
 #' is used (IPCC Table 10.10), and total CH4 emissions are estimated as:
 #' \deqn{CH4_{enteric} = Q_{obs} \times EF}
-#' 
+#'
 #' ## Poultry (Tier 1)
 #' For poultry, enteric fermentation emissions are considered negligible under IPCC guidelines,
 #' and total CH4 emissions are set to zero.
@@ -197,6 +197,15 @@ f_GHGE_ch4_enteric <- function(object,
         stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim > 8.500 ~ (5.7+6)/2,
         stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim <= 8.500 & milk_t_anim >= 5.000 ~ 6.3,
         stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim < 5.000 ~ 6.5,
+        # for dairy cows without recorded milk production, we apply the same Ym than for other cattle
+        stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & is.na(milk_t_anim) & DE_pc <= 62 ~ 7.0,
+        stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & is.na(milk_t_anim) & DE_pc > 62 & DE_pc <= 71 ~ 6.3,
+        stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & is.na(milk_t_anim) & DE_pc >= 72 & DE_pc < 75 ~ 4.0,
+        stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & is.na(milk_t_anim) & DE_pc >= 75 ~ 3.0,
+        ## In Table 10.12, there is no default MY for cattle with a feed DE >71 & <72 which introduce NAs
+        ## Hence, for this range of DE, we use the average of the adjacent DE categories
+        stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & is.na(milk_t_anim) & DE_pc > 71 & DE_pc < 72 ~ (6.3+4.0)/2,
+
 
         # other cattle
         !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc <= 62 ~ 7.0,
@@ -221,35 +230,35 @@ f_GHGE_ch4_enteric <- function(object,
       #  MY = Methane yield, g CH4 kg DMI-1 (Table 10.12)
       ## In Table 10.12, the MY of dairy cows is linked to annual milk production levels and to feed quantity and quality
       ## diary cow productivity in kg milk /head/yr-1
-      MY = dplyr::case_when(
-        # diary cattle
-        ## TODO: differentiate between high producing cows depending on Neutral Detergent Fibre (NDF, % DMI)
-        stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim > 8.500 ~ (19+20)/2,
-        stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim <= 8.500 & milk_t_anim >= 5.000 ~ 21,
-        stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim < 5.000 ~ 21.4,
-
-        # other cattle
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc <= 62 ~ 23.3,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 62 & DE_pc <= 71 ~ 21,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 72 & DE_pc < 75 ~ 13.6,
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 75 ~ 10,
-        ## In Table 10.12, there is no default MY for cattle with a feed DE >71 & <72 which introduce NAs
-        ## Hence, for this range of DE, we use the average of the adjacent DE categories
-        !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 71 & DE_pc < 72 ~ (21+13.6)/2
-
-      ),
+      #MY = dplyr::case_when(
+      #  # diary cattle
+      #  ## TODO: differentiate between high producing cows depending on Neutral Detergent Fibre (NDF, % DMI)
+      #  stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim > 8.500 ~ (19+20)/2,
+      #  stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim <= 8.500 & milk_t_anim >= 5.000 ~ 21,
+      #  stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & milk_t_anim < 5.000 ~ 21.4,
+#
+      #  # other cattle
+      #  !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc <= 62 ~ 23.3,
+      #  !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 62 & DE_pc <= 71 ~ 21,
+      #  !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 72 & DE_pc < 75 ~ 13.6,
+      #  !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc >= 75 ~ 10,
+      #  ## In Table 10.12, there is no default MY for cattle with a feed DE >71 & <72 which introduce NAs
+      #  ## Hence, for this range of DE, we use the average of the adjacent DE categories
+      #  !stringr::str_detect(IPCC_mix_cat,"cows_milk_prod") & DE_pc > 71 & DE_pc < 72 ~ (21+13.6)/2
+#
+      #),
 
       # EQUATION 10.21A (NEW) METHANE EMISSION FACTORS FOR ENTERIC FERMENTATION FROM A LIVESTOCK CATEGORY
       ### EF = emission factor, kg CH4 head-1 yr-1
       ### DMI = kg DMI day-1
       ### MY = Methane yield, g CH4 kg DMI-1 (Table 10.12)
       #### MY (g CH4 kg DMI-1) = MY (kg CH4 t DMI-1)
-      EF_MY = DM_t_anim * MY,
+      #EF_MY = DM_t_anim * MY,
 
       # "To estimate total emissions, the selected emission factors are multiplied by the associated animal population [...]. As described above[...], the emissions estimates should be reported in gigagrams (Gg)." (IPCC Guidelines 2019 Refinements)
       ## CH4_enteric_kgCH4 = kg CH4 yr-1
       CH4_EF_Ym = Qobs * EF_Ym,
-      CH4_EF_MY = Qobs * EF_MY,
+      #CH4_EF_MY = Qobs * EF_MY,
 
       #CH4_enteric_kgCH4 = (CH4_EF_Ym+CH4_EF_MY)/2,
       CH4_enteric_kgCH4 = CH4_EF_Ym,

@@ -1819,3 +1819,179 @@ h_generate_mock_child_panel <- function(parent_latent,
   rownames(result) <- NULL
   result
 }
+
+
+# UNFCCC CRT parameter fallbacks ------------------------------------------------
+
+#' Weighted mean that tolerates missing values and weights
+#'
+#' @param x Numeric vector of parameter values (any unit; returned unchanged).
+#' @param w Numeric vector of non-negative weights (e.g. UNFCCC population,
+#'   heads). Missing weights are ignored; when no positive weight is available
+#'   the simple mean of `x` is returned.
+#' @return A single numeric value in the unit of `x`, or `NA_real_` when `x`
+#'   has no non-missing value.
+#' @noRd
+h_weighted_mean_or_na <- function(x, w = NULL) {
+  ok <- !is.na(x)
+  if (!any(ok)) return(NA_real_)
+  if (is.null(w)) return(mean(x[ok]))
+  ok_w <- ok & !is.na(w) & w > 0
+  if (!any(ok_w)) return(mean(x[ok]))
+  sum(x[ok_w] * w[ok_w]) / sum(w[ok_w])
+}
+
+#' Join UNFCCC country-year parameters with hierarchical fallbacks
+#'
+#' Joins country- and year-specific UNFCCC CRT parameters to `data` and fills
+#' values that remain missing with (1) the mean of the same category for the
+#' same country across all available years, then (2) the mean of the same
+#' category across all countries and years of `reference`. When `category` is
+#' empty, level (2) is the mean across all countries and years.
+#'
+#' @param data Data frame containing the `category`, `country` and `year`
+#'   columns. It must not already contain the `values` columns.
+#' @param reference Data frame with at most one row per category x country x
+#'   year and the `values` columns. Units are not converted.
+#' @param values Character vector of parameter columns to transfer.
+#' @param category Character vector of category key columns (e.g.
+#'   `"FADN_code_letter"` or `"MMS"`), or `character()` for country-level
+#'   parameters.
+#' @param country,year Names of the ISO 3166-1 alpha-3 country and year
+#'   columns.
+#' @return `data` with the same rows (same order) and the `values` columns
+#'   added, in the units of `reference`. Values stay `NA` only when the
+#'   category has no non-missing value in `reference`.
+#' @noRd
+h_unfccc_fallback <- function(data, reference, values,
+                              category = character(),
+                              country = "Country_ISO_3166_1_A3",
+                              year = "YEAR") {
+  keys <- c(category, country, year)
+  ref <- reference |>
+    dplyr::select(dplyr::all_of(c(keys, values))) |>
+    dplyr::filter(dplyr::if_all(dplyr::all_of(keys), ~ !is.na(.x))) |>
+    dplyr::filter(dplyr::if_any(dplyr::all_of(values), ~ !is.na(.x)))
+  if (anyDuplicated(ref[keys]) > 0) {
+    stop("`reference` must have one row per ",
+         paste(keys, collapse = " x "), ".")
+  }
+
+  out <- dplyr::left_join(data, ref, by = keys)
+  fb_names <- paste0(".fb_", values)
+  for (by in list(c(category, country), category)) {
+    fill <- ref |>
+      dplyr::summarise(
+        dplyr::across(dplyr::all_of(values), h_weighted_mean_or_na),
+        .by = dplyr::all_of(by))
+    names(fill)[match(values, names(fill))] <- fb_names
+    out <- if (length(by) > 0) {
+      dplyr::left_join(out, fill, by = by)
+    } else {
+      dplyr::cross_join(out, fill)
+    }
+    for (i in seq_along(values)) {
+      out[[values[i]]] <- dplyr::coalesce(out[[values[i]]], out[[fb_names[i]]])
+    }
+    out <- out[setdiff(names(out), fb_names)]
+  }
+  out
+}
+
+#' Join UNFCCC share distributions with hierarchical fallbacks
+#'
+#' Expands each row of `data` into one row per component (e.g. manure
+#' management system) using the country-year distribution of `reference`.
+#' When the exact category x country x year distribution is missing, the
+#' mean distribution of the same category for the same country across its
+#' available years is used, then the mean distribution of the category across
+#' all countries and years. Mean distributions are computed as the sum of
+#' shares divided by the number of country-years, so that they still sum to 1.
+#'
+#' @param data Data frame containing the `category`, `country` and `year`
+#'   columns.
+#' @param reference Data frame with the `category`, `country`, `year`,
+#'   `component` and `share` columns. Shares are dimensionless fractions
+#'   summing to 1 within each category x country x year.
+#' @param share,component Names of the share and component columns.
+#' @param category Character vector of category key columns.
+#' @param country,year Names of the ISO 3166-1 alpha-3 country and year
+#'   columns.
+#' @return `data` expanded to one row per component with `component` and
+#'   `share` (dimensionless fraction) added. Rows without any reference
+#'   distribution are kept once with `NA` component and share.
+#' @noRd
+h_unfccc_fallback_shares <- function(data, reference, share, component,
+                                     category,
+                                     country = "Country_ISO_3166_1_A3",
+                                     year = "YEAR") {
+  ref <- reference |>
+    dplyr::select(dplyr::all_of(c(category, country, year, component, share))) |>
+    dplyr::filter(dplyr::if_all(dplyr::all_of(c(category, country, year, component)),
+                                ~ !is.na(.x))) |>
+    dplyr::filter(!is.na(.data[[share]]) & .data[[share]] > 0)
+
+  mean_shares <- function(by) {
+    ref |>
+      dplyr::mutate(
+        .n = dplyr::n_distinct(.data[[country]], .data[[year]]),
+        .by = dplyr::all_of(by)) |>
+      dplyr::summarise(
+        !!share := sum(.data[[share]]) / .n[1],
+        .by = dplyr::all_of(c(by, component)))
+  }
+  levels <- list(
+    list(ref = ref, by = c(category, country, year)),
+    list(ref = mean_shares(c(category, country)), by = c(category, country)),
+    list(ref = mean_shares(category), by = category)
+  )
+
+  rest <- data
+  rest$.fb_row <- seq_len(nrow(rest))
+  matched <- list()
+  for (lvl in levels) {
+    m <- if (length(lvl$by) > 0) {
+      dplyr::inner_join(rest, lvl$ref, by = lvl$by,
+                        relationship = "many-to-many")
+    } else {
+      dplyr::cross_join(rest, lvl$ref)
+    }
+    matched[[length(matched) + 1L]] <- m
+    rest <- rest[!rest$.fb_row %in% m$.fb_row, , drop = FALSE]
+  }
+
+  out <- dplyr::bind_rows(c(matched, list(rest)))
+  out <- out[order(out$.fb_row), , drop = FALSE]
+  out$.fb_row <- NULL
+  out
+}
+
+#' Country-year AWMS distribution by FADN livestock category
+#'
+#' @param table3Bas2 `UNFCCC_data$table3Bas2`, with `AWMS` in percent of the
+#'   UNFCCC animal category manure and `Population__size` in heads.
+#' @return A data frame with one row per `FADN_code_letter` x
+#'   `Country_ISO_3166_1_A3` x `YEAR` x `MMS` and `AWMS` as a dimensionless
+#'   fraction summing to 1 within each FADN category x country x year.
+#'   Several UNFCCC categories matched to one FADN category are weighted by
+#'   population (equal weights when population is missing).
+#' @noRd
+h_unfccc_awms_shares <- function(table3Bas2) {
+  table3Bas2 |>
+    dplyr::filter(!is.na(FADN_code_letter) & !is.na(AWMS) & AWMS > 0) |>
+    dplyr::mutate(
+      .w = if (any(!is.na(Population__size) & Population__size > 0)) {
+        dplyr::coalesce(Population__size, 0)
+      } else {
+        1
+      },
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3, YEAR)) |>
+    dplyr::mutate(pop_MMS = .w * AWMS / 100) |>
+    dplyr::mutate(
+      AWMS = pop_MMS / sum(pop_MMS, na.rm = TRUE),
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3, YEAR)) |>
+    dplyr::filter(!is.na(AWMS)) |>
+    dplyr::summarise(
+      AWMS = sum(AWMS),
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3, YEAR, MMS))
+}

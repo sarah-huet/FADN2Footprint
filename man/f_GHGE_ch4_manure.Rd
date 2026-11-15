@@ -4,7 +4,7 @@
 \alias{f_GHGE_ch4_manure}
 \title{Calculate CH4 Emissions from Manure Management}
 \usage{
-f_GHGE_ch4_manure(object, overwrite = F, ...)
+f_GHGE_ch4_manure(object, overwrite = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\link{FADN2Footprint}}.}

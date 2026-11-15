@@ -110,7 +110,7 @@ save(
 # =========================================
 
 #load(
-#        "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/data_raw/FADN_EU_17_21_obj.RData"
+#        "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/data_raw/FADN_EU_17_21_FRA_ITA_DEU_obj.RData"
 #)
 
 cat("Infer the practices")

@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Sarah HUET &amp; Valentin BELLASSEN">
-<meta name="dcterms.date" content="2026-11-02">
+<meta name="dcterms.date" content="2026-11-09">
 
 <title>FADN2Footprint — Validation Report Comparing FADN raw data to F2F output</title>
 <style>
@@ -99,7 +99,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 2, 2026</p>
+      <p class="date">November 9, 2026</p>
     </div>
   </div>
   
@@ -201,7 +201,7 @@ Attaching package: 'zip'</code></pre>
 <section id="load-raw-fadn-data" class="level1">
 <h1>Load raw FADN data</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(wd_path, <span class="st">"/data_raw/raw_FADN_EU_17_21.RData"</span>))</span>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(wd_path, <span class="st">"/data_raw/raw_FADN_EU_17_21_FRA_ITA_DEU.RData"</span>))</span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>raw_fadn <span class="ot">&lt;-</span> my_FADN_data <span class="sc">|&gt;</span></span>
 <span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">ID =</span> <span class="fu">as.character</span>(ID), <span class="at">YEAR =</span> <span class="fu">as.character</span>(YEAR))</span>
@@ -212,10 +212,10 @@ Attaching package: 'zip'</code></pre>
 <h1>Run package</h1>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
-<pre><code>FADN dataset loaded: 358390 farm-year observations</code></pre>
+<pre><code>FADN dataset loaded: 112567 farm-year observations</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Countries covered: BEL, BGR, CYP, CZE, DAN, DEU, ELL, ESP, EST, FRA, HRV, HUN, IRE, ITA, LTU, LUX, LVA, MLT, NED, OST, POL, POR, ROU, SUO, SVE, SVK, SVN, UKI </code></pre>
+<pre><code>Countries covered: DEU, FRA, ITA </code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Years covered: 2017, 2018, 2019, 2020, 2021 </code></pre>
@@ -413,12 +413,12 @@ Attaching package: 'zip'</code></pre>
 <span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">#comp_pop_sum_raw_f2f |&gt; reactable::reactable(searchable = TRUE, filterable = TRUE)</span></span>
 <span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">mean</span>(comp_pop_sum_raw_f2f<span class="sc">$</span>rel_diff, <span class="at">na.rm =</span> T))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.1573597</code></pre>
+<pre><code>[1] 0.2340864</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">quantile</span>(comp_pop_sum_raw_f2f<span class="sc">$</span>rel_diff, <span class="at">na.rm =</span> T))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       0%       25%       50%       75%      100% 
-0.0000000 0.0173060 0.0637243 0.1927435 1.0000000 </code></pre>
+<pre><code>        0%        25%        50%        75%       100% 
+0.00000000 0.07490167 0.10940740 0.28001026 0.99771391 </code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>  <span class="fu">hist</span>(comp_pop_sum_raw_f2f<span class="sc">$</span>rel_diff)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
@@ -502,7 +502,7 @@ Attaching package: 'zip'</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">length</span>(<span class="fu">unique</span>(my_object_GHGE<span class="sc">@</span>traceability<span class="sc">$</span>discarded_farms<span class="sc">$</span>ID)), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>25976 </code></pre>
+<pre><code>9098 </code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>my_object_GHGE<span class="sc">@</span>traceability<span class="sc">$</span>discarded_farms <span class="sc">|&gt;</span></span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">separate_longer_delim</span>(<span class="at">cols =</span> problem, <span class="at">delim =</span> <span class="st">";"</span>) <span class="sc">|&gt;</span></span>
@@ -560,7 +560,7 @@ Attaching package: 'zip'</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>
 discarded      kept 
-     4137     20305 </code></pre>
+     2893      4924 </code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co">#raw_poultry_farms |&gt; view()</span></span>
 <span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -586,285 +586,6 @@ discarded      kept
 </figure>
 </div>
 </div>
-</div>
-</section>
-<section id="compare-ge-filters--" class="level1">
-<h1>Compare GE filters —-</h1>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>raw_th_ration <span class="ot">&lt;-</span> <span class="fu">f_feed_theo_ration</span>(my_object)</span>
-<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>raw_th_ration_sum_feed_DM <span class="ot">&lt;-</span> raw_th_ration<span class="sc">$</span>th_feed_ration <span class="sc">|&gt;</span></span>
-<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">summarise</span>(</span>
-<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sum_DM_t_livcat =</span> <span class="fu">sum</span>(th_DMI_t_livcat_y)</span>
-<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a>raw_herd_feed <span class="ot">&lt;-</span> <span class="fu">f_herd_feed</span>(my_object, <span class="at">overwrite =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>We consider that crop productions are recorded as dry matter.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Purchased feed value imputed from contract sales for 5634 farm-year(s) with animals under contract.</code></pre>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>tmp_max_cat0 <span class="ot">&lt;-</span> my_object<span class="sc">@</span>herd <span class="sc">|&gt;</span></span>
-<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># estimate LU</span></span>
-<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
-<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">LU =</span> Qobs <span class="sc">*</span> livestock_unit_coef</span>
-<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># filter max LU</span></span>
-<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">slice_max</span>(</span>
-<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">order_by =</span> LU,</span>
-<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">with_ties =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> dplyr<span class="sc">::</span><span class="fu">all_of</span>(id_cols)</span>
-<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># select columns</span></span>
-<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(dplyr<span class="sc">::</span><span class="fu">all_of</span>(id_cols), FADN_code_letter)</span>
-<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a><span class="do">### Average FADN filter ----</span></span>
-<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>tmp_mean_GE <span class="ot">&lt;-</span> FADN_averages<span class="sc">$</span>GE_MJ_anim_day <span class="sc">|&gt;</span></span>
-<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a>  <span class="co">#dplyr::summarise(</span></span>
-<span id="cb50-18"><a href="#cb50-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">#     mean_GE_MJ_anim_day = mean(mean_GE_MJ_anim_day, na.rm = T),</span></span>
-<span id="cb50-19"><a href="#cb50-19" aria-hidden="true" tabindex="-1"></a>  <span class="co">#     sd_GE_MJ_anim_day = mean(sd_GE_MJ_anim_day, na.rm = T),</span></span>
-<span id="cb50-20"><a href="#cb50-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">#     .by = FADN_code_letter</span></span>
-<span id="cb50-21"><a href="#cb50-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">#) |&gt;</span></span>
-<span id="cb50-22"><a href="#cb50-22" aria-hidden="true" tabindex="-1"></a>  <span class="co"># define thresholds</span></span>
-<span id="cb50-23"><a href="#cb50-23" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
-<span id="cb50-24"><a href="#cb50-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">threshold_up =</span> mean_GE_MJ_anim_day <span class="sc">+</span> <span class="dv">3</span> <span class="sc">*</span> sd_GE_MJ_anim_day,</span>
-<span id="cb50-25"><a href="#cb50-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">threshold_down =</span> dplyr<span class="sc">::</span><span class="fu">case_when</span>(</span>
-<span id="cb50-26"><a href="#cb50-26" aria-hidden="true" tabindex="-1"></a>      FADN_code_letter <span class="sc">==</span> <span class="st">"LCOWDAIR"</span> <span class="sc">~</span> <span class="fl">0.25</span> <span class="sc">*</span> mean_GE_MJ_anim_day,</span>
-<span id="cb50-27"><a href="#cb50-27" aria-hidden="true" tabindex="-1"></a>      <span class="at">.default =</span> <span class="fl">0.10</span> <span class="sc">*</span> mean_GE_MJ_anim_day</span>
-<span id="cb50-28"><a href="#cb50-28" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb50-29"><a href="#cb50-29" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb50-30"><a href="#cb50-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-31"><a href="#cb50-31" aria-hidden="true" tabindex="-1"></a><span class="do">## main livestock category</span></span>
-<span id="cb50-32"><a href="#cb50-32" aria-hidden="true" tabindex="-1"></a>tmp_max_cat <span class="ot">&lt;-</span> tmp_max_cat0 <span class="sc">|&gt;</span></span>
-<span id="cb50-33"><a href="#cb50-33" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add thresholds</span></span>
-<span id="cb50-34"><a href="#cb50-34" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">left_join</span>(</span>
-<span id="cb50-35"><a href="#cb50-35" aria-hidden="true" tabindex="-1"></a>    tmp_mean_GE,</span>
-<span id="cb50-36"><a href="#cb50-36" aria-hidden="true" tabindex="-1"></a>    <span class="co">#by = 'FADN_code_letter'</span></span>
-<span id="cb50-37"><a href="#cb50-37" aria-hidden="true" tabindex="-1"></a>    <span class="co"># </span><span class="al">TODO</span><span class="co">: restore by country when good enough data</span></span>
-<span id="cb50-38"><a href="#cb50-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">'FADN_code_letter'</span>, <span class="st">'COUNTRY'</span>)</span>
-<span id="cb50-39"><a href="#cb50-39" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb50-40"><a href="#cb50-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-41"><a href="#cb50-41" aria-hidden="true" tabindex="-1"></a><span class="do">## retrieve farms with aberrant values</span></span>
-<span id="cb50-42"><a href="#cb50-42" aria-hidden="true" tabindex="-1"></a>farms_to_remove_GE_filter_avrg_FADN <span class="ot">&lt;-</span> raw_herd_feed<span class="sc">$</span>feed_intake<span class="sc">$</span>total <span class="sc">|&gt;</span></span>
-<span id="cb50-43"><a href="#cb50-43" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add thresholds and filter for the main livestock category</span></span>
-<span id="cb50-44"><a href="#cb50-44" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">inner_join</span>(</span>
-<span id="cb50-45"><a href="#cb50-45" aria-hidden="true" tabindex="-1"></a>    tmp_max_cat,</span>
-<span id="cb50-46"><a href="#cb50-46" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(id_cols, <span class="st">'FADN_code_letter'</span>)</span>
-<span id="cb50-47"><a href="#cb50-47" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb50-48"><a href="#cb50-48" aria-hidden="true" tabindex="-1"></a>  <span class="co"># filter farms above &amp; below thresholds</span></span>
-<span id="cb50-49"><a href="#cb50-49" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
-<span id="cb50-50"><a href="#cb50-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">valid_practice =</span> dplyr<span class="sc">::</span><span class="fu">case_when</span>(</span>
-<span id="cb50-51"><a href="#cb50-51" aria-hidden="true" tabindex="-1"></a>      <span class="co"># between thresholds</span></span>
-<span id="cb50-52"><a href="#cb50-52" aria-hidden="true" tabindex="-1"></a>      GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span> <span class="sc">&gt;=</span> threshold_down <span class="sc">&amp;</span></span>
-<span id="cb50-53"><a href="#cb50-53" aria-hidden="true" tabindex="-1"></a>        GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span> <span class="sc">&lt;=</span> threshold_up <span class="sc">~</span> <span class="cn">TRUE</span>,</span>
-<span id="cb50-54"><a href="#cb50-54" aria-hidden="true" tabindex="-1"></a>      <span class="co"># if NAs</span></span>
-<span id="cb50-55"><a href="#cb50-55" aria-hidden="true" tabindex="-1"></a>      <span class="fu">is.na</span>(GE_MJ_anim) <span class="sc">|</span> <span class="fu">is.na</span>(threshold_down) <span class="sc">|</span> <span class="fu">is.na</span>(threshold_up) <span class="sc">~</span> <span class="cn">FALSE</span>,</span>
-<span id="cb50-56"><a href="#cb50-56" aria-hidden="true" tabindex="-1"></a>      <span class="at">.default =</span> <span class="cn">FALSE</span></span>
-<span id="cb50-57"><a href="#cb50-57" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb50-58"><a href="#cb50-58" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb50-59"><a href="#cb50-59" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb50-60"><a href="#cb50-60" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(farms_to_remove_GE_filter_avrg_FADN<span class="sc">$</span>valid_practice)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
- FALSE   TRUE 
- 98374 124121 </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co">#farms_to_remove_GE_filter_avrg_FADN |&gt; view()</span></span>
-<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a><span class="do">### Percentiles FADN filter ----</span></span>
-<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>tmp_mean_GE <span class="ot">&lt;-</span> raw_herd_feed<span class="sc">$</span>feed_intake<span class="sc">$</span>total <span class="sc">|&gt;</span></span>
-<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">summarise</span>(</span>
-<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_GE_MJ_anim_day =</span> <span class="fu">mean</span>(GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span>, <span class="at">na.rm =</span> T),</span>
-<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd_GE_MJ_anim_day =</span> <span class="fu">sd</span>(GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span>, <span class="at">na.rm =</span> T),</span>
-<span id="cb52-8"><a href="#cb52-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_GE_MJ_anim_day =</span> <span class="fu">median</span>(GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span>, <span class="at">na.rm =</span> T),</span>
-<span id="cb52-9"><a href="#cb52-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">q01 =</span> <span class="fu">quantile</span>(GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>, <span class="fl">0.01</span>),</span>
-<span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">q05 =</span> <span class="fu">quantile</span>(GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>, <span class="fl">0.05</span>),</span>
-<span id="cb52-11"><a href="#cb52-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">q95 =</span> <span class="fu">quantile</span>(GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>, <span class="fl">0.95</span>),</span>
-<span id="cb52-12"><a href="#cb52-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">q99 =</span> <span class="fu">quantile</span>(GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>, <span class="fl">0.99</span>),</span>
-<span id="cb52-13"><a href="#cb52-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(FADN_code_letter, COUNTRY)</span>
-<span id="cb52-14"><a href="#cb52-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb52-15"><a href="#cb52-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># define thresholds</span></span>
-<span id="cb52-16"><a href="#cb52-16" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
-<span id="cb52-17"><a href="#cb52-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">threshold_up =</span> q99,</span>
-<span id="cb52-18"><a href="#cb52-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">threshold_down =</span> q01</span>
-<span id="cb52-19"><a href="#cb52-19" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb52-20"><a href="#cb52-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb52-21"><a href="#cb52-21" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(tmp_mean_GE$mean_GE_MJ_anim_day, tmp_mean_GE$median_GE_MJ_anim_day)</span></span>
-<span id="cb52-22"><a href="#cb52-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb52-23"><a href="#cb52-23" aria-hidden="true" tabindex="-1"></a><span class="do">## main livestock category</span></span>
-<span id="cb52-24"><a href="#cb52-24" aria-hidden="true" tabindex="-1"></a>tmp_max_cat <span class="ot">&lt;-</span> tmp_max_cat0 <span class="sc">|&gt;</span></span>
-<span id="cb52-25"><a href="#cb52-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add thresholds</span></span>
-<span id="cb52-26"><a href="#cb52-26" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">left_join</span>(</span>
-<span id="cb52-27"><a href="#cb52-27" aria-hidden="true" tabindex="-1"></a>    tmp_mean_GE,</span>
-<span id="cb52-28"><a href="#cb52-28" aria-hidden="true" tabindex="-1"></a>    <span class="co">#by = 'FADN_code_letter'</span></span>
-<span id="cb52-29"><a href="#cb52-29" aria-hidden="true" tabindex="-1"></a>    <span class="co"># </span><span class="al">TODO</span><span class="co">: restore by country when good enough data</span></span>
-<span id="cb52-30"><a href="#cb52-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">'FADN_code_letter'</span>, <span class="st">'COUNTRY'</span>)</span>
-<span id="cb52-31"><a href="#cb52-31" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb52-32"><a href="#cb52-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb52-33"><a href="#cb52-33" aria-hidden="true" tabindex="-1"></a><span class="do">## retrieve farms with aberrant values</span></span>
-<span id="cb52-34"><a href="#cb52-34" aria-hidden="true" tabindex="-1"></a>farms_to_remove_GE_filter_pctl_FADN <span class="ot">&lt;-</span> raw_herd_feed<span class="sc">$</span>feed_intake<span class="sc">$</span>total <span class="sc">|&gt;</span></span>
-<span id="cb52-35"><a href="#cb52-35" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add thresholds and filter for the main livestock category</span></span>
-<span id="cb52-36"><a href="#cb52-36" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">inner_join</span>(</span>
-<span id="cb52-37"><a href="#cb52-37" aria-hidden="true" tabindex="-1"></a>    tmp_max_cat,</span>
-<span id="cb52-38"><a href="#cb52-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(id_cols, <span class="st">'FADN_code_letter'</span>)</span>
-<span id="cb52-39"><a href="#cb52-39" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb52-40"><a href="#cb52-40" aria-hidden="true" tabindex="-1"></a>  <span class="co"># filter farms above &amp; below thresholds</span></span>
-<span id="cb52-41"><a href="#cb52-41" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
-<span id="cb52-42"><a href="#cb52-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">valid_practice =</span> dplyr<span class="sc">::</span><span class="fu">case_when</span>(</span>
-<span id="cb52-43"><a href="#cb52-43" aria-hidden="true" tabindex="-1"></a>      <span class="co"># between thresholds</span></span>
-<span id="cb52-44"><a href="#cb52-44" aria-hidden="true" tabindex="-1"></a>      GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span> <span class="sc">&gt;=</span> threshold_down <span class="sc">&amp;</span></span>
-<span id="cb52-45"><a href="#cb52-45" aria-hidden="true" tabindex="-1"></a>        GE_MJ_anim <span class="sc">/</span> <span class="dv">365</span> <span class="sc">&lt;=</span> threshold_up <span class="sc">~</span> <span class="cn">TRUE</span>,</span>
-<span id="cb52-46"><a href="#cb52-46" aria-hidden="true" tabindex="-1"></a>      <span class="co"># if NAs</span></span>
-<span id="cb52-47"><a href="#cb52-47" aria-hidden="true" tabindex="-1"></a>      <span class="fu">is.na</span>(GE_MJ_anim) <span class="sc">|</span> <span class="fu">is.na</span>(threshold_down) <span class="sc">|</span> <span class="fu">is.na</span>(threshold_up) <span class="sc">~</span> <span class="cn">FALSE</span>,</span>
-<span id="cb52-48"><a href="#cb52-48" aria-hidden="true" tabindex="-1"></a>      <span class="at">.default =</span> <span class="cn">FALSE</span></span>
-<span id="cb52-49"><a href="#cb52-49" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb52-50"><a href="#cb52-50" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb52-51"><a href="#cb52-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb52-52"><a href="#cb52-52" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(farms_to_remove_GE_filter_pctl_FADN<span class="sc">$</span>valid_practice)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
- FALSE   TRUE 
-  4987 217508 </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="do">### AROPAj filter ----</span></span>
-<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>AROPAJ_Sailley_filter <span class="ot">&lt;-</span> <span class="fu">source</span>(<span class="fu">file.path</span>(wd_path,<span class="st">"inst/scripts/AROPAJ_Sailley_filter_for_GE.R"</span>))<span class="sc">$</span>value</span>
-<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a>tmp_mean_GE <span class="ot">&lt;-</span> AROPAJ_Sailley_filter <span class="sc">|&gt;</span></span>
-<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add livestock unit coefficient</span></span>
-<span id="cb54-7"><a href="#cb54-7" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">left_join</span>(</span>
-<span id="cb54-8"><a href="#cb54-8" aria-hidden="true" tabindex="-1"></a>    data_extra<span class="sc">$</span>livestock <span class="sc">|&gt;</span></span>
-<span id="cb54-9"><a href="#cb54-9" aria-hidden="true" tabindex="-1"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(FADN_code_letter, livestock_unit_coef),</span>
-<span id="cb54-10"><a href="#cb54-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">'FADN_code_letter'</span>)</span>
-<span id="cb54-11"><a href="#cb54-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb54-12"><a href="#cb54-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># define thresholds</span></span>
-<span id="cb54-13"><a href="#cb54-13" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
-<span id="cb54-14"><a href="#cb54-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">threshold_up =</span> (th_GE_MJ_LU_y <span class="sc">*</span> livestock_unit_coef) <span class="sc">*</span> <span class="dv">10</span>,</span>
-<span id="cb54-15"><a href="#cb54-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">threshold_down =</span> dplyr<span class="sc">::</span><span class="fu">case_when</span>(</span>
-<span id="cb54-16"><a href="#cb54-16" aria-hidden="true" tabindex="-1"></a>      FADN_code_letter <span class="sc">==</span> <span class="st">"LCOWDAIR"</span> <span class="sc">~</span> <span class="fl">0.25</span> <span class="sc">*</span></span>
-<span id="cb54-17"><a href="#cb54-17" aria-hidden="true" tabindex="-1"></a>        (th_GE_MJ_LU_y <span class="sc">*</span> livestock_unit_coef),</span>
-<span id="cb54-18"><a href="#cb54-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">.default =</span> <span class="fl">0.10</span> <span class="sc">*</span> (th_GE_MJ_LU_y <span class="sc">*</span> livestock_unit_coef)</span>
-<span id="cb54-19"><a href="#cb54-19" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb54-20"><a href="#cb54-20" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb54-21"><a href="#cb54-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb54-22"><a href="#cb54-22" aria-hidden="true" tabindex="-1"></a><span class="do">## main livestock category</span></span>
-<span id="cb54-23"><a href="#cb54-23" aria-hidden="true" tabindex="-1"></a>tmp_max_cat <span class="ot">&lt;-</span> tmp_max_cat0 <span class="sc">|&gt;</span></span>
-<span id="cb54-24"><a href="#cb54-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add thresholds</span></span>
-<span id="cb54-25"><a href="#cb54-25" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">left_join</span>(</span>
-<span id="cb54-26"><a href="#cb54-26" aria-hidden="true" tabindex="-1"></a>    tmp_mean_GE,</span>
-<span id="cb54-27"><a href="#cb54-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="st">'FADN_code_letter'</span></span>
-<span id="cb54-28"><a href="#cb54-28" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb54-29"><a href="#cb54-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb54-30"><a href="#cb54-30" aria-hidden="true" tabindex="-1"></a><span class="do">## retrieve farms with aberrant values</span></span>
-<span id="cb54-31"><a href="#cb54-31" aria-hidden="true" tabindex="-1"></a>farms_to_remove_GE_filter_AROPAJ <span class="ot">&lt;-</span> raw_herd_feed<span class="sc">$</span>feed_intake<span class="sc">$</span>total <span class="sc">|&gt;</span></span>
-<span id="cb54-32"><a href="#cb54-32" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add thresholds and filter for the main livestock category</span></span>
-<span id="cb54-33"><a href="#cb54-33" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">inner_join</span>(</span>
-<span id="cb54-34"><a href="#cb54-34" aria-hidden="true" tabindex="-1"></a>    tmp_max_cat,</span>
-<span id="cb54-35"><a href="#cb54-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(id_cols, <span class="st">'FADN_code_letter'</span>)</span>
-<span id="cb54-36"><a href="#cb54-36" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb54-37"><a href="#cb54-37" aria-hidden="true" tabindex="-1"></a>  <span class="co"># filter farms above &amp; below thresholds</span></span>
-<span id="cb54-38"><a href="#cb54-38" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
-<span id="cb54-39"><a href="#cb54-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">valid_practice =</span> dplyr<span class="sc">::</span><span class="fu">case_when</span>(</span>
-<span id="cb54-40"><a href="#cb54-40" aria-hidden="true" tabindex="-1"></a>      <span class="co"># between thresholds</span></span>
-<span id="cb54-41"><a href="#cb54-41" aria-hidden="true" tabindex="-1"></a>      GE_MJ_anim <span class="sc">&gt;=</span> threshold_down <span class="sc">&amp;</span></span>
-<span id="cb54-42"><a href="#cb54-42" aria-hidden="true" tabindex="-1"></a>        GE_MJ_anim <span class="sc">&lt;=</span> threshold_up <span class="sc">~</span> <span class="cn">TRUE</span>,</span>
-<span id="cb54-43"><a href="#cb54-43" aria-hidden="true" tabindex="-1"></a>      <span class="co"># if NAs</span></span>
-<span id="cb54-44"><a href="#cb54-44" aria-hidden="true" tabindex="-1"></a>      <span class="fu">is.na</span>(GE_MJ_anim) <span class="sc">|</span> <span class="fu">is.na</span>(threshold_down) <span class="sc">|</span> <span class="fu">is.na</span>(threshold_up) <span class="sc">~</span> <span class="cn">FALSE</span>,</span>
-<span id="cb54-45"><a href="#cb54-45" aria-hidden="true" tabindex="-1"></a>      <span class="at">.default =</span> <span class="cn">FALSE</span></span>
-<span id="cb54-46"><a href="#cb54-46" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb54-47"><a href="#cb54-47" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb54-48"><a href="#cb54-48" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb54-49"><a href="#cb54-49" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(farms_to_remove_GE_filter_AROPAJ<span class="sc">$</span>valid_practice)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
- FALSE   TRUE 
- 13187 209308 </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co">#farms_to_remove_GE_filter_AROPAJ |&gt; view()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="do">## plot average gross energy intake for average FADN filter</span></span>
-<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>farms_to_remove_GE_filter_avrg_FADN <span class="sc">|&gt;</span></span>
-<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">#view()</span></span>
-<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">ggplot</span>(</span>
-<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>    ggplot2<span class="sc">::</span><span class="fu">aes</span>(</span>
-<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> FADN_code_letter,</span>
-<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> GE_MJ_anim,</span>
-<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">fill =</span> valid_practice</span>
-<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
-<span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">scale_y_continuous</span>(<span class="at">trans =</span> <span class="st">"log10"</span>) <span class="sc">+</span></span>
-<span id="cb57-13"><a href="#cb57-13" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">labs</span>(</span>
-<span id="cb57-14"><a href="#cb57-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Average Gross Energy Intake for Kept and Discarded Farms from average FADN filter"</span>,</span>
-<span id="cb57-15"><a href="#cb57-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Kept or Discarded"</span>,</span>
-<span id="cb57-16"><a href="#cb57-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Average Gross Energy Intake (MJ/animal)"</span></span>
-<span id="cb57-17"><a href="#cb57-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb57-18"><a href="#cb57-18" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">coord_flip</span>() <span class="sc">+</span></span>
-<span id="cb57-19"><a href="#cb57-19" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="validation_report_comp_raw_FADN_F2F_output_livestock_files/figure-html/compare_GE-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="do">## plot average gross energy intake for percentile FADN filter</span></span>
-<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>farms_to_remove_GE_filter_pctl_FADN <span class="sc">|&gt;</span></span>
-<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">#view()</span></span>
-<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">ggplot</span>(</span>
-<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>    ggplot2<span class="sc">::</span><span class="fu">aes</span>(</span>
-<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> FADN_code_letter,</span>
-<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> GE_MJ_anim,</span>
-<span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">fill =</span> valid_practice</span>
-<span id="cb58-9"><a href="#cb58-9" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
-<span id="cb58-12"><a href="#cb58-12" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">scale_y_continuous</span>(<span class="at">trans =</span> <span class="st">"log10"</span>) <span class="sc">+</span></span>
-<span id="cb58-13"><a href="#cb58-13" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">labs</span>(</span>
-<span id="cb58-14"><a href="#cb58-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Average Gross Energy Intake for Kept and Discarded Farms from percentile FADN filter"</span>,</span>
-<span id="cb58-15"><a href="#cb58-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Kept or Discarded"</span>,</span>
-<span id="cb58-16"><a href="#cb58-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Average Gross Energy Intake (MJ/animal)"</span></span>
-<span id="cb58-17"><a href="#cb58-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb58-18"><a href="#cb58-18" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">coord_flip</span>() <span class="sc">+</span></span>
-<span id="cb58-19"><a href="#cb58-19" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="validation_report_comp_raw_FADN_F2F_output_livestock_files/figure-html/compare_GE-2.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="do">## plot average gross energy intake for Aropaj filter</span></span>
-<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>farms_to_remove_GE_filter_AROPAJ <span class="sc">|&gt;</span></span>
-<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">#view()</span></span>
-<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">ggplot</span>(</span>
-<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>    ggplot2<span class="sc">::</span><span class="fu">aes</span>(</span>
-<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> FADN_code_letter,</span>
-<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> GE_MJ_anim,</span>
-<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">fill =</span> valid_practice</span>
-<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
-<span id="cb59-12"><a href="#cb59-12" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">scale_y_continuous</span>(<span class="at">trans =</span> <span class="st">"log10"</span>) <span class="sc">+</span></span>
-<span id="cb59-13"><a href="#cb59-13" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">labs</span>(</span>
-<span id="cb59-14"><a href="#cb59-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Average Gross Energy Intake for Kept and Discarded Farms from AROPAJ filter"</span>,</span>
-<span id="cb59-15"><a href="#cb59-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Kept or Discarded"</span>,</span>
-<span id="cb59-16"><a href="#cb59-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Average Gross Energy Intake (MJ/animal)"</span></span>
-<span id="cb59-17"><a href="#cb59-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb59-18"><a href="#cb59-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">#  ggplot2::facet_wrap(~YEAR) +</span></span>
-<span id="cb59-19"><a href="#cb59-19" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">coord_flip</span>() <span class="sc">+</span></span>
-<span id="cb59-20"><a href="#cb59-20" aria-hidden="true" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="validation_report_comp_raw_FADN_F2F_output_livestock_files/figure-html/compare_GE-3.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Poultry have clearly a lower GE in discarded than in kept farms</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 

@@ -74,11 +74,12 @@ average proportions (prop_SSN_Qobs, prop_SRN_Qobs), and corresponding
 sales values are derived using the average value-to-number ratios
 (ratio_SS_V_N, ratio_SR_V_N).
 
-\strong{5. Assign live weights:} average live weights (live_weight_kg) are
-derived per FADN_code_letter, species and country from
-\code{UNFCCC_data$table3As2}, based on \code{data_extra$livestock}'s UNFCCC_cat
-mapping. Missing country-specific weights are replaced by the
-FADN_code_letter-level mean.
+\strong{5. Assign live weights:} average live weights (live_weight_kg, kg per
+head) are derived per FADN_code_letter, country and year from
+\code{UNFCCC_data$table3As2}, whose UNFCCC categories are mapped to
+FADN_code_letter when the data are built. Missing country-year weights are
+replaced by the mean of the same FADN_code_letter and country across years,
+then by the mean of the FADN_code_letter across all countries and years.
 
 \strong{6. Build output tables:}
 \itemize{

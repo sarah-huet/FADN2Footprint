@@ -32,10 +32,10 @@ and used as grouping keys during pivoting.}
 }
 \value{
 A single wide data frame in EU FADN format (one row per farm).
-  Categorical codes are dimensionless; measurement units follow the dictionary.
-  French purchased grazing-feed values are in EUR: \code{AUTAC + HERAC}
-  yields \code{IGRFEDCNCTRPUR_V}, and \code{AUTAG + HERAG} yields
-  \code{IGRFEDCRSPUR_V} when specified in the conversion dictionary.
+Categorical codes are dimensionless; measurement units follow the dictionary.
+French purchased grazing-feed values are in EUR: \code{AUTAC + HERAC}
+yields \code{IGRFEDCNCTRPUR_V}, and \code{AUTAG + HERAG} yields
+\code{IGRFEDCRSPUR_V} when specified in the conversion dictionary.
 }
 \description{
 Pivot and convert a national FADN to EU FADN format

@@ -1,3 +1,11 @@
+test_that("internal UNFCCC data match the published dataset", {
+  published <- new.env(parent = emptyenv())
+  load(testthat::test_path("..", "..", "data", "UNFCCC_data.rda"),
+       envir = published)
+  internal <- getFromNamespace("UNFCCC_data", "FADN2Footprint")
+  expect_identical(internal, published$UNFCCC_data)
+})
+
 test_that("CRT reference tables preserve country and inventory-year keys", {
   load(
     testthat::test_path("..", "..", "data", "UNFCCC_data.rda"),
@@ -28,7 +36,7 @@ test_that("CRT reference tables preserve country and inventory-year keys", {
       UNFCCC_data$table3Bas2[
         c(
           "Country_ISO_3166_1_A3", "YEAR", "Animal_cat",
-          "climate_region", "MMS", "UNFCCC_cat"
+          "climate_region", "MMS", "FADN_code_letter"
         )
       ]
     ),

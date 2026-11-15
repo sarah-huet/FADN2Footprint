@@ -2,6 +2,8 @@ if (!file.exists("DESCRIPTION")) {
   stop("Run this script from the package root.")
 }
 
+source(file.path("inst", "scripts", "unfccc_mcf_units.R"), local = TRUE)
+
 input_file <- file.path("AI_agents", "outputs", "crt_variables_long.csv")
 if (!file.exists(input_file)) {
   stop("The verified CRT aggregate is missing: ", input_file)
@@ -83,149 +85,261 @@ clean_category <- function(category) {
     category,
     perl = TRUE
   )
+  # CRT footnote markers, e.g. "Bulls (2)" or "Fur-bearing animals (5)".
+  category <- gsub("\\s*\\(\\d+\\)", "", category, perl = TRUE)
   trimws(category)
 }
 
-animal_key <- function(category, category_code) {
-  label <- clean_category(category)
+cell_row <- function(cell) {
+  suppressWarnings(as.integer(sub("^[A-Z]+", "", cell)))
+}
+
+species_from_code <- function(category_code) {
   code <- ifelse(is.na(category_code), "", category_code)
+  dplyr::case_when(
+    grepl("^3\\.[AB]\\.1(\\.|$)", code) ~ "cattle",
+    grepl("^3\\.[AB]\\.2(\\.|$)", code) ~ "sheep",
+    grepl("^3\\.[AB]\\.3(\\.|$)", code) ~ "swine",
+    grepl("^3\\.[AB]\\.4\\.a(\\.|$)", code) ~ "buffalo",
+    grepl("^3\\.[AB]\\.4\\.d(\\.|$)", code) ~ "goats",
+    grepl("^3\\.[AB]\\.4\\.[ef](\\.|$)", code) ~ "horse",
+    grepl("^3\\.[AB]\\.4\\.g(\\.|$)", code) ~ "poultry",
+    grepl("^3\\.[AB]\\.4\\.h\\.i$", code) ~ "rabbit",
+    TRUE ~ NA_character_
+  )
+}
+
+species_from_label <- function(category) {
+  label <- clean_category(category)
+  dplyr::case_when(
+    grepl("buffalo", label, ignore.case = TRUE) ~ "buffalo",
+    grepl("cattle|\\bcows?\\b|calve|calf|bull|heifer|steer", label, ignore.case = TRUE) ~
+      "cattle",
+    grepl("sheep|lamb|\\bewes?\\b|\\brams?\\b", label, ignore.case = TRUE, perl = TRUE) ~
+      "sheep",
+    grepl("swine|\\bsows?\\b|\\bpigs?\\b|piglet|weaner|gilt|guilt|boar", label,
+          ignore.case = TRUE, perl = TRUE) ~ "swine",
+    grepl("goat", label, ignore.case = TRUE) ~ "goats",
+    grepl("horse|\\bmules?\\b|\\basses\\b", label, ignore.case = TRUE, perl = TRUE) ~ "horse",
+    grepl("poultry|broiler|turkey|duck|\\bhens?\\b|laying|chicken|goose|geese", label,
+          ignore.case = TRUE, perl = TRUE) ~ "poultry",
+    grepl("rabbit", label, ignore.case = TRUE) ~ "rabbit",
+    TRUE ~ NA_character_
+  )
+}
+
+animal_key <- function(category, species) {
+  label <- clean_category(category)
   label <- gsub("\\s*>\\s*", " over ", label)
   label <- gsub("\\s*<\\s*", " under ", label)
   key <- tolower(gsub("[^[:alnum:]]+", "_", label))
   key <- gsub("^_+|_+$", "", key)
-  key[grepl("^3\\.B\\.2", code) & grepl("other", label, ignore.case = TRUE)] <- "sheep"
-  key[grepl("^3\\.B\\.3", code) & grepl("other", label, ignore.case = TRUE)] <- "swine"
+  # Generic labels are only unique within a species.
+  generic <- grepl("^(other|other_please_specify|additional_information|unspecified)$", key)
+  prefix <- generic & !is.na(species)
+  key[prefix] <- paste(species[prefix], key[prefix], sep = "_")
   key
 }
 
-animal_species <- function(category, category_code) {
-  label <- clean_category(category)
-  code <- ifelse(is.na(category_code), "", category_code)
-  dplyr::case_when(
-    grepl("^3\\.[AB]\\.1", code) |
-      grepl("cattle|cow|calve|bull", label, ignore.case = TRUE) ~ "cattle",
-    grepl("^3\\.B\\.2", code) |
-      grepl("sheep|lamb|ewe|ram", label, ignore.case = TRUE) ~ "sheep",
-    grepl("^3\\.B\\.3", code) |
-      grepl("swine|sow|pig|weaner", label, ignore.case = TRUE) ~ "swine",
-    grepl("^3\\.B\\.4\\.d", code) |
-      grepl("goat", label, ignore.case = TRUE) ~ "goats",
-    grepl("^3\\.B\\.4\\.e", code) |
-      grepl("horse", label, ignore.case = TRUE) ~ "horse",
-    grepl("^3\\.B\\.4\\.g", code) |
-      grepl("poultry", label, ignore.case = TRUE) ~ "poultry",
-    TRUE ~ NA_character_
-  )
+# FADN livestock codes used to translate CRT categories ------------------------
+livestock <- data_extra$livestock
+fadn_species_codes <- function(species) {
+  livestock$FADN_code_letter[livestock$species %in% species]
 }
+buffalo_codes <- c("LBUFDAIRPRS", "LCOWBUFDAIR_X")
+cattle_codes <- setdiff(fadn_species_codes("cattle"), buffalo_codes)
+non_dairy_cattle_codes <- setdiff(cattle_codes, "LCOWDAIR")
+growing_cattle_codes <- c("LBOV1", "LBOV1_2F", "LBOV1_2M", "LHEIFBRE", "LHEIFFAT")
+stopifnot(
+  all(c(buffalo_codes, growing_cattle_codes, "LCOWDAIR", "LCOWOTH", "LBOV2") %in%
+        livestock$FADN_code_letter)
+)
+fadn_codes <- function(...) paste(c(...), collapse = ";")
 
-animal_unfccc_category <- function(category, category_code) {
-  label <- clean_category(category)
-  species <- animal_species(category, category_code)
-  dplyr::case_when(
-    species == "cattle" & grepl("non.?dairy|non.?lactating", label, ignore.case = TRUE) ~
-      "growing_cattle;other_mature_cattle",
-    species == "cattle" & grepl("dairy", label, ignore.case = TRUE) ~ "dairy_cattle",
-    species == "cattle" & grepl("growing|calve|suckler|young", label, ignore.case = TRUE) ~
-      "growing_cattle",
-    species == "cattle" & grepl("mature|bull|other", label, ignore.case = TRUE) ~
-      "other_mature_cattle",
-    species == "swine" & grepl("breeding|sow", label, ignore.case = TRUE) ~
-      "breeding_swine",
-    species == "swine" &
-      grepl("weaner|under\\s*20|<\\s*20", label, ignore.case = TRUE) ~ "piglets",
-    species == "swine" &
-      grepl("fattening|over\\s*20|market|>\\s*20", label, ignore.case = TRUE) ~
-      "fattening_swine",
-    species == "swine" ~ "breeding_swine;piglets;fattening_swine",
-    species == "poultry" ~ "poultry",
-    species == "sheep" & grepl("ewes", label, ignore.case = TRUE) ~ "breeding_sheep",
-    species == "sheep" & grepl("lambs|over 1yr|rams|other mature", label, ignore.case = TRUE) ~
-      "fattening_sheep",
-    species == "sheep" ~ "breeding_sheep;fattening_sheep",
-    species == "goats" ~ "goats",
-    species == "horse" ~ "horse",
-    TRUE ~ NA_character_
-  )
-}
+# Closest FADN match for each CRT livestock category. Rules are evaluated in
+# order within a species; the first matching label pattern wins.
+# match_level: 1 = specific FADN category, 2 = group of FADN categories,
+# 3 = whole species (used only for FADN codes without a closer CRT match).
+generic_label <- "please specify|unspecified|^all\\b|additional information|^other$"
+fadn_rules <- tibble::tribble(
+  ~species, ~pattern, ~fadn_match, ~FADN_code_letter, ~match_level,
+  "buffalo", ".", "buffalo", fadn_codes(buffalo_codes), 1L,
+  "cattle", "non.?dairy|non.?lactating", "non_dairy_cattle",
+  fadn_codes(non_dairy_cattle_codes), 2L,
+  "cattle", "dairy", "LCOWDAIR", "LCOWDAIR", 1L,
+  "cattle", "suckler|other cows", "LCOWOTH", "LCOWOTH", 1L,
+  "cattle", "bulls?\\s*(under|<)\\s*2", "LBOV1_2M", "LBOV1_2M", 1L,
+  "cattle", "bull", "LBOV2", "LBOV2", 1L,
+  "cattle", "calve|calf", "LBOV1", "LBOV1", 1L,
+  "cattle", "other mature", "other_mature_cattle", fadn_codes("LCOWOTH", "LBOV2"), 2L,
+  "cattle", "growing|young", "growing_cattle", fadn_codes(growing_cattle_codes), 2L,
+  "cattle", ".", "cattle", fadn_codes(cattle_codes), 3L,
+  "sheep", generic_label, "sheep", fadn_codes(fadn_species_codes("sheep")), 3L,
+  "sheep", "other mature ewes", "LSHEPOTH", "LSHEPOTH", 1L,
+  "sheep", "\\bewes?\\b", "breeding_ewes", fadn_codes("LEWEBRE", "LSHEEPEWE"), 1L,
+  "sheep", "lamb|\\brams?\\b|other", "LSHEPOTH", "LSHEPOTH", 1L,
+  "sheep", ".", "sheep", fadn_codes(fadn_species_codes("sheep")), 3L,
+  "swine", generic_label, "swine", fadn_codes(fadn_species_codes("swine")), 3L,
+  "swine", "boar", "LPIGOTH", "LPIGOTH", 1L,
+  "swine", "piglet|weaner|<\\s*20|under\\s*20|less than 20", "LPIGLET", "LPIGLET", 1L,
+  "swine", "fattening|finishing|market|>\\s*20|20\\s*-\\s*50|>\\s*50|more than 50|young pig",
+  "fattening_pigs", fadn_codes("LPIGFAT", "LPIGOTH"), 1L,
+  "swine", "\\bsows?\\b|gilt|guilt|breeding", "LSOWBRE", "LSOWBRE", 1L,
+  "swine", ".", "swine", fadn_codes(fadn_species_codes("swine")), 3L,
+  "goats", ".", "goats", fadn_codes(fadn_species_codes("goats")), 1L,
+  "horse", ".", "LEQD", "LEQD", 1L,
+  "poultry", "broiler", "LPLTRBROYL", "LPLTRBROYL", 1L,
+  "poultry", "\\bhens?\\b|laying|layer", "LHENSLAY", "LHENSLAY", 1L,
+  "poultry", "turkey|duck|goose|geese|other poultry", "LPLTROTH", "LPLTROTH", 1L,
+  "poultry", ".", "poultry", fadn_codes(fadn_species_codes("poultry")), 3L,
+  "rabbit", ".", "rabbit", fadn_codes("LRABBRE", "LRABOTH"), 1L
+)
 
-map_animals <- function(data) {
-  data |>
-    dplyr::mutate(
-      Animal_cat = animal_key(category, category_code),
-      species = animal_species(category, category_code),
-      UNFCCC_cat = animal_unfccc_category(category, category_code)
-    )
-}
-
-prefer_leaf_categories <- function(data) {
-  key_columns <- c("iso3", "YEAR", "sheet", "variable")
-  coded <- data |>
-    dplyr::filter(!is.na(category_code), nzchar(category_code)) |>
-    dplyr::distinct(dplyr::across(dplyr::all_of(c(key_columns, "category_code"))))
-  if (nrow(coded) == 0) {
-    return(data)
+match_fadn <- function(data) {
+  label <- clean_category(data$category)
+  rule <- rep(NA_integer_, nrow(data))
+  for (i in seq_len(nrow(fadn_rules))) {
+    hit <- is.na(rule) &
+      data$species %in% fadn_rules$species[[i]] &
+      grepl(fadn_rules$pattern[[i]], label, ignore.case = TRUE, perl = TRUE)
+    rule[hit] <- i
   }
+  data$fadn_match <- fadn_rules$fadn_match[rule]
+  data$FADN_code_letter <- fadn_rules$FADN_code_letter[rule]
+  data$match_level <- fadn_rules$match_level[rule]
+  data
+}
 
-  ancestor_rows <- lapply(seq_len(nrow(coded)), function(i) {
-    parts <- strsplit(coded$category_code[[i]], ".", fixed = TRUE)[[1]]
-    if (length(parts) < 2) {
-      return(NULL)
-    }
-    data.frame(
-      coded[rep(i, length(parts) - 1), key_columns, drop = FALSE],
-      category_code = vapply(
-        seq_len(length(parts) - 1),
-        function(n) paste(parts[seq_len(n)], collapse = "."),
-        character(1)
-      ),
-      stringsAsFactors = FALSE
+# Expand to one row per FADN code and, for each country, year and FADN code,
+# keep only the closest CRT categories (lowest match_level).
+expand_fadn_matches <- function(data) {
+  data |>
+    tidyr::separate_longer_delim(FADN_code_letter, ";") |>
+    dplyr::filter(
+      is.na(FADN_code_letter) | match_level == min(match_level),
+      .by = c(Country_ISO_3166_1_A3, YEAR, FADN_code_letter)
     )
-  })
-  ancestor_rows <- dplyr::bind_rows(ancestor_rows)
-  parent_codes <- dplyr::inner_join(
-    ancestor_rows,
-    coded,
-    by = c(key_columns, "category_code")
+}
+
+# CRT hierarchy ----------------------------------------------------------------
+# Uncoded rows (e.g. DNK "Sows", "Fattening pigs", "Weaners") are listed directly
+# below the coded category they disaggregate (e.g. 3.B.3.a). A coded row with
+# coded descendants or uncoded children is an aggregate and is dropped so that
+# each animal is counted once. The hierarchy is read from the sheet rows shared
+# by all variables passed in, because parent cells are not reported for every
+# variable (e.g. Bo or VS of 3.B.2.a).
+add_category_context <- function(data) {
+  keys <- c("iso3", "YEAR", "sheet")
+  data <- dplyr::mutate(
+    data,
+    .row = cell_row(cell),
+    .coded = !is.na(category_code) & nzchar(category_code)
+  )
+  structure <- data |>
+    dplyr::distinct(dplyr::across(dplyr::all_of(keys)), .row, .coded, category_code) |>
+    dplyr::mutate(.last_code = dplyr::if_else(.coded, category_code, NA_character_)) |>
+    dplyr::arrange(dplyr::across(dplyr::all_of(keys)), .row, dplyr::desc(.coded)) |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(keys))) |>
+    tidyr::fill(.last_code, .direction = "down") |>
+    dplyr::ungroup() |>
+    dplyr::filter(!.coded) |>
+    dplyr::distinct(dplyr::across(dplyr::all_of(keys)), .row, parent_code = .last_code)
+  if (anyDuplicated(structure[c(keys, ".row")])) {
+    stop("CRT sheet rows hold several categories; cannot rebuild the hierarchy.")
+  }
+  data |>
+    dplyr::left_join(structure, by = c(keys, ".row")) |>
+    dplyr::mutate(
+      parent_code = dplyr::if_else(.coded, NA_character_, parent_code),
+      species = dplyr::coalesce(
+        species_from_code(dplyr::if_else(.coded, category_code, parent_code)),
+        species_from_label(category)
+      )
+    )
+}
+
+keep_leaf_categories <- function(data) {
+  keys <- c("iso3", "YEAR", "sheet")
+  coded <- data |>
+    dplyr::filter(.coded) |>
+    dplyr::distinct(dplyr::across(dplyr::all_of(c(keys, "category_code"))))
+  ancestors <- coded |>
+    dplyr::mutate(
+      category_code = lapply(
+        strsplit(category_code, ".", fixed = TRUE),
+        function(parts) {
+          if (length(parts) < 2) {
+            return(character())
+          }
+          vapply(
+            seq_len(length(parts) - 1),
+            function(n) paste(parts[seq_len(n)], collapse = "."),
+            character(1)
+          )
+        }
+      )
+    ) |>
+    tidyr::unnest_longer(category_code)
+  parents <- dplyr::bind_rows(
+    dplyr::semi_join(ancestors, coded, by = c(keys, "category_code")),
+    data |>
+      dplyr::filter(!.coded, !is.na(parent_code)) |>
+      dplyr::distinct(dplyr::across(dplyr::all_of(keys)), category_code = parent_code)
   ) |>
     dplyr::distinct()
-  data <- dplyr::anti_join(
-    data,
-    parent_codes,
-    by = c(key_columns, "category_code")
-  )
-
-  coded_animals <- data |>
-    dplyr::filter(!is.na(category_code), nzchar(category_code)) |>
-    dplyr::distinct(dplyr::across(dplyr::all_of(c(key_columns, "Animal_cat"))))
-  uncoded <- data |>
-    dplyr::filter(is.na(category_code) | !nzchar(category_code)) |>
-    dplyr::anti_join(
-      coded_animals,
-      by = c(key_columns, "Animal_cat")
-    )
-  dplyr::bind_rows(
-    data |> dplyr::filter(!is.na(category_code), nzchar(category_code)),
-    uncoded
-  )
+  data |>
+    dplyr::anti_join(parents, by = c(keys, "category_code")) |>
+    dplyr::select(-.row, -.coded)
 }
 
-expand_unfccc_categories <- function(data) {
-  tidyr::separate_longer_delim(data, UNFCCC_cat, ";")
+population_rows <- crt |>
+  dplyr::filter(
+    sheet %in% c("Table3.A", "Table3.B(a)"),
+    grepl("Population size", variable, ignore.case = TRUE),
+    nzchar(clean_category(category))
+  ) |>
+  add_category_context() |>
+  keep_leaf_categories()
+
+# Species of each CRT label in its country-year hierarchy. Table 3.As2 and
+# Table 3.B(a)s2 list labels without codes, so their species is taken from here.
+label_species <- population_rows |>
+  dplyr::filter(!is.na(species)) |>
+  dplyr::transmute(iso3, YEAR, .label = clean_category(category), species) |>
+  dplyr::distinct() |>
+  dplyr::filter(dplyr::n() == 1L, .by = c(iso3, YEAR, .label)) |>
+  dplyr::rename(context_species = species)
+
+add_label_species <- function(data) {
+  data |>
+    dplyr::mutate(.label = clean_category(category)) |>
+    dplyr::left_join(label_species, by = c("iso3", "YEAR", ".label")) |>
+    dplyr::mutate(
+      species = dplyr::coalesce(context_species, species_from_label(category))
+    ) |>
+    dplyr::select(-.label, -context_species)
 }
 
 weight_rows <- crt |>
-  dplyr::filter(sheet == "Table3.A", variable == "Weight", !is.na(value)) |>
-  map_animals()
+  dplyr::filter(
+    sheet == "Table3.A", variable == "Weight", !is.na(value),
+    nzchar(clean_category(category))
+  ) |>
+  add_label_species() |>
+  dplyr::mutate(Animal_cat = animal_key(category, species)) |>
+  match_fadn()
 UNFCCC_table3As2 <- weight_rows |>
   dplyr::transmute(
     Animal_cat,
     Weight = value,
     species,
-    UNFCCC_cat,
+    fadn_match,
+    FADN_code_letter,
+    match_level,
     Country_ISO_3166_1_A3 = iso3,
     YEAR
   ) |>
-  expand_unfccc_categories()
+  expand_fadn_matches()
 
 bas1 <- crt |>
   dplyr::filter(sheet == "Table3.B(a)") |>
@@ -247,9 +361,11 @@ bas1 <- crt |>
       TRUE ~ NA_character_
     )
   ) |>
-  dplyr::filter(!is.na(feature), !is.na(category), nzchar(category)) |>
-  map_animals() |>
-  prefer_leaf_categories()
+  dplyr::filter(!is.na(feature), nzchar(clean_category(category))) |>
+  add_category_context() |>
+  keep_leaf_categories() |>
+  dplyr::mutate(Animal_cat = animal_key(category, species)) |>
+  match_fadn()
 
 bas1_key <- c("iso3", "YEAR", "Animal_cat", "feature")
 bas1_duplicates <- dplyr::filter(
@@ -279,7 +395,10 @@ bas1_values <- bas1 |>
     values_from = value
   )
 bas1_mapping <- bas1 |>
-  dplyr::distinct(iso3, YEAR, Animal_cat, species, UNFCCC_cat)
+  dplyr::distinct(iso3, YEAR, Animal_cat, species, fadn_match, FADN_code_letter, match_level)
+if (anyDuplicated(bas1_mapping[c("iso3", "YEAR", "Animal_cat")])) {
+  stop("Table 3.B(a) animal categories map to several FADN categories.")
+}
 UNFCCC_table3Bas1 <- bas1_values |>
   dplyr::left_join(
     bas1_mapping,
@@ -287,7 +406,7 @@ UNFCCC_table3Bas1 <- bas1_values |>
   ) |>
   dplyr::mutate(Country_ISO_3166_1_A3 = iso3) |>
   dplyr::select(-iso3) |>
-  expand_unfccc_categories()
+  expand_fadn_matches()
 
 population_lookup <- bas1 |>
   dplyr::filter(feature == "Population__size") |>
@@ -310,7 +429,8 @@ bas2 <- crt |>
       "^Manure Management Systems \\(b\\) - (.+) - (Allocation|MCF \\(c\\)) - (Cool|Temperate|Warm)$"
     )
   ) |>
-  dplyr::filter(!is.na(mms_match[, 1]), !is.na(category), nzchar(category)) |>
+  dplyr::filter(!is.na(mms_match[, 1]), nzchar(clean_category(category))) |>
+  add_label_species() |>
   dplyr::mutate(
     MMS_label = gsub("\\s*\\([^)]*\\)", "", mms_match[, 2]),
     MMS = paste0(
@@ -319,11 +439,22 @@ bas2 <- crt |>
     ),
     climate_region = mms_match[, 4],
     feature = ifelse(mms_match[, 3] == "Allocation", "AWMS", "MCF"),
-    Animal_cat = animal_key(category, category_code)
-  )
+    value = dplyr::if_else(
+      feature == "MCF",
+      normalize_unfccc_mcf_percent(iso3, value),
+      value
+    ),
+    Animal_cat = animal_key(category, species)
+  ) |>
+  match_fadn()
 bas2_key <- c("iso3", "YEAR", "Animal_cat", "climate_region", "MMS", "feature")
 if (nrow(dplyr::filter(dplyr::count(bas2, dplyr::across(dplyr::all_of(bas2_key))), n > 1)) > 0) {
   stop("Table 3.B(a) has repeated manure-system values.")
+}
+bas2_mapping <- bas2 |>
+  dplyr::distinct(iso3, YEAR, Animal_cat, species, fadn_match, FADN_code_letter, match_level)
+if (anyDuplicated(bas2_mapping[c("iso3", "YEAR", "Animal_cat")])) {
+  stop("Table 3.B(a)s2 animal categories map to several FADN categories.")
 }
 UNFCCC_table3Bas2 <- bas2 |>
   dplyr::select(iso3, YEAR, Animal_cat, climate_region, MMS, feature, value) |>
@@ -335,13 +466,13 @@ UNFCCC_table3Bas2 <- bas2 |>
     population_lookup,
     by = c("iso3", "YEAR", "Animal_cat")
   ) |>
-  dplyr::mutate(
-    species = animal_species(Animal_cat, NA_character_),
-    UNFCCC_cat = animal_unfccc_category(Animal_cat, NA_character_),
-    Country_ISO_3166_1_A3 = iso3
+  dplyr::left_join(
+    bas2_mapping,
+    by = c("iso3", "YEAR", "Animal_cat")
   ) |>
+  dplyr::mutate(Country_ISO_3166_1_A3 = iso3) |>
   dplyr::select(-iso3) |>
-  expand_unfccc_categories()
+  expand_fadn_matches()
 
 direct_ief <- crt |>
   dplyr::filter(
@@ -463,3 +594,11 @@ if (!nrow(UNFCCC_data$table3Bb) || !nrow(UNFCCC_data$EF_managed_soils)) {
 }
 
 usethis::use_data(UNFCCC_data, overwrite = TRUE, compress = "xz")
+
+# Package functions resolve the internal copy, not the exported dataset.
+internal_data <- new.env(parent = emptyenv())
+internal_names <- load(file.path("R", "sysdata.rda"), envir = internal_data)
+internal_data$UNFCCC_data <- UNFCCC_data
+save(list = union(internal_names, "UNFCCC_data"),
+     file = file.path("R", "sysdata.rda"), envir = internal_data,
+     compress = "xz", version = 3)

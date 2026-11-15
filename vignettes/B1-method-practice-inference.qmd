@@ -50,8 +50,8 @@ from UNFCCC (@tbl-practice-list).
 |                | Yields         |                |                |
 +----------------+----------------+----------------+----------------+
 | Grassland      | N Fertilizer   | Hedge density  | Yield          |
-| practices      | quantity,      |                | (Agreste SAA   |
-|                | organic and    |                | 2020)          |
+| practices      | quantity,      |                | (Copernicus    |
+|                | organic and    |                | DMP estimates) |
 |                | mineral        |                |                |
 |                |                |                |                |
 |                | Livestock      |                |                |
@@ -975,9 +975,11 @@ al., 2021; see “Sailley_2021_feed_flows” sheet of Appendix C in Huet et
 al., 2026).
 
 On-farm feed quantity is calculated as the recorded crop production
-minus sales, with grass yield - not provided in FADN - assumed equal to
-the NUTS3 average for the corresponding year (Agreste, 2020). Purchased
-feed quantity is estimated based on FADN expenditures variables for
+minus sales. Where FADN records forage area but not production, the
+forage yield is imputed using annual Copernicus Dry Matter Production
+(DMP)-based estimates for the corresponding crop type and region (see
+@sec-method-practices-yields). Purchased feed quantity is estimated
+based on FADN expenditure variables for
 concentrated feedstuffs and coarse fodder. We first value the
 theoretical ration using feed prices (Eurostat, 2022) to determine the
 theoretical cost share of each feedstuff per livestock species
@@ -1033,10 +1035,18 @@ liveweights reported in UNFCCC CRF tables.
 
 Yields in FADN2Footprint are obtained directly from FADN when both crop
 area and production are registered. When FADN production is missing —
-especially important for forage/grass where FADN often records area but
-not production, we impute yields from external reference data (French
-forage yields aggregated by crop type and NUTS3; Agreste SAA 2020),
-joined at a NUTS3 level and used to infer the missing production.
+especially for forage crops and grasslands, where FADN often records
+area but not production — annual reference yields are taken from the
+Copernicus DMP-based regional dataset in
+`inst/ext_data/forage_yield/forage_yields_EU.xlsx`. The dataset provides
+green maize, artificial grass, temporary grass, and permanent grass
+yields in t DM/ha/year for NUTS3 and NUTS2 regions from 2004 to 2024.
+The parser maps the relevant FADN crop codes to these four types and
+matches by farm year and NUTS3 region, falling back to NUTS2 when a
+NUTS3 estimate is unavailable. Missing production is then calculated as
+crop area multiplied by the imputed yield. Observed yields and
+production are retained. If no regional reference is available, the
+existing FADN-average yield imputation is used.
 
 # Allocation keys: activity-level & product-level disaggregation {#sec-method-practices-alloc}
 

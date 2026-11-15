@@ -105,6 +105,7 @@
       # Farm localisation
       "COUNTRY",
       dplyr::matches("NUTS"),
+      "ALTITUDE",
       # Farm representativeness
       dplyr::matches("SYS02"),
       # Type of farming
@@ -706,7 +707,11 @@
 
         .default = yield
       ),
-      prod_t = ifelse(is.na(prod_t), dplyr::coalesce(area_ha, 0) * yield, prod_t)
+      prod_t = ifelse(
+        is.na(prod_t),
+        dplyr::coalesce(area_ha, 0) * yield,
+        prod_t
+      )
     )
 
   return(final_df)

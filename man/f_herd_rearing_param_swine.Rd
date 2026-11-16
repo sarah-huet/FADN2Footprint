@@ -22,7 +22,11 @@ Function to estimate off-farm animals of the swine herd based on FADN data
 \code{f_herd_rearing_param_swine} Estimate off-farm animals of the swine herd
 }
 \examples{
-data(fadn_fict)
+data("mock_data", package = "FADN2Footprint")
+fadn_fict <- mock_data$fadn_fict[
+  which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+  drop = FALSE
+]
 fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
 f_herd_rearing_param_swine(object = fadn_fict_obj)
 

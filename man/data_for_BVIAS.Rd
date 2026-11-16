@@ -10,7 +10,7 @@ data_for_BVIAS(object, ...)
 \arguments{
 \item{object}{a FADN2Footprint object}
 
-\item{...}{Additional arguments.}
+\item{...}{Additional arguments passed to \code{\link{infer_practices}}.}
 }
 \value{
 a tibble
@@ -20,8 +20,16 @@ Intermediate functions n°1 for the estimation of BVI for crops
 \code{data_for_BVIAS} Create a tibble with the following variables: "farm_id", "crop",  "land_use_type", "metric_code", "value", "max", "x_norm", "org_farming"
 }
 \examples{
-data(fadn_fict)
+data("mock_data", package = "FADN2Footprint")
+dairy_row <- which(
+  as.character(mock_data$fadn_fict$TF14) == "45" &
+    as.numeric(mock_data$fadn_fict$YEAR) >= 2017
+)[1]
+fadn_fict <- mock_data$fadn_fict[
+  dairy_row, ,
+  drop = FALSE
+]
 fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-data_for_BVIAS(object = fadn_fict_obj)
+data_for_BVIAS(object = fadn_fict_obj, account_pseudoherd = FALSE)
 }
 \concept{footprint-biodiv}

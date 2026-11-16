@@ -84,10 +84,10 @@
 #' }
 
 # ---- Load FADN data ----
-load("../FADN2Footprint/data_raw/FADN_EU_16_18.RData")
+load(file.path("data_raw", "FADN_EU_16_18.RData"))
 fadn_data <- FADN_16_18
 
-load("../FADN2Footprint/data_raw/FADN_EU_16_18_obj.RData")
+load(file.path("data_raw", "FADN_EU_16_18_obj.RData"))
 object <- my_object
 # TODO: recalculate averages using SYS02 variable
 

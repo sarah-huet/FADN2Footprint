@@ -80,7 +80,7 @@
 #' }
 #'
 #' @seealso
-#' \code{\link{.parse_crop_data}}, \code{\link{.parse_livestock_data}},
+#' \code{\link{.parse_crop_data}}, \code{\link{.parse_herd_data}},
 #' \code{\link{data_4FADN2Footprint}}, \code{\link{data_extra}}
 #'
 #' @importFrom dplyr select mutate left_join filter pull matches all_of
@@ -105,7 +105,7 @@
       # Farm localisation
       "COUNTRY",
       dplyr::matches("NUTS"),
-      "ALTITUDE",
+      dplyr::any_of("ALTITUDE"),
       # Farm representativeness
       dplyr::matches("SYS02"),
       # Type of farming
@@ -289,7 +289,7 @@
 #' working paper for methodology.
 #'
 #' @seealso
-#' \code{\link{.parse_farm_data}}, \code{\link{.parse_livestock_data}},
+#' \code{\link{.parse_farm_data}}, \code{\link{.parse_herd_data}},
 #' \code{\link{data_4FADN2Footprint}}, \code{\link{data_extra}}
 #'
 #' @importFrom dplyr select filter mutate rename left_join summarise coalesce pick where any_of all_of matches join_by
@@ -1118,7 +1118,7 @@
 #'     animals reared under contract (\code{PCNTRCATL_SV},
 #'     \code{PCNTRSHEPGOAT_SV}, \code{PCNTRPIG_SV}, \code{PCNTRPLTR_SV}),
 #'     included where available as \code{sales_contract_*} columns. They are
-#'     used by \code{\link{f_feed_offfarm_animals_under_contract}} to impute
+#'     used for contract-animal feed imputation to
 #'     purchased feed supplied by the integrator.
 #' }
 #'
@@ -1325,7 +1325,7 @@
         )
       }
     }
-    prediction <- predict(
+    prediction <- mgcv::predict.gam(
       gam_reg,
       newdata = newdata,
       type = "link",
@@ -1560,7 +1560,7 @@
 #'
 #' @seealso
 #' \code{\link{.parse_crop_data}}, \code{\link{.parse_herd_data}},
-#' \code{\link{.parse_farm_data}}, \code{\link{new_FADN2Footprint}},
+#' \code{\link{.parse_farm_data}}, \code{\link{data_4FADN2Footprint}},
 #' \code{\link{data_extra}}
 #'
 #' @importFrom dplyr select filter mutate left_join rename coalesce case_when if_else all_of matches starts_with pull

@@ -32,7 +32,7 @@
 #'     livestock system of origin and are not double-counted.
 #'   \item This function covers fertiliser production emissions only. Field-
 #'     level N2O emissions from fertiliser application are estimated
-#'     separately in \code{\link{GHGE_n2o_msoils}}.
+#'     separately in \code{\link{f_GHGE_n2o_msoils}}.
 #' }
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
@@ -64,8 +64,8 @@
 #' 276, 111211. \doi{10.1016/j.jenvman.2020.111211}
 #'
 #' @seealso
-#' \code{\link{f_n_ferti()}}, \code{\link{f_GHGE_n2o_msoils()}},
-#' \code{\link{f_GHGE_crops()}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_n_ferti}}, \code{\link{f_GHGE_n2o_msoils}},
+#' \code{\link{f_GHGE_crops}}, \code{\linkS4class{FADN2Footprint}}
 #'
 #' @importFrom dplyr mutate select all_of
 #'

@@ -127,7 +127,7 @@ Ngarize, S., Osako, A., Pyrozhenko, Y., Shermanau, P. and Federici, S. (eds).
 IPCC, Switzerland.
 }
 \seealso{
-\code{\link{f_feed_onfarm()}}, \code{\link{f_feed_offfarm()}},
-\code{\link{GWP}}, \code{\link{FADN2Footprint-class}}
+\code{\link{f_feed_onfarm}}, \code{\link{f_feed_offfarm}},
+\code{\link{GWP}}, \code{\linkS4class{FADN2Footprint}}
 }
 \concept{footprint-ghge}

@@ -108,6 +108,7 @@
 #'   \item Country-specific Bo, VS, MCF, AWMS, and DE values are sourced from
 #'     UNFCCC national inventory submissions compiled in
 #'     \code{\link{UNFCCC_data}}.
+#' }
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
 #' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
@@ -145,9 +146,9 @@
 #' \url{https://unfccc.int/ghg-inventories-annex-i-parties/2023}
 #'
 #' @seealso
-#' \code{\link{f_GHGE_ch4_enteric()}}, \code{\link{f_feed_onfarm()}},
-#' \code{\link{f_feed_offfarm()}}, \code{\link{GWP}},
-#' \code{\link{UNFCCC_data}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_GHGE_ch4_enteric}}, \code{\link{f_feed_onfarm}},
+#' \code{\link{f_feed_offfarm}}, \code{\link{GWP}},
+#' \code{\link{UNFCCC_data}}, \code{\linkS4class{FADN2Footprint}}
 #'
 #' @importFrom dplyr left_join filter select rename inner_join mutate group_by summarise across all_of bind_rows case_when join_by distinct
 #'

@@ -124,9 +124,9 @@
 #' IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_GHGE_n2o_msoils()}}, \code{\link{f_GHGE_ferti_prod()}},
-#' \code{\link{f_GHGE_fuels()}}, \code{\link{f_GHGE_elec()}},
-#' \code{\link{f_GHGE_herd()}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_GHGE_n2o_msoils}}, \code{\link{f_GHGE_ferti_prod}},
+#' \code{\link{f_GHGE_fuels}}, \code{\link{f_GHGE_elec}},
+#' \code{\link{f_GHGE_herd}}, \code{\linkS4class{FADN2Footprint}}
 #'
 #' @importFrom dplyr left_join select mutate across all_of
 #' @importFrom purrr reduce

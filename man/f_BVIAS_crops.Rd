@@ -75,7 +75,7 @@ Finally:
 }
 }
 \references{
-Lindner, J.P., Fehrenbach, H., Winter, L., Bloemer, J., Knuepffer, E., 2019. Valuing Biodiversity in Life Cycle Impact Assessment. Sustainability 11, 5628. https://doi.org/10.3390/su11205628
-Gallego-Zamorano, J., Huijbregts, M.A.J., Schipper, A.M., 2022. Changes in plant species richness due to land use and nitrogen deposition across the globe. Diversity and Distributions 28, 745–755. https://doi.org/10.1111/ddi.13476
+Lindner, J.P., Fehrenbach, H., Winter, L., Bloemer, J., Knuepffer, E., 2019. Valuing Biodiversity in Life Cycle Impact Assessment. Sustainability 11, 5628. \doi{10.3390/su11205628}
+Gallego-Zamorano, J., Huijbregts, M.A.J., Schipper, A.M., 2022. Changes in plant species richness due to land use and nitrogen deposition across the globe. Diversity and Distributions 28, 745–755. \doi{10.1111/ddi.13476}
 }
 \concept{footprint-biodiv}

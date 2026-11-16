@@ -66,10 +66,6 @@
 #' @param overwrite Logical, default FALSE. If FALSE and
 #'   `object@footprints$GHGE$GHGE_herd` is not NULL, the cached table is
 #'   returned with a message. Set to TRUE to force recomputation.
-#' @param account_pseudoherd Logical, default FALSE. When TRUE, pseudo-herd
-#'   animals (inferred from feed flows rather than directly observed) are
-#'   included in the emission calculation. Currently reserved for future
-#'   implementation.
 #' @param ... Additional arguments.
 #'
 #' @return A tibble with one row per farm × livestock category combination

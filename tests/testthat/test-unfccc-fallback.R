@@ -85,8 +85,7 @@ test_that("UNFCCC AWMS shares sum to one per FADN category and country-year", {
 })
 
 test_that("manure N2O uses country averages for years without CRT data", {
-  load(testthat::test_path("..", "..", "data", "mock_data.rda"),
-       envir = environment())
+  data("mock_data", package = "FADN2Footprint", envir = environment())
   herd <- mock_data$fadn_fict[1, c("ID", "YEAR", "COUNTRY")]
   herd$COUNTRY <- "FRA"
   herd$YEAR <- "2099"

@@ -88,7 +88,7 @@ code, etc.).
 }
 }
 \seealso{
-\code{\link{.parse_crop_data}}, \code{\link{.parse_livestock_data}},
+\code{\link{.parse_crop_data}}, \code{\link{.parse_herd_data}},
 \code{\link{data_4FADN2Footprint}}, \code{\link{data_extra}}
 }
 \concept{data-preparation}

@@ -2,9 +2,12 @@
 % Please edit documentation in R/FADN2Footprint_methods.R
 \name{m_remove_farms}
 \alias{m_remove_farms}
+\alias{m_remove_farms,FADN2Footprint-method}
 \title{Remove farms from a FADN2Footprint object}
 \usage{
 m_remove_farms(object, farms_to_remove)
+
+\S4method{m_remove_farms}{FADN2Footprint}(object, farms_to_remove)
 }
 \arguments{
 \item{object}{A \code{FADN2Footprint} object.}

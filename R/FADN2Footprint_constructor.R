@@ -1,5 +1,22 @@
 # Constructor ----
 
+#' FADN2Footprint S4 class
+#'
+#' A harmonized farm-level dataset with parsed crop, herd, input, and output
+#' tables, plus slots for inferred practices, footprints, and traceability.
+#'
+#' @slot farm Farm-level identifiers and structural characteristics.
+#' @slot crop Crop-level observations and derived yields.
+#' @slot herd Herd-level observations and livestock characteristics.
+#' @slot input Farm-level input quantities and expenditure.
+#' @slot output Parsed farm output tables.
+#' @slot landscape_metrics Optional landscape metrics.
+#' @slot practices Cached inferred agricultural practices.
+#' @slot footprints Cached environmental footprint results.
+#' @slot traceability Input identifiers and transformation metadata.
+#' @name FADN2Footprint-class
+#' @rdname FADN2Footprint-class
+#' @exportClass FADN2Footprint
 setClass("FADN2Footprint",
          slots = list(
            farm = "data.frame",
@@ -62,8 +79,12 @@ setClass("FADN2Footprint",
 #' \linkS4class{FADN2Footprint}
 #'
 #' @examples
-#' data(my_FADN_data)
-#' data(dict_FADN)
+#' data("mock_data", package = "FADN2Footprint")
+#' data("dict_FADN", package = "FADN2Footprint")
+#' my_FADN_data <- mock_data$fadn_fict[
+#'   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+#'   drop = FALSE
+#' ]
 #'
 #' my_object <- data_4FADN2Footprint(
 #'   df = my_FADN_data,

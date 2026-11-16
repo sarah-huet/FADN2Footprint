@@ -75,7 +75,7 @@
 #' @seealso
 #' \code{\link{f_GHGE_herd_output}}, \code{\link{f_GHGE_pseudoherd}},
 #' \code{\link{f_pseudoherd_animals}}, \code{\link{f_herd_activities}},
-#' \code{\link{f_output_econ_alloc}}, \code{\link{new_FADN2Footprint}}
+#' \code{\link{f_output_econ_alloc}}, \code{\link{data_4FADN2Footprint}}
 #'
 #' @concept footprint-ghge
 #' @export

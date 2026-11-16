@@ -41,8 +41,8 @@ A data.frame.
 \description{
 Handles three cases:
 \enumerate{
-\item General stats (no grouping) → one block of n rows
+\item General stats (no grouping) -> one block of n rows
 \item Stats grouped by one or more factors (e.g., farm_type, country)
-→ generates rows per group proportionally or with explicit counts
+-> generates rows per group proportionally or with explicit counts
 }
 }

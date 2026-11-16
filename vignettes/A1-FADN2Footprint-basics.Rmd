@@ -18,15 +18,14 @@ editor_options:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment  = "#>",
-  eval     = FALSE
+  eval     = FALSE,
+  purl     = FALSE
 )
 library(dplyr)
 library(tidyr)
 library(readxl)
 library(gt)
 
-pak::pak("sarah-huet/FADN2Footprint")
-Y
 library(FADN2Footprint)
 
 options(tibble.width = Inf)
@@ -38,7 +37,7 @@ Sarah HUET, Kassoum AYOUBA & Valentin BELLASSEN
 [sarah.huet\@inrae.fr](mailto:sarah.huet@inrae.fr){.email}
 [valentin.bellassen\@inrae.fr](mailto:valentin.bellassen@inrae.fr){.email}
 
-[FADN2Footprint Home Page](http://sarah-huet.github.io/FADN2Footprint/)
+[FADN2Footprint Home Page](https://sarah-huet.github.io/FADN2Footprint/)
 
 If you use FADN2Footprint, please acknowledge and cite FADN2Footprint in
 your publications:
@@ -199,14 +198,9 @@ To build a `FADN2Footprint` object you need:
   compute landscape-related indicators and footprints.
 
 ```{r load_data}
-# Mock EU FADN data: one Excel file per country and year
-mock_dir <- system.file("ext_data", "mock_FADN_EU", package = "FADN2Footprint")
-if (mock_dir == "") mock_dir <- "inst/ext_data/mock_FADN_EU"
-
-fadn_fict <- list.files(mock_dir, pattern = "\\.xlsx$", full.names = TRUE) |>
-  lapply(readxl::read_excel) |>
-  dplyr::bind_rows()
-
+# The packaged mock data contains one synthetic observation per farm-year.
+data("mock_data", package = "FADN2Footprint")
+fadn_fict <- mock_data$fadn_fict
 data("dict_FADN", package = "FADN2Footprint")
 
 ```

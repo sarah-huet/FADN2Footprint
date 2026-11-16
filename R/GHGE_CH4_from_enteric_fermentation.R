@@ -106,8 +106,8 @@
 #' IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_feed_onfarm()}}, \code{\link{f_feed_offfarm()}},
-#' \code{\link{GWP}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_feed_onfarm}}, \code{\link{f_feed_offfarm}},
+#' \code{\link{GWP}}, \code{\linkS4class{FADN2Footprint}}
 #'
 #' @importFrom dplyr left_join filter select rename inner_join mutate group_by summarise across all_of bind_rows case_when
 #' @importFrom stringr str_detect

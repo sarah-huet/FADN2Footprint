@@ -23,11 +23,6 @@ GHGE_n2o_manure and f_GHGE_feed.
 returned with a message. Set to TRUE to force recomputation.}
 
 \item{...}{Additional arguments.}
-
-\item{account_pseudoherd}{Logical, default FALSE. When TRUE, pseudo-herd
-animals (inferred from feed flows rather than directly observed) are
-included in the emission calculation. Currently reserved for future
-implementation.}
 }
 \value{
 A tibble with one row per farm × livestock category combination

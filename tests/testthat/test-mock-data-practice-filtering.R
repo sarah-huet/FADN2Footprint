@@ -1,5 +1,5 @@
 test_that("about 90% of EU mock farms pass infer_practices", {
-  data(mock_data)
+  data("mock_data", package = "FADN2Footprint")
   mock_farms <- mock_data$fadn_fict
   expect_true("SE295" %in% names(mock_farms))
   expect_true(all(c("ACHEN", "OTEXE") %in% names(mock_data$rica_fict$rica)))
@@ -14,21 +14,70 @@ test_that("about 90% of EU mock farms pass infer_practices", {
   expect_equal(pass_rate, 0.9, tolerance = 0.01)
 })
 
-test_that("EU mock Excel files are one per country and year and ~90% pass", {
-  dir <- system.file("ext_data", "mock_FADN_EU", package = "FADN2Footprint")
-  files <- list.files(dir, pattern = "\\.xlsx$", full.names = TRUE)
-  expect_gt(length(files), 0L)
-  expect_true(all(grepl("^FADN_[A-Z]{3}_[0-9]{4}\\.xlsx$", basename(files))))
+test_that("pre-2017 N fertilizer quantity inference uses the saved GAM", {
+  data("mock_data", package = "FADN2Footprint")
+  mock_farms <- mock_data$fadn_fict
+  early_row <- mock_farms[
+    which(as.numeric(mock_farms$YEAR) < 2017)[1], ,
+    drop = FALSE
+  ]
 
-  df <- dplyr::bind_rows(lapply(files, readxl::read_excel))
-  expect_equal(
-    nrow(unique(df[c("COUNTRY", "YEAR")])), length(files)
-  )
+  object <- data_4FADN2Footprint(early_row)
 
-  inferred <- suppressMessages(
-    infer_practices(data_4FADN2Footprint(df), overwrite = TRUE)
-  )
-  expect_equal(nrow(inferred@farm) / nrow(df), 0.9, tolerance = 0.02)
+  expect_true("N_min_ferti_Q" %in% names(object@input))
+  expect_true(any(is.finite(object@input$N_min_ferti_Q)))
+})
+
+test_that("farm parsing accepts inputs without optional altitude", {
+  data("mock_data", package = "FADN2Footprint")
+  mock_farms <- mock_data$fadn_fict
+  mock_farms$ALTITUDE <- NULL
+
+  object <- data_4FADN2Footprint(mock_farms)
+
+  expect_s4_class(object, "FADN2Footprint")
+  expect_false("ALTITUDE" %in% names(object@farm))
+})
+
+test_that("herding practices handle a farm with no recorded feed", {
+  data("mock_data", package = "FADN2Footprint")
+  mock_farms <- mock_data$fadn_fict
+  row <- which(as.numeric(mock_farms$YEAR) >= 2017)[1]
+  object <- data_4FADN2Footprint(mock_farms[row, , drop = FALSE])
+
+  practices <- f_herding_practices(object, overwrite = TRUE)
+
+  expect_true("total_t_DM" %in% names(practices))
+  expect_true(all(is.finite(practices$total_t_DM)))
+})
+
+test_that("cattle pseudoherd calculations allow absent livestock categories", {
+  data("mock_data", package = "FADN2Footprint")
+  mock_farms <- mock_data$fadn_fict
+  row <- which(
+    as.character(mock_farms$TF14) == "45" &
+      as.numeric(mock_farms$YEAR) >= 2017
+  )[1]
+  object <- data_4FADN2Footprint(mock_farms[row, , drop = FALSE])
+
+  pseudoherd <- f_pseudoherd_cattle(object)
+
+  expect_true(all(c("rearing_param", "pseudoherd") %in% names(pseudoherd)))
+  expect_true(all(c("FADN_code_letter", "Qeq_meat") %in%
+    names(pseudoherd$pseudoherd)))
+})
+
+test_that("swine pseudoherd calculations allow absent livestock categories", {
+  data("mock_data", package = "FADN2Footprint")
+  mock_farms <- mock_data$fadn_fict
+  row <- which(as.numeric(mock_farms$YEAR) >= 2017)[1]
+  object <- data_4FADN2Footprint(mock_farms[row, , drop = FALSE])
+
+  pseudoherd <- f_pseudoherd_swine(object)
+
+  expect_true(all(c("rearing_param", "pseudoherd") %in% names(pseudoherd)))
+  expect_true(all(c("FADN_code_letter", "Qeq_meat") %in%
+    names(pseudoherd$pseudoherd)))
 })
 
 test_that("French mock Excel files (year/table) have ~90% farms passing", {
@@ -46,7 +95,9 @@ test_that("French mock Excel files (year/table) have ~90% farms passing", {
   expect_true(all(vapply(yearly, function(x) "ACHEN" %in% names(x$rica), logical(1))))
   expect_true(all(vapply(yearly, function(x) "OTEXE" %in% names(x$rica), logical(1))))
 
-  dict_path <- "../../vignettes/dictionary_conversion_filled_FRA.xlsx"
+  dict_path <- testthat::test_path(
+    "..", "..", "vignettes", "dictionary_conversion_filled_FRA.xlsx"
+  )
   skip_if_not(file.exists(dict_path))
 
   converted <- suppressMessages(h_pivot_national_fadn(

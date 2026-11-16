@@ -72,7 +72,7 @@ eurostat_long <- left_join(eurostat_raw, data_extra$country_name |> dplyr::selec
 stopifnot(!anyNA(eurostat_long$Country_ISO_3166_1_A3))
 
 # 4. Load FADN and adapt long/wide livestock sales -------------------------
-load("../FADN2Footprint/data_raw/FADN_16_18.RData")
+load(file.path("data_raw", "FADN_EU_16_18.RData"))
 fadn_data = FADN_16_18 |>
     select(ID, COUNTRY, YEAR, TF14, SYS02, dplyr::matches("SN$|SSN$|SRN$")) |>
     dplyr::left_join(data_extra$country_name |> dplyr::select(Country_ISO_3166_1_A3, country_FADN),

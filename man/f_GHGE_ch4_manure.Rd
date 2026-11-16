@@ -146,6 +146,7 @@ divided by 100 in the VS equation to match the IPCC fractional form.
 UNFCCC national inventory submissions compiled in
 \code{\link{UNFCCC_data}}.
 }
+}
 \references{
 IPCC (2006). \emph{2006 IPCC Guidelines for National Greenhouse Gas Inventories,
 Volume 4: Agriculture, Forestry and Other Land Use, Chapter 10: Emissions from
@@ -163,8 +164,8 @@ UNFCCC National Inventory Submissions.
 \url{https://unfccc.int/ghg-inventories-annex-i-parties/2023}
 }
 \seealso{
-\code{\link{f_GHGE_ch4_enteric()}}, \code{\link{f_feed_onfarm()}},
-\code{\link{f_feed_offfarm()}}, \code{\link{GWP}},
-\code{\link{UNFCCC_data}}, \code{\link{FADN2Footprint-class}}
+\code{\link{f_GHGE_ch4_enteric}}, \code{\link{f_feed_onfarm}},
+\code{\link{f_feed_offfarm}}, \code{\link{GWP}},
+\code{\link{UNFCCC_data}}, \code{\linkS4class{FADN2Footprint}}
 }
 \concept{footprint-ghge}

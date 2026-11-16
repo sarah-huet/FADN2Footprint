@@ -1,12 +1,27 @@
 feed_conversion_dictionary <- function() {
-  dict <- h_read_dictionary(testthat::test_path(
-    "..", "..", "vignettes", "dictionary_conversion_filled_FRA.xlsx"
-  ))
-  dict$manual_matches <- subset(
-    dict$manual_matches,
-    national_variable %in% c("AUTAC", "HERAC", "AUTAG", "HERAG")
+  list(
+    variable_pattern = data.frame(
+      pattern_FADN = character(),
+      pattern_national = character(),
+      Group = character()
+    ),
+    category_pattern = data.frame(
+      FADN_code_letter = character(),
+      national_code = character(),
+      Group = character(),
+      allocation_key = numeric()
+    ),
+    manual_matches = data.frame(
+      fadn_variable = c(
+        "IGRFEDCNCTRPUR_V", "IGRFEDCNCTRPUR_V",
+        "IGRFEDCRSPUR_V", "IGRFEDCRSPUR_V"
+      ),
+      national_variable = c("AUTAC", "HERAC", "AUTAG", "HERAG"),
+      national_table = "rica",
+      unit_conversion = 1
+    ),
+    value_mappings = NULL
   )
-  dict
 }
 
 test_that("French feed purchases sum into two EUR columns by farm-year", {

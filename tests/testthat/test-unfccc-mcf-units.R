@@ -1,7 +1,12 @@
-source(
-  testthat::test_path("..", "..", "inst", "scripts", "unfccc_mcf_units.R"),
-  local = TRUE
+script_path <- system.file(
+  "scripts", "unfccc_mcf_units.R", package = "FADN2Footprint"
 )
+if (!nzchar(script_path)) {
+  script_path <- testthat::test_path(
+    "..", "..", "inst", "scripts", "unfccc_mcf_units.R"
+  )
+}
+source(script_path, local = TRUE)
 
 test_that("MCF ingestion normalizes only fractional DEU and NLD values", {
   country_iso3 <- c("DEU", "NLD", "NLD", "FRA", "FRA", "DEU")

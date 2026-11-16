@@ -16,7 +16,8 @@ editor_options:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment  = "#>",
-  eval     = FALSE
+  eval     = FALSE,
+  purl     = FALSE
 )
 library(FADN2Footprint)
 library(dplyr)
@@ -76,14 +77,6 @@ my_object = FADN2Footprint::data_4FADN2Footprint(
 
 # Infer the practices
 my_object_w_practices <- FADN2Footprint::infer_practices(my_object)
-
-```
-
-```{r tmp}
-
-load("C:/Users/srhuet/OneDrive/Research/GitHub/Organic_prod_in_Europe/data_raw/FADN_16_18_object_w_practices.RData")
-
-my_object_w_practices = FADN_16_18_GHGE
 
 ```
 
@@ -266,6 +259,10 @@ library(ggplot2)
 library(dplyr)
 library(patchwork) # For combining the plots
 library(scales)
+
+my_data <- my_object@crop |>
+  dplyr::filter(FADN_code_letter %in% c("CGRSXRG", "CRG", "CGRSTMP")) |>
+  dplyr::select(COUNTRY, area_ha, yield)
 
 # --- 1. Grassland Area per Farm by Country ---
 # We use a log10 scale because FADN farm areas are highly skewed

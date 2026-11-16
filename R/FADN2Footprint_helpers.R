@@ -23,6 +23,7 @@
 #' The tibble includes columns for each of the \code{target_vars} and the grouping columns specified in \code{primary_grp}.
 #' 
 #' @import dplyr
+#' @importFrom stats approx pnorm qgamma qnorm rgamma runif
 #'
 #' @concept utils
 #' @export
@@ -33,8 +34,6 @@ h_average_practices <- function(data,
                                 secondary_grp,
                                 weight_var = NULL,
                                 min_obs = 15) {
-
-  require(dplyr)
 
   # Check that target variables are in the data set
 
@@ -185,7 +184,7 @@ h_average_practices <- function(data,
 #' \code{manual_matches} sheet (farm-level variables), and reference sheets.
 #'
 #' @param output_path Character. File path for the output Excel workbook.
-#' @param raw_tables Named list of data frames — the raw national FADN tables.
+#' @param raw_tables Named list of data frames - the raw national FADN tables.
 #' @param id_cols Character vector. Column name(s) identifying individual farms
 #'   (e.g., \code{c("IDENT")}). These columns are preserved as-is in the output
 #'   and used as grouping keys during pivoting.
@@ -224,7 +223,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
 
     wb <- openxlsx::createWorkbook()
 
-    # ── Instructions sheet ──
+    # -- Instructions sheet --
     openxlsx::addWorksheet(wb, "instructions")
     instructions <- data.frame(
       Step = 1:6,
@@ -239,7 +238,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
     )
     openxlsx::writeDataTable(wb, "instructions", instructions)
 
-    # ── Variable pattern sheet ──
+    # -- Variable pattern sheet --
     openxlsx::addWorksheet(wb, "variable_pattern")
 
     # Collect FADN suffixes from internal reference (or build from known list)
@@ -261,7 +260,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
     })
     national_suffixes_df <- do.call(rbind, national_suffixes_list)
 
-    # Build the template: one row per FADN suffix × group, with national suffixes
+    # Build the template: one row per FADN suffix by group, with national suffixes
     # listed as a reference comment
     vp_template <- fadn_suffixes %>%
       dplyr::mutate(
@@ -285,7 +284,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
 
     openxlsx::writeDataTable(wb, "variable_pattern", vp_template)
 
-    # ── Category pattern sheet ──
+    # -- Category pattern sheet --
     openxlsx::addWorksheet(wb, "category_pattern")
 
     group_map <- c(crops = "CROPS", livestock = "LIVESTOCK", output = "ANIMAL PRODUCTS AND SERVICES")
@@ -329,7 +328,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
 
     openxlsx::writeDataTable(wb, "category_pattern", cat_pattern)
 
-    # ── Manual matches sheet ──
+    # -- Manual matches sheet --
     openxlsx::addWorksheet(wb, "manual_matches")
     manual_template <- data.frame(
       fadn_variable = c('ORGANIC', 'IGRFEDCNCTRPUR_V', 'IGRFEDCRSPUR_V', 'IGRFEDCNCTRPUR_V', 'IGRFEDCRSPUR_V', 'NUTS3', 'SIZC', 'IFULS_Q', 'IFULS_V', 'IHFULS_Q', 'IHFULS_V', 'IPROT_V', 'IKUSE_Q', 'INUSE_Q', 'IPUSE_Q', 'IELE_V', 'IELE_Q', 'SYS02', 'ID', 'YEAR', 'NUTS1', 'TF_PART3', 'TF_SUBP4', 'TF', 'TF8', 'TF14', 'TF_PRIN2', 'IPIGFEDPUR_V', 'NUTS2', 'IRRAA_X', 'SE025', 'SIRET', 'SE080', 'IPLTRFEDPUR_V'),
@@ -572,9 +571,9 @@ h_validate_dictionary <- function(dictionary_path,
 
   # Report
   if (verbose) {
-    cat("══════════════════════════════════════════════════════\n")
+    cat("======================================================\n")
     cat("  Dictionary Validation Report\n")
-    cat("══════════════════════════════════════════════════════\n")
+    cat("======================================================\n")
     if (length(issues) == 0) {
       cat("  \u2713 No issues found. Dictionary looks good!\n")
     } else {
@@ -583,7 +582,7 @@ h_validate_dictionary <- function(dictionary_path,
         print(issues[[nm]])
       }
     }
-    cat("══════════════════════════════════════════════════════\n")
+    cat("======================================================\n")
   }
 
   invisible(issues)
@@ -625,7 +624,7 @@ h_pivot_national_fadn <- function(raw_tables,
     dplyr::filter(!is.na(FADN_code_letter) & !is.na(national_code))
   mm <- dict_conversion$manual_matches
 
-  # ── Pivot each product group ──
+  # -- Pivot each product group --
   pivoted_tables <- list()
 
   for (grp in names(table_config)) {
@@ -731,7 +730,7 @@ h_pivot_national_fadn <- function(raw_tables,
 
   }
 
-  # ── Build base skeleton: union of all farm-year ids ──
+  # -- Build base skeleton: union of all farm-year ids --
   # Priority: tables referenced in manual_matches (farm register), then product tables
   base_tables <- unique(c(
     if (!is.null(mm)) intersect(unique(mm$national_table), names(raw_tables)) else character(0),
@@ -752,14 +751,14 @@ h_pivot_national_fadn <- function(raw_tables,
     stop("Could not build farm-year skeleton: no table contains all id_cols.")
   }
 
-  # ── Join all pivoted product tables onto the skeleton ──
+  # -- Join all pivoted product tables onto the skeleton --
   result <- id_skeleton
   for (k in seq_along(pivoted_tables)) {
     result <- dplyr::left_join(result, pivoted_tables[[k]], by = id_cols)
   }
 
 
-  # ── Add manual matches (farm-level variables) ──
+  # -- Add manual matches (farm-level variables) --
   if (!is.null(mm) && nrow(mm) > 0) {
 
     # Collect all missing variables for a single summary warning
@@ -865,7 +864,10 @@ h_pivot_national_fadn <- function(raw_tables,
           if (is_char || !is.numeric(result[[fadn_var]])) {
             stop("Cannot aggregate non-numeric mappings for ", fadn_var, ".")
           }
-          incoming <- tail(make.unique(c(names(result), ".manual_value")), 1L)
+          incoming <- utils::tail(
+            make.unique(c(names(result), ".manual_value")),
+            1L
+          )
           names(vals)[names(vals) == fadn_var] <- incoming
           result <- dplyr::left_join(result, vals, by = id_cols)
           both_missing <- is.na(result[[fadn_var]]) & is.na(result[[incoming]])
@@ -1157,9 +1159,9 @@ h_stack_country_tables <- function(country_data, country_col = "COUNTRY") {
 #' Generate mock FADN data from descriptive statistics
 #'
 #' Handles three cases:
-#'   1. General stats (no grouping) → one block of n rows
+#'   1. General stats (no grouping) -> one block of n rows
 #'   2. Stats grouped by one or more factors (e.g., farm_type, country)
-#'      → generates rows per group proportionally or with explicit counts
+#'      -> generates rows per group proportionally or with explicit counts
 #'
 #' @param n Total number of rows to generate.
 #' @param continuous_stats Data.frame with columns: variable, mean, sd, min, max,
@@ -1224,7 +1226,7 @@ h_generate_mock_data <- function(n = 500,
 
 
   # ========================================================
-  # CASE 1: No grouping — general stats
+  # CASE 1: No grouping - general stats
   # ========================================================
   if (is.null(group_cols)) {
     return(generate_block(n, continuous_stats, categorical_stats))

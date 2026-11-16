@@ -7,13 +7,8 @@
 #' - Q_obs: the number of animals observed in the farm (in number of heads)
 #' - Q_obs_pseudo: the number of animals of the pseudo-herd (in number of heads)
 #'
-#' @examples
-#' data(fadn_fict)
-#' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-#' f_pseudoherd_feed_impact(object = fadn_fict_obj)
-#'
 #' @concept footprint-biodiv
-#' @export
+#' @noRd
 #'
 #' @import dplyr
 #' @import tidyr

@@ -15,10 +15,10 @@ a data frame (tibble) avec X lignes et 3 variables :
 \source{
 Bastos, Joana; Monforti-Ferrario, Fabio; Melica, Giulia (2024):
 GHG Emission Factors for Electricity Consumption. European Commission,
-Joint Research Centre (JRC) \verb{[Dataset]} PID: \url{http://data.europa.eu/89h/919df040-0252-4e4e-ad82-c054896e1641}
+Joint Research Centre (JRC) \verb{[Dataset]} PID: \url{https://data.europa.eu/89h/919df040-0252-4e4e-ad82-c054896e1641}
 }
 \usage{
-data(electricity_factors)
+data(EF_electricity)
 }
 \description{
 A dataset containing greenhouse gas emission factors

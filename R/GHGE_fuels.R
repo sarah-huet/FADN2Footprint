@@ -94,9 +94,9 @@
 #' \url{https://unfccc.int/ghg-inventories-annex-i-parties/2023}
 #'
 #' @seealso
-#' \code{\link{GHGE_elec}}, \code{\link{f_GHGE_crops}},
+#' \code{\link{f_GHGE_elec}}, \code{\link{f_GHGE_crops}},
 #' \code{\link{UNFCCC_data}}, \code{\link{infer_practices}},
-#' \code{\link{FADN2Footprint-class}}
+#' \code{\linkS4class{FADN2Footprint}}
 #'
 #' @importFrom dplyr select left_join mutate across starts_with if_else all_of distinct join_by
 #'

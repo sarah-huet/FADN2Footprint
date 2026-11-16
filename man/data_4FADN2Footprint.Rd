@@ -63,8 +63,12 @@ with the following main slots:
 }
 }
 \examples{
-data(my_FADN_data)
-data(dict_FADN)
+data("mock_data", package = "FADN2Footprint")
+data("dict_FADN", package = "FADN2Footprint")
+my_FADN_data <- mock_data$fadn_fict[
+  which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+  drop = FALSE
+]
 
 my_object <- data_4FADN2Footprint(
   df = my_FADN_data,

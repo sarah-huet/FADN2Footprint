@@ -84,7 +84,7 @@
 #'
 #' @format A list of four dataframes: rica, veg, ani, pan
 #'
-#' @source Ministère De L’Agriculture - SSP, 2021. Réseau d’Information Comptable Agricole - 2020. https://doi.org/10.34724/CASD.66.4159.V1
+#' @source Ministère De L’Agriculture - SSP, 2021. Réseau d’Information Comptable Agricole - 2020. \doi{10.34724/CASD.66.4159.V1}
 #'
 #' @keywords internal
 #' @keywords datasets
@@ -415,8 +415,8 @@
 #'
 #' ### Typical workflow
 #' \enumerate{
-#'   \item Extract a template of the dictionary using \code{\link{get_dictionary_template}}.
-#'   This ensures you are working with the correct structure.
+#'   \item Use the packaged \code{\link{dict_FADN}} dataset as a reference for
+#'   internal variable names and descriptions.
 #'
 #'   \item Fill the \code{var_user} column with your dataset's column names for the corresponding variables.
 #'   \emph{Tip: Filter for \code{needed_in_FADN2Footprint == TRUE} to prioritize essential mappings.}
@@ -452,7 +452,8 @@
 #' @examples
 #' \dontrun{
 #' ## 1) Get the template dictionary shipped with the package
-#' dict_tpl <- FADN2Footprint::get_dictionary_template()
+#' data("dict_FADN", package = "FADN2Footprint")
+#' dict_tpl <- dict_FADN
 #'
 #' ## 2) Fill `var_user` with your dataset's column names
 #' ## Option 1: manual fill in R (example only: replace right-hand side with your real column names)
@@ -681,8 +682,8 @@
 #' }
 #' @source Bastos, Joana; Monforti-Ferrario, Fabio; Melica, Giulia (2024):
 #' GHG Emission Factors for Electricity Consumption. European Commission,
-#' Joint Research Centre (JRC) `[Dataset]` PID: \url{http://data.europa.eu/89h/919df040-0252-4e4e-ad82-c054896e1641}
-#' @usage data(electricity_factors)
+#' Joint Research Centre (JRC) `[Dataset]` PID: \url{https://data.europa.eu/89h/919df040-0252-4e4e-ad82-c054896e1641}
+#' @usage data(EF_electricity)
 #' @docType data
 #' @keywords datasets
 #'
@@ -865,3 +866,67 @@
 #' str(ref_fuel_wob)
 #' head(ref_fuel_wob)
 "ref_fuel_wob"
+
+# Internal fertilizer price reference ----
+#' Eurostat fertilizer price reference data
+#'
+#' @name EUROSTAT_ferti_price
+#' @description Country- and year-indexed fertilizer price observations used
+#'   when constructing nitrogen fertilizer quantity estimates.
+#' @format A tibble with columns \code{country_FADN}, \code{time_period}, and
+#'   \code{n_price}.
+#' @docType data
+#' @keywords internal datasets
+#' @usage data(EUROSTAT_ferti_price)
+"EUROSTAT_ferti_price"
+
+# Internal fertilizer-use ratio reference ----
+#' Eurostat fertilizer-use ratios
+#'
+#' @name EUROSTAT_ferti_use_ratio
+#' @description Country- and year-specific nitrogen fertilizer-use ratios used
+#'   by the input parser to estimate nitrogen quantity where it is not reported.
+#' @format A tibble with columns \code{country_FADN}, \code{time_period}, and
+#'   \code{n_ratio}.
+#' @docType data
+#' @keywords internal datasets
+#' @usage data(EUROSTAT_ferti_use_ratio)
+"EUROSTAT_ferti_use_ratio"
+
+# Internal slaughter reference ----
+#' Eurostat slaughter allocation reference data
+#'
+#' @name EUROSTAT_slaughter
+#' @description Country-, year-, and livestock-category-specific reference
+#'   shares used to estimate slaughter flows for FADN livestock categories.
+#' @format A tibble with columns \code{FADN_code_letter},
+#'   \code{Country_ISO_3166_1_A3}, \code{YEAR}, \code{eurostat_meat},
+#'   \code{share_SSN}, and \code{share_SRN}.
+#' @docType data
+#' @keywords internal datasets
+#' @usage data(EUROSTAT_slaughter)
+"EUROSTAT_slaughter"
+
+# Internal model and rearing references ----
+#' Fitted generalized additive model for nitrogen quantity inference
+#'
+#' @name N_min_inference_GAM
+#' @description Internal fitted model used to estimate mineral nitrogen
+#'   fertilizer quantity from fertilizer value for eligible farm-year records.
+#' @format A fitted generalized additive model object.
+#' @docType data
+#' @keywords internal datasets
+#' @usage data(N_min_inference_GAM)
+"N_min_inference_GAM"
+
+#' Regional and overall livestock rearing parameter references
+#'
+#' @name reference_rearing_param
+#' @description Internal reference tables used to supply livestock rearing
+#'   parameters when farm-level values are unavailable.
+#' @format A named list with \code{ref_per_NUTS2} and \code{ref_overall}
+#'   elements. Each contains species-specific reference tables.
+#' @docType data
+#' @keywords internal datasets
+#' @usage data(reference_rearing_param)
+"reference_rearing_param"

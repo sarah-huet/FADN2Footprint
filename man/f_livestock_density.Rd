@@ -23,9 +23,13 @@ Function to estimate the farm livestock density based on FADN data
 \code{livestock_density} Create a tibble with the following variables:  'farm_id', 'crop', 'TFI_ha'
 }
 \examples{
-data(fadn_fict)
+data("mock_data", package = "FADN2Footprint")
+fadn_fict <- mock_data$fadn_fict[
+  which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+  drop = FALSE
+]
 fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-livestock_density(object = fadn_fict_obj)
+f_livestock_density(object = fadn_fict_obj)
 
 }
 \concept{practice-herding}

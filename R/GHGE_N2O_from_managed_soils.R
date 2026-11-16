@@ -147,10 +147,10 @@
 #' Federici, S. (eds). IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_n_ferti()}}, \code{\link{f_n_excr()}},
-#' \code{\link{f_GHGE_n2o_manure()}}, \code{\link{UNFCCC_data}},
+#' \code{\link{f_n_ferti}}, \code{\link{f_n_excr}},
+#' \code{\link{f_GHGE_n2o_manure}}, \code{\link{UNFCCC_data}},
 #' \code{\link{data_extra}}, \code{\link{GWP}},
-#' \code{\link{FADN2Footprint-class}}
+#' \code{\linkS4class{FADN2Footprint}}
 #'
 #' @importFrom dplyr select left_join filter mutate summarise across all_of starts_with if_else case_when join_by distinct where
 #' @importFrom tidyr separate_longer_delim pivot_wider

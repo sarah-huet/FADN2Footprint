@@ -69,8 +69,7 @@ test_that("missing EF3 cannot silently omit positive manure allocations", {
 })
 
 test_that("manure emissions include fallback factors for missing reported IEFs", {
-  load(testthat::test_path("..", "..", "data", "mock_data.rda"),
-       envir = environment())
+  data("mock_data", package = "FADN2Footprint", envir = environment())
   herd <- mock_data$fadn_fict[1, c("ID", "YEAR", "COUNTRY")]
   herd$COUNTRY <- "FRA"
   herd$YEAR <- "2018"

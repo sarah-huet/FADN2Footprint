@@ -1,10 +1,10 @@
 #' Accessors for FADN2Footprint Objects
 #'
 #' Methods to access internal data slots (farm, crop, herd, input, output)
-#' from a \code{\link{FADN2Footprint-class}} object.
+#' from a \code{\linkS4class{FADN2Footprint}} object.
 #' @include FADN2Footprint_constructor.R
 #'
-#' @param x An object of class \code{\link{FADN2Footprint-class}}.
+#' @param x An object of class \code{\linkS4class{FADN2Footprint}}.
 #'
 #' @return
 #' \itemize{

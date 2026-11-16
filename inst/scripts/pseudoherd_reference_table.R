@@ -18,7 +18,7 @@
 # Reference data ----
 
 #____________________________
-load("C:/Users/srhuet/OneDrive/Research/GitHub/Organic_prod_in_Europe/data/raw/FADN_16_18_GHGE.RData")
+load(file.path("data", "raw", "FADN_16_18_GHGE.RData"))
 ref_obj = FADN_16_18_GHGE
 #ref_obj = RICA_2020_obj
 

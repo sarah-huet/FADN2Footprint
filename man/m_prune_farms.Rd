@@ -2,9 +2,12 @@
 % Please edit documentation in R/FADN2Footprint_methods.R
 \name{m_prune_farms}
 \alias{m_prune_farms}
+\alias{m_prune_farms,FADN2Footprint-method}
 \title{Prune farms from a FADN2Footprint object based on filtering conditions}
 \usage{
 m_prune_farms(object, ...)
+
+\S4method{m_prune_farms}{FADN2Footprint}(object, ...)
 }
 \arguments{
 \item{object}{A FADN2Footprint object containing farm data and related information.}
@@ -36,12 +39,14 @@ The function performs a cascading filter operation:
 Additionally, this function updates the traceability slot to log discarded farms.
 }
 \examples{
+\dontrun{
 # Filter to keep only farms from France
 pruned_obj <- m_prune_farms(fadn_obj, COUNTRY == "FRA")
 
 # Filter to keep only large farms in France
 pruned_obj <- m_prune_farms(fadn_obj,
                          COUNTRY == "FRA", ORGANIC == TRUE)
+}
 
 }
 \seealso{

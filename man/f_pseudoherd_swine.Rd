@@ -10,6 +10,8 @@ f_pseudoherd_swine(object, overwrite = FALSE)
 \item{object}{An S4 object of class "FADN2Footprint" prepared by the
 package workflow, providing 'object@traceability$id_cols' and all data
 required by f_herd_rearing_param_swine.}
+
+\item{overwrite}{Logical. If TRUE, recompute and replace cached results.}
 }
 \value{
 A list with two elements:

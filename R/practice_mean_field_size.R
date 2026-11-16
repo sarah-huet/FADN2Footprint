@@ -10,9 +10,13 @@
 #' A tibble with:
 #' - mean_field_size: average of hedge linear meter per hectare
 #' @examples
-#' data(fadn_fict)
+#' data("mock_data", package = "FADN2Footprint")
+#' fadn_fict <- mock_data$fadn_fict[
+#'   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+#'   drop = FALSE
+#' ]
 #' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-#' mean_field_size(object = fadn_fict_obj)
+#' f_mean_field_size(object = fadn_fict_obj)
 #'
 #' @concept practice-crop
 #' @export

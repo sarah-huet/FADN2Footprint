@@ -134,9 +134,9 @@
 #' (eds). IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_n_excr()}}, \code{\link{GHGE_ch4_manure()}},
-#' \code{\link{f_GHGE_n2o_msoils()}}, \code{\link{UNFCCC_data}},
-#' \code{\link{GWP}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_n_excr}}, \code{\link{f_GHGE_ch4_manure}},
+#' \code{\link{f_GHGE_n2o_msoils}}, \code{\link{UNFCCC_data}},
+#' \code{\link{GWP}}, \code{\linkS4class{FADN2Footprint}}
 #'
 #' @importFrom dplyr select left_join filter mutate summarise group_by across all_of case_when join_by distinct summarise
 #' @importFrom tidyr separate_longer_delim

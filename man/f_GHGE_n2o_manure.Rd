@@ -158,8 +158,8 @@ Ngarize, S., Osako, A., Pyrozhenko, Y., Shermanau, P. and Federici, S.
 (eds). IPCC, Switzerland.
 }
 \seealso{
-\code{\link{f_n_excr()}}, \code{\link{GHGE_ch4_manure()}},
-\code{\link{f_GHGE_n2o_msoils()}}, \code{\link{UNFCCC_data}},
-\code{\link{GWP}}, \code{\link{FADN2Footprint-class}}
+\code{\link{f_n_excr}}, \code{\link{f_GHGE_ch4_manure}},
+\code{\link{f_GHGE_n2o_msoils}}, \code{\link{UNFCCC_data}},
+\code{\link{GWP}}, \code{\linkS4class{FADN2Footprint}}
 }
 \concept{footprint-ghge}

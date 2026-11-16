@@ -21,10 +21,6 @@
 #'   values in EUR. The function recognises concentrate vs rough feed and maps
 #'   to species groups (grazing, swine, poultry) based on the purchase variable
 #'   name;
-#' - supplement the recorded purchase values with feed purchase values imputed
-#'   for animals reared under contract (feed usually supplied by the
-#'   integrator and hence not recorded as a farm purchase), using
-#'   f_feed_offfarm_animals_under_contract(object);
 #' - join theoretical per‑crop/per‑feed value shares to the purchase values and
 #'   allocate purchased value among crops and livestock categories using the
 #'   th_feed$th_feed_value table (th_crop_value_p100_feed_type);
@@ -82,8 +78,7 @@
 #' feed_purch2 <- f_feed_offfarm(f, overwrite = TRUE)
 #' }
 #'
-#' @seealso f_feed_theo_ration, f_feed_onfarm,
-#'   f_feed_offfarm_animals_under_contract
+#' @seealso f_feed_theo_ration, f_feed_onfarm
 #'
 #' @concept practice-herding
 #' @export

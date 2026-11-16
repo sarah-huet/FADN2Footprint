@@ -28,9 +28,13 @@ Function to estimate crop diversity based on FADN data
 \code{crop_diversity} Create a tibble with the following variables:  'farm_id', 'land_use_type', 'Shannon', 'crop_nb_LU'
 }
 \examples{
-data(fadn_fict)
+data("mock_data", package = "FADN2Footprint")
+fadn_fict <- mock_data$fadn_fict[
+  which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+  drop = FALSE
+]
 fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-crop_diversity(object = fadn_fict_obj)
+f_crop_diversity(object = fadn_fict_obj)
 
 }
 \concept{practice-crop}

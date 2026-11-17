@@ -23,9 +23,13 @@ Function to estimate the share of fertilizer based on either FADN or RICA data
 \code{share_Nmin_ferti} Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'
 }
 \examples{
-data(fadn_fict)
+data("mock_data", package = "FADN2Footprint")
+fadn_fict <- mock_data$fadn_fict[
+  which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+  drop = FALSE
+]
 fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-share_Nmin_ferti(object = fadn_fict_obj)
+f_share_Nmin_ferti(object = fadn_fict_obj)
 
 }
 \concept{practice-crop}

@@ -7,7 +7,11 @@
 #' A list with rearing parameters and the pseudo herd (in number of heads)
 #'
 #' @examples
-#' data(fadn_fict)
+#' data("mock_data", package = "FADN2Footprint")
+#' fadn_fict <- mock_data$fadn_fict[
+#'   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+#'   drop = FALSE
+#' ]
 #' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
 #' f_pseudoherd_sheep(object = fadn_fict_obj)
 #'

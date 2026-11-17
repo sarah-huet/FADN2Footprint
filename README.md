@@ -47,7 +47,7 @@ using life cycle assessment principles and Scope 3 accounting.
 
 ## Installation {#installation}
 
-This R package was built using R 4.5.0 and depends on R \>= xxx
+This R package was built using R 4.5.0 and depends on R \>= 4.1.0
 
 **Step 1: Install the devtools package**
 

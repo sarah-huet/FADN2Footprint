@@ -26,9 +26,13 @@ Function to estimate ground cover based on FADN, LPIS and SENTINEL-2 data
 \code{ground_cover} Create a tibble with the following variables:  'farm_id', 'land_use_type', 'ground_cover'
 }
 \examples{
-data(fadn_fict)
+data("mock_data", package = "FADN2Footprint")
+fadn_fict <- mock_data$fadn_fict[
+  which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+  drop = FALSE
+]
 fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-ground_cover(object = fadn_fict_obj)
+f_ground_cover(object = fadn_fict_obj)
 
 }
 \concept{practice-crop}

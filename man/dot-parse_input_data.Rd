@@ -80,7 +80,7 @@ concentrates for pigs (\code{IPIGFEDPUR_V}) and poultry
 animals reared under contract (\code{PCNTRCATL_SV},
 \code{PCNTRSHEPGOAT_SV}, \code{PCNTRPIG_SV}, \code{PCNTRPLTR_SV}),
 included where available as \code{sales_contract_*} columns. They are
-used by \code{\link{f_feed_offfarm_animals_under_contract}} to impute
+used for contract-animal feed imputation to
 purchased feed supplied by the integrator.
 }
 }

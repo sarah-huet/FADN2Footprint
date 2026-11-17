@@ -43,7 +43,7 @@ Since FADN reports electricity as an expenditure value (\code{IELE_V},
 in national currency) rather than a physical quantity, electricity consumption
 in kWh is back-calculated using EUROSTAT national average electricity prices
 (€ kWh\eqn{^{-1}}, source: EUROSTAT
-\href{https://doi.org/10.2908/NRG_PC_205}{NRG_PC_205}).
+\doi{10.2908/NRG_PC_205}).
 }
 \details{
 \subsection{Electricity Quantity Estimation}{
@@ -81,7 +81,7 @@ is used.
 \item Allocation of electricity emissions to specific farm activities
 (crops or livestock) is not performed within this function; it is
 handled downstream in \code{\link{f_GHGE_crops}} and
-\code{\link{f_GHGE_livestock}} using economic allocation keys.
+\code{\link{f_GHGE_herd}} using economic allocation keys.
 \item The FADN variable \code{IELE_V} represents total farm electricity
 expenditure and does not distinguish between end-uses.
 \item If no finite price or emission-factor reference values are available,
@@ -92,11 +92,11 @@ missing fallback inputs.
 \references{
 EUROSTAT (2024). \emph{Electricity prices for non-household consumers —
 bi-annual data (from 2007 onwards)}. Table \code{NRG_PC_205}.
-\url{https://doi.org/10.2908/NRG_PC_205}
+\doi{10.2908/NRG_PC_205}
 }
 \seealso{
 \code{\link{EF_electricity}}, \code{\link{EUROSTAT_elec_price}},
-\code{\link{f_GHGE_fuels()}}, \code{\link{f_GHGE_crops()}},
-\code{\link{f_GHGE_herd()}}, \code{\link{FADN2Footprint-class}}
+\code{\link{f_GHGE_fuels}}, \code{\link{f_GHGE_crops}},
+\code{\link{f_GHGE_herd}}, \code{\linkS4class{FADN2Footprint}}
 }
 \concept{footprint-ghge}

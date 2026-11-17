@@ -3,11 +3,17 @@
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
 #'
-#' @return a list with two elements:
-#'   item{feed_price_country_year}{Data frame with feed price per country and year.}
-#'   item{feed_price_year}{Data frame with average feed price per year across countries.}
+#' @return A list with two elements:
+#' \describe{
+#'   \item{feed_price_country_year}{Data frame with feed price per country and year.}
+#'   \item{feed_price_year}{Data frame with average feed price per year across countries.}
+#' }
 #' @examples
-#' data(fadn_fict)
+#' data("mock_data", package = "FADN2Footprint")
+#' fadn_fict <- mock_data$fadn_fict[
+#'   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+#'   drop = FALSE
+#' ]
 #' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
 #' f_feed_value(object = fadn_fict_obj)
 #'

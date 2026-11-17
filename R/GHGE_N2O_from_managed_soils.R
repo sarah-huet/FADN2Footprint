@@ -108,6 +108,9 @@
 #'   the function returns
 #'   the cached object and no recomputation is performed. If TRUE, existing
 #'   cached GHGE results are ignored and computations are re-run.
+#' @param return_components Logical (default FALSE). If TRUE, return emissions
+#'   and diagnostic calculation tables; N inputs are in kg N/year, raw N2O
+#'   emissions in kg N2O/year, and CO2-equivalent emissions in kg CO2-eq/year.
 #' @param ... Additional arguments.
 #'
 #' @return A \code{\link[tibble]{tibble}} with one row per farm observation ×
@@ -127,6 +130,8 @@
 #'   \item{N2O_L_kgCO2e}{\code{numeric}. Indirect N2O emissions from N
 #'     leaching and runoff (kg CO2-eq yr\eqn{^{-1}}), from IPCC Eq. 11.10.}
 #' }
+#' With \code{return_components = TRUE}, returns a list named \code{emissions},
+#' \code{activity}, \code{direct}, and \code{indirect}, instead of the tibble.
 #'
 #' @references
 #' IPCC (2006). \emph{2006 IPCC Guidelines for National Greenhouse Gas
@@ -142,10 +147,10 @@
 #' Federici, S. (eds). IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_n_ferti()}}, \code{\link{f_n_excr()}},
-#' \code{\link{f_GHGE_n2o_manure()}}, \code{\link{UNFCCC_data}},
+#' \code{\link{f_n_ferti}}, \code{\link{f_n_excr}},
+#' \code{\link{f_GHGE_n2o_manure}}, \code{\link{UNFCCC_data}},
 #' \code{\link{data_extra}}, \code{\link{GWP}},
-#' \code{\link{FADN2Footprint-class}}
+#' \code{\linkS4class{FADN2Footprint}}
 #'
 #' @importFrom dplyr select left_join filter mutate summarise across all_of starts_with if_else case_when join_by distinct where
 #' @importFrom tidyr separate_longer_delim pivot_wider
@@ -154,47 +159,58 @@
 #' @export
 #'
 
-f_GHGE_n2o_msoils <- function(object,
-                              overwrite = FALSE,
-                              ...){
+f_GHGE_n2o_msoils <- function(
+  object,
+  overwrite = FALSE,
+  return_components = FALSE,
+  ...
+) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
+  id_cols <- object@traceability$id_cols
   ## Steps:
   ## 1. Retrieve activity data
   ## 2. Estimate direct N2O emissions from managed soils in accordance with IPCC recommendations (IPCC, 2019, 2006)
   ## 3. Estimate indirect N2O emissions from managed soils in accordance with IPCC recommendations (IPCC, 2019, 2006)
   ### Conversion to CO2 equivalents: data("GWP")
 
-
   # FADN data ----
 
   crop_data <- object@crop
 
-  n_ferti_data = f_n_ferti(object, overwrite = overwrite)
+  n_ferti_data <- f_n_ferti(object, overwrite = overwrite)
 
-  n_excr_from_livestock = f_n_excr(object, overwrite = overwrite)
+  n_excr_from_livestock <- f_n_excr(object, overwrite = overwrite)
   # TODO: estimate fraction of manure deposited on pasture
 
   # IPCC data ----
 
   IPCC_data <- data_extra$crops |>
     # create a matching variable between FADN code and IPCC data
-    dplyr::select(FADN_code_letter,land_use_type,species,IPCC_default_values) |>
+    dplyr::select(
+      FADN_code_letter,
+      land_use_type,
+      species,
+      IPCC_default_values
+    ) |>
     dplyr::mutate(
       condition_species = dplyr::case_when(
-        is.na(IPCC_default_values) & grepl("cereal|oilseeds|legumes",species)  ~ "Generic Grains|Grains",
-        is.na(IPCC_default_values) ~ "Generic value for crops not indicated below",
+        is.na(IPCC_default_values) &
+          grepl("cereal|oilseeds|legumes", species) ~ "Generic Grains|Grains",
+        is.na(
+          IPCC_default_values
+        ) ~ "Generic value for crops not indicated below",
         .default = IPCC_default_values
       )
     ) |>
-    tidyr::separate_longer_delim(condition_species,"|") |>
+    tidyr::separate_longer_delim(condition_species, "|") |>
     # add IPCC data
     dplyr::left_join(
       data_extra$IPCC_default_values |>
-        dplyr::filter(grepl("Table 11.1|Table 11.2",source_details)) |>
-        dplyr::select(parameter,condition_species,value) |>
+        dplyr::filter(grepl("Table 11.1|Table 11.2", source_details)) |>
+        dplyr::select(parameter, condition_species, value) |>
         tidyr::pivot_wider(
           id_cols = condition_species,
           names_from = parameter,
@@ -207,21 +223,22 @@ f_GHGE_n2o_msoils <- function(object,
       ## For countries where pastures are renewed on average every X years, Frac_Renew = 1/X. (IPCC-2019-vol.4;	Notes for EQUATION 11.6)
       ## Here, we consider that grasslands are renewed only once every six years
       # TODO: check this assumption
-      Frac_renew_T = ifelse(land_use_type == "grassland", 1/6, 1)
+      Frac_renew_T = ifelse(land_use_type == "grassland", 1 / 6, 1)
     ) |>
     # summarize for each FADN code
     dplyr::summarise(
-      dplyr::across(dplyr::where(is.numeric), ~mean(.x, na.rm = TRUE)),
-      .by = c(FADN_code_letter,land_use_type,species)) |>
+      dplyr::across(dplyr::where(is.numeric), ~ mean(.x, na.rm = TRUE)),
+      .by = c(FADN_code_letter, land_use_type, species)
+    ) |>
     # replace NAs
     dplyr::mutate(
       ## In Table 11.1, R_AG_T = 1 as a generic value for crops not indicated. Thus, as we use slope and intercept instead of R_AG_T as suggested in Table 11.2, when no slope and intercept are available, Slope_T = 1 and Intercept_T = 0 (IPCC 2019, vol. 4)
-      Slope_T = ifelse(is.na(Slope_T),1,Slope_T),
-      Intercept_T = ifelse(is.na(Intercept_T),0,Intercept_T),
+      Slope_T = ifelse(is.na(Slope_T), 1, Slope_T),
+      Intercept_T = ifelse(is.na(Intercept_T), 0, Intercept_T),
       ## In Table 11.1, a generic value is given for N_AG_T, N_BG_T, and RS_T (IPCC 2019, vol. 4)
-      N_AG_T = ifelse(is.na(N_AG_T),0.008,N_AG_T),
-      N_BG_T = ifelse(is.na(N_BG_T),0.009,N_BG_T),
-      RS_T = ifelse(is.na(RS_T),0.22,RS_T)
+      N_AG_T = ifelse(is.na(N_AG_T), 0.008, N_AG_T),
+      N_BG_T = ifelse(is.na(N_BG_T), 0.009, N_BG_T),
+      RS_T = ifelse(is.na(RS_T), 0.22, RS_T)
     )
 
   # Activity data ----
@@ -230,25 +247,22 @@ f_GHGE_n2o_msoils <- function(object,
     # add fertilization
     dplyr::left_join(
       n_ferti_data,
-      by = c(object@traceability$id_cols, "FADN_code_letter", "area_ha")
+      by = c(id_cols, "FADN_code_letter", "area_ha")
     ) |>
     # add country ISO codes
     dplyr::left_join(
       data_extra$country_names |>
-        dplyr::select(country_FADN,Country_ISO_3166_1_A3) |>
+        dplyr::select(country_FADN, Country_ISO_3166_1_A3) |>
         dplyr::distinct(),
       by = dplyr::join_by(COUNTRY == country_FADN)
     ) |>
-    # add EF from UNFCCC data
-    dplyr::left_join(
+    # add EF from UNFCCC data; missing country-years fall back to the country
+    # mean across years, then to the mean across all countries and years
+    h_unfccc_fallback(
       UNFCCC_data$EF_managed_soils,
-      by = c('Country_ISO_3166_1_A3', 'YEAR')
-    ) |>
-    ## replace NAs by EF mean
-    dplyr::mutate(
-      dplyr::across(
-        .cols = dplyr::starts_with("EF"),
-        .fns = ~ dplyr::if_else(is.na(.), mean(., na.rm = TRUE), .)
+      values = setdiff(
+        names(UNFCCC_data$EF_managed_soils),
+        c("Country_ISO_3166_1_A3", "YEAR")
       )
     ) |>
     # add IPCC data
@@ -259,9 +273,8 @@ f_GHGE_n2o_msoils <- function(object,
 
     # estimate N amounts
     dplyr::mutate(
-
       ## F_SN = annual amount of synthetic fertilizer N applied to soils, kg N yr-1
-      F_SN = N_ferti_min*area_ha,
+      F_SN = N_ferti_min * area_ha,
 
       ### EQUATION 11.3
       ## F_ON = annual amount of animal manure, compost, sewage sludge and other organic N additions applied to soils (Note: If including sewage sludge, cross-check with Waste Sector to ensure there is no double counting of N2O emissions from the N in sewage sludge), kg N yr-1
@@ -305,7 +318,7 @@ f_GHGE_n2o_msoils <- function(object,
       AG_DM_T = Crop_T * Slope_T + Intercept_T,
       AGR_T = AG_DM_T * Area_T,
       BGR_T = (Crop_T + AG_DM_T) * RS_T * Area_T * Frac_renew_T,
-      F_CR = (AGR_T * N_AG_T)+(BGR_T*N_BG_T),
+      F_CR = (AGR_T * N_AG_T) + (BGR_T * N_BG_T),
 
       ### EQUATION 11.8
       ## F_SOM = annual amount of N in mineral soils that is mineralized, in association with loss of soil C from soil organic matter as a result of changes to land use or management, kg N yr-1
@@ -326,7 +339,6 @@ f_GHGE_n2o_msoils <- function(object,
       #### we retrieve country specific values from UNFCCC data: see EF_PRP
       #N2ON_PRP = F_PRP * EF3_PRP
     )
-
 
   # DIRECT N2O EMISSIONS FROM MANAGED SOILS ----
 
@@ -355,20 +367,33 @@ f_GHGE_n2o_msoils <- function(object,
       ## Equation 11.2 may be modified in a variety of ways to accommodate any combination of N source-, crop type-, management-, land use-, climate-, soil- or other condition-specific emission factors that a country may be able to obtain for each of the individual N input variables (FSN, FON, FCR, FSOM, FOS, FPRP).
       ### We modified Equation 11.2 to account for country-specific emission factors retrieved from UNFCCC data
       #N2ON_d = (F_SN + F_ON)*EF1_i + (F_CR+F_SOM)*EF1 + N2ON_OS + N2ON_PRP
-      N2ON_d = F_SN*EF_SN + F_ON*EF_ON + F_CR*EF_CR + F_SOM*EF_SOM + F_OS*EF_OS + F_PRP*EF_PRP,
+      N2ON_d = F_SN *
+        EF_SN +
+        F_ON * EF_ON +
+        F_CR * EF_CR +
+        F_SOM * EF_SOM +
+        F_OS * EF_OS +
+        F_PRP * EF_PRP,
 
       # Conversion of N2O–N emissions to N2O emissions for reporting purposes is performed by using the following equation:  N2O = N2O–N * 44/28
-      N2O_d = N2ON_d * (44/28),
+      N2O_d = N2ON_d * (44 / 28),
 
       # Conversion of nitrous oxide (N20) to CO2 equivalents
-      N2O_d_kgCO2e = N2O_d * GWP[["N20"]]
+      N2O_d_kgCO2e = N2O_d * GWP[["N20"]],
+
+      # estimate detailed N2O emissions from managed soils
+      N2O_d_kgCO2e_SN = F_SN * EF_SN * (44 / 28) * GWP[["N20"]],
+      N2O_d_kgCO2e_ON = F_ON * EF_ON * (44 / 28) * GWP[["N20"]],
+      N2O_d_kgCO2e_CR = F_CR * EF_CR * (44 / 28) * GWP[["N20"]],
+      N2O_d_kgCO2e_SOM = F_SOM * EF_SOM * (44 / 28) * GWP[["N20"]],
+      N2O_d_kgCO2e_OS = F_OS * EF_OS * (44 / 28) * GWP[["N20"]],
+      N2O_d_kgCO2e_PRP = F_PRP * EF_PRP * (44 / 28) * GWP[["N20"]]
     )
 
   # INDIRECT N2O EMISSIONS FROM MANAGED SOILS ----
 
   N2O_id_MS <- activity_data |>
     dplyr::mutate(
-
       ## Volatilization ----
       # TODO: retrieve Frac_GASF, Frac_GASM, and EF4 from UNFCCC data if available; otherwise, use IPCC default values (Table 11.3)
 
@@ -382,11 +407,10 @@ f_GHGE_n2o_msoils <- function(object,
       ### Frac_GASM = fraction of applied organic N fertilizer materials (F_ON) and of urine and dung N deposited by grazing animals (F_PRP) that volatilizes as NH3 and NOx, kg N volatilized (kg of N applied or deposited)-1 (Table 11.3)
       Frac_GASM = 0.21,
       ### EF4 = emission factor for N2O emissions from atmospheric deposition of N on soils and water surfaces, [kg N–N2O (kg NH3–N + NOx–N volatilized)-1] (Table 11.3)
-      N2ON_ATD = ((F_SN * Frac_GASF) + ((F_ON + F_PRP) * Frac_GASM))*EF4,
-
+      N2ON_ATD = ((F_SN * Frac_GASF) + ((F_ON + F_PRP) * Frac_GASM)) * EF4,
 
       # Conversion of N2O–N emissions to N2O emissions for reporting purposes is performed by using the following equation:  N2O = N2O–N * 44/28
-      N2O_ATD = N2ON_ATD * (44/28),
+      N2O_ATD = N2ON_ATD * (44 / 28),
 
       # Conversion of nitrous oxide (N20) to CO2 equivalents
       N2O_ATD_kgCO2e = N2O_ATD * GWP[["N20"]],
@@ -401,29 +425,73 @@ f_GHGE_n2o_msoils <- function(object,
       N2ON_L = (F_SN + F_ON + F_PRP + F_CR + F_SOM) * Frac_leach_H * EF5,
 
       # Conversion of N2O–N emissions to N2O emissions for reporting purposes is performed by using the following equation:  N2O = N2O–N * 44/28
-      N2O_L = N2ON_L * (44/28),
+      N2O_L = N2ON_L * (44 / 28),
 
       # Conversion of nitrous oxide (N20) to CO2 equivalents
       N2O_L_kgCO2e = N2O_L * GWP[["N20"]]
-
-
     )
 
   # Output ----
 
-  N2O_MS <- Reduce(x = list(N2O_d_MS,
-                            N2O_id_MS),
-                   f = function(x,y) dplyr::left_join(x,y,
-                                                      by = c(object@traceability$id_cols,
-                                                             "FADN_code_letter","species","land_use_type"))|>
-                     dplyr::select(dplyr::all_of(object@traceability$id_cols),
-                                   FADN_code_letter,species,land_use_type,
-                                   #N2O_d,N2O_ATD,N2O_L,
-                                   N2O_d_kgCO2e,N2O_ATD_kgCO2e,N2O_L_kgCO2e
-                     ))
+  N2O_MS <- Reduce(
+    x = list(
+      activity_data |>
+        dplyr::select(
+          dplyr::all_of(id_cols),
+          FADN_code_letter,
+          species,
+          land_use_type,
+          #N2O_d,N2O_ATD,N2O_L,
+          F_SN,
+          F_ON,
+          F_PRP,
+          F_CR
+        ),
+      N2O_d_MS |>
+        dplyr::select(
+          dplyr::all_of(id_cols),
+          FADN_code_letter,
+          species,
+          land_use_type,
+          N2O_d_kgCO2e,
+          N2O_d_kgCO2e_SN,
+          N2O_d_kgCO2e_ON,
+          N2O_d_kgCO2e_CR,
+          N2O_d_kgCO2e_SOM,
+          N2O_d_kgCO2e_OS,
+          N2O_d_kgCO2e_PRP
+        ),
+      N2O_id_MS |>
+        dplyr::select(
+          dplyr::all_of(id_cols),
+          FADN_code_letter,
+          species,
+          land_use_type,
+          N2O_ATD_kgCO2e,
+          N2O_L_kgCO2e
+        )
+    ),
+    f = function(x, y) {
+      dplyr::left_join(
+        x,
+        y,
+        by = c(
+          id_cols,
+          "FADN_code_letter",
+          "species",
+          "land_use_type"
+        )
+      )
+    }
+  )
 
+  if (return_components) {
+    return(list(
+      emissions = N2O_MS,
+      activity = activity_data,
+      direct = N2O_d_MS,
+      indirect = N2O_id_MS
+    ))
+  }
   return(N2O_MS)
-
 }
-
-

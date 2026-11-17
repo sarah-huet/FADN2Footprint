@@ -34,12 +34,14 @@
 #' Additionally, this function updates the traceability slot to log discarded farms.
 #' 
 #' @examples
+#' \dontrun{
 #' # Filter to keep only farms from France
 #' pruned_obj <- m_prune_farms(fadn_obj, COUNTRY == "FRA")
 #'
 #' # Filter to keep only large farms in France
 #' pruned_obj <- m_prune_farms(fadn_obj,
 #'                          COUNTRY == "FRA", ORGANIC == TRUE)
+#' }
 #'
 #' @seealso \code{\link{FADN2Footprint}} for the class definition
 #'
@@ -51,6 +53,9 @@
 # 1. Define the Generic
 setGeneric("m_prune_farms", function(object, ...) standardGeneric("m_prune_farms"))
 
+#' @rdname m_prune_farms
+#' @aliases m_prune_farms,FADN2Footprint-method
+#' @export
 # 2. Define the Method
 setMethod("m_prune_farms", "FADN2Footprint", function(object, ...) {
 
@@ -149,10 +154,15 @@ setMethod("m_prune_farms", "FADN2Footprint", function(object, ...) {
 #' # Remove them
 #' obj_clean <- m_remove_farms(my_obj, outliers)
 #' }
+#' @rdname m_remove_farms
+#' @export
 setGeneric("m_remove_farms", function(object, farms_to_remove) {
   standardGeneric("m_remove_farms")
 })
 
+#' @rdname m_remove_farms
+#' @aliases m_remove_farms,FADN2Footprint-method
+#' @export
 setMethod("m_remove_farms", "FADN2Footprint", function(object, farms_to_remove) {
 
   # --- 1. Validation ---
@@ -275,10 +285,15 @@ setMethod("m_remove_farms", "FADN2Footprint", function(object, farms_to_remove) 
 #' # Keep only them
 #' obj_subset <- m_keep_farms(my_obj, subset)
 #' }
+#' @rdname m_keep_farms
+#' @export
 setGeneric("m_keep_farms", function(object, farms_to_keep) {
   standardGeneric("m_keep_farms")
 })
 
+#' @rdname m_keep_farms
+#' @aliases m_keep_farms,FADN2Footprint-method
+#' @export
 setMethod("m_keep_farms", "FADN2Footprint", function(object, farms_to_keep) {
 
   # --- 1. Validation ---

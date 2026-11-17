@@ -1,5 +1,22 @@
 # Constructor ----
 
+#' FADN2Footprint S4 class
+#'
+#' A harmonized farm-level dataset with parsed crop, herd, input, and output
+#' tables, plus slots for inferred practices, footprints, and traceability.
+#'
+#' @slot farm Farm-level identifiers and structural characteristics.
+#' @slot crop Crop-level observations and derived yields.
+#' @slot herd Herd-level observations and livestock characteristics.
+#' @slot input Farm-level input quantities and expenditure.
+#' @slot output Parsed farm output tables.
+#' @slot landscape_metrics Optional landscape metrics.
+#' @slot practices Cached inferred agricultural practices.
+#' @slot footprints Cached environmental footprint results.
+#' @slot traceability Input identifiers and transformation metadata.
+#' @name FADN2Footprint-class
+#' @rdname FADN2Footprint-class
+#' @exportClass FADN2Footprint
 setClass("FADN2Footprint",
          slots = list(
            farm = "data.frame",
@@ -62,8 +79,12 @@ setClass("FADN2Footprint",
 #' \linkS4class{FADN2Footprint}
 #'
 #' @examples
-#' data(my_FADN_data)
-#' data(dict_FADN)
+#' data("mock_data", package = "FADN2Footprint")
+#' data("dict_FADN", package = "FADN2Footprint")
+#' my_FADN_data <- mock_data$fadn_fict[
+#'   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+#'   drop = FALSE
+#' ]
 #'
 #' my_object <- data_4FADN2Footprint(
 #'   df = my_FADN_data,
@@ -134,7 +155,7 @@ data_4FADN2Footprint <- function(df,
 
   ### detect columns with zeros
   columns_with_zeros = setdiff(colnames(df),
-                               colnames(df %>%
+                               colnames(df |>
                                           dplyr::select(dplyr::where(function(col) {
                                             if (is.numeric(col)) {
                                               any(col != 0, na.rm = TRUE)
@@ -147,19 +168,19 @@ data_4FADN2Footprint <- function(df,
   # keep columns needed for the package
   columns_with_zeros <- setdiff(
     columns_with_zeros,
-    var_dict %>%
-      dplyr::filter(!is.na(needed_in_FADN2Footprint) & !is.na(var_user)) %>%
-      tidyr::separate_longer_delim(var_user,";") %>%
+    var_dict |>
+      dplyr::filter(!is.na(needed_in_FADN2Footprint) & !is.na(var_user)) |>
+      tidyr::separate_longer_delim(var_user,";") |>
       dplyr::pull(var_user))
   columns_with_zeros <- setdiff(
     columns_with_zeros,
-    var_dict %>%
-      dplyr::filter(!is.na(needed_in_FADN2Footprint) & !is.na(var_common)) %>%
+    var_dict |>
+      dplyr::filter(!is.na(needed_in_FADN2Footprint) & !is.na(var_common)) |>
       dplyr::pull(var_common))
   # Remove names starting with C (for crop variables) or L (for livestock variables) or P (for animal products variables)
-  columns_with_zeros <- str_subset(columns_with_zeros, "^[CLP]", negate = TRUE)
+  columns_with_zeros <- stringr::str_subset(columns_with_zeros, "^[CLP]", negate = TRUE)
   ## Remove any columns in the list
-  df_harmonized <- df %>%
+  df_harmonized <- df |>
     dplyr::select(-dplyr::any_of(columns_with_zeros))
   message(length(columns_with_zeros)," columns contain only zeros and will be removed.")
   message((ncol(df) - ncol(df_harmonized))," are removed. Their names are stored in `object@traceability$columns$columns_removed`")
@@ -172,10 +193,10 @@ data_4FADN2Footprint <- function(df,
   traceability$version <- version
   ## Map the variable names to a common format
   if (version == "var_common") {
-    df_harmonized <- df_harmonized %>%
+    df_harmonized <- df_harmonized |>
       dplyr::mutate(ID = as.character(ID))
   } else {
-    df_harmonized <- f_map_columns_to_common(df_harmonized, id_cols, var_dict, version) %>%
+    df_harmonized <- f_map_columns_to_common(df_harmonized, id_cols, var_dict, version) |>
       dplyr::mutate(ID = as.character(ID))
 
     traceability$columns$trace_map <- attr(df_harmonized,"trace_map")
@@ -308,7 +329,7 @@ data_4FADN2Footprint <- function(df,
   # Step 3: Create master object ----
   message("\n~~~ Building FADN2Footprint object ~~~\n")
   message("Data for ",
-          nrow(farm_data %>% dplyr::select(dplyr::all_of(id_cols)) %>% distinct()),
+          nrow(farm_data |> dplyr::select(dplyr::all_of(id_cols)) |> distinct()),
           " farms have been gathered into a FADN2Footprint object.")
 
   obj <- new("FADN2Footprint",
@@ -401,20 +422,20 @@ f_map_columns_to_common <- function(df,
   trace_map <- list()
 
   # Clean and normalize dictionary
-  var_dict_clean <- var_dict %>%
-    dplyr::select(var_common,any_of(version)) %>%
-    dplyr::rename(var_user = any_of(version)) %>%
+  var_dict_clean <- var_dict |>
+    dplyr::select(var_common,any_of(version)) |>
+    dplyr::rename(var_user = any_of(version)) |>
     # duplicate rows in case several source variables match one target variable (will be summed afterwards)
-    tidyr::separate_longer_delim(var_user,";") %>%
+    tidyr::separate_longer_delim(var_user,";") |>
     # keep only variables in user data
     dplyr::filter(!is.na(var_user) & var_user != "" & var_user %in% colnames(df))
 
   # Handle multiple common targets per source:
   # Keep only the first one encountered and mark others as "ignored"
-  var_dict_first <- var_dict_clean %>%
-    dplyr::mutate(first_common = dplyr::first(var_common), .by = var_user) %>%
-    dplyr::mutate(var_common = first_common) %>%
-    dplyr::select(-first_common) %>%
+  var_dict_first <- var_dict_clean |>
+    dplyr::mutate(first_common = dplyr::first(var_common), .by = var_user) |>
+    dplyr::mutate(var_common = first_common) |>
+    dplyr::select(-first_common) |>
     dplyr::distinct()
 
   id_cols_raw = var_dict_first$var_user[var_dict_first$var_common %in% id_cols]
@@ -452,7 +473,7 @@ f_map_columns_to_common <- function(df,
 
     # Drop the original user columns
     tmp <- setdiff(matched_vars,common_var)
-    df_out <- df_out %>% dplyr::select(-dplyr::any_of(tmp))
+    df_out <- df_out |> dplyr::select(-dplyr::any_of(tmp))
 
     # Trace mapping back
     if (trace) trace_map[[common_var]] <- matched_vars

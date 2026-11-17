@@ -4,7 +4,7 @@ devtools::load_all()
 
 # Load data
 load(
-    "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/data_raw/raw_FADN_EU_10_21_FRA_ITA_DEU.RData"
+    file.path("data_raw", "raw_FADN_EU_10_21_FRA_ITA_DEU.RData")
 )
 
 # Select relevant columns from the loaded data

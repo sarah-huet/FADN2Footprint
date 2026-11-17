@@ -10,9 +10,13 @@
 #' A tibble with:
 #' - ground_cover: average of hedge linear meter per hectare
 #' @examples
-#' data(fadn_fict)
+#' data("mock_data", package = "FADN2Footprint")
+#' fadn_fict <- mock_data$fadn_fict[
+#'   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+#'   drop = FALSE
+#' ]
 #' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-#' ground_cover(object = fadn_fict_obj)
+#' f_ground_cover(object = fadn_fict_obj)
 #'
 #' @concept practice-crop
 #' @export

@@ -80,7 +80,7 @@
 #' }
 #'
 #' @seealso
-#' \code{\link{.parse_crop_data}}, \code{\link{.parse_livestock_data}},
+#' \code{\link{.parse_crop_data}}, \code{\link{.parse_herd_data}},
 #' \code{\link{data_4FADN2Footprint}}, \code{\link{data_extra}}
 #'
 #' @importFrom dplyr select mutate left_join filter pull matches all_of
@@ -105,6 +105,7 @@
       # Farm localisation
       "COUNTRY",
       dplyr::matches("NUTS"),
+      dplyr::any_of("ALTITUDE"),
       # Farm representativeness
       dplyr::matches("SYS02"),
       # Type of farming
@@ -189,8 +190,8 @@
 #'   \item Enrichment with crop metadata (land use type, species) from
 #'     \code{\link{data_extra}}.
 #'   \item Imputation of missing yields and production quantities for forage
-#'     crops and grasslands using French official statistics (SAA Agreste
-#'     2020), matched at NUTS3 (département) level.
+#'     crops and grasslands using regional estimates based on Copernicus Dry
+#'     Matter Production, matched by year and NUTS3 or NUTS2 region.
 #' }
 #'
 #' @details
@@ -217,29 +218,33 @@
 #' \code{data_extra$crops}. A raw yield (\code{yield = prod_t / area_ha}) is
 #' calculated.
 #'
-#' ## Step 4 — Reference Yields (SAA Agreste 2020)
-#' For forage crops and grasslands, production quantities are not recorded in
-#' the French FADN (RICA), as specified in the French \emph{Instruction de
-#' collecte}. Reference yields are derived from the French official
-#' agricultural statistics (SAA Agreste 2020, Chiffres définitifs, 11/2021),
-#' averaged by crop type and département (NUTS3). Département codes are
-#' harmonised, including overseas territories (DOM).
+#' ## Step 4 — Reference Yields (Copernicus Dry Matter Production)
+#' Forage reference yields are read from
+#' \code{inst/ext_data/forage_yield/forage_yields_EU.xlsx}. The workbook
+#' provides annual estimates in tonnes of dry matter per hectare for four
+#' forage types at NUTS3 and NUTS2 levels. Matching uses the farm's NUTS3 code
+#' first and falls back to its NUTS2 code when a NUTS3 estimate is unavailable.
+#' FADN crop codes are mapped to green maize (\code{CFODMZ}), artificial grass
+#' (\code{CLEG}, \code{CFODOTH}), temporary grass (\code{CGRSTMP}), and
+#' permanent grass (\code{CGRSXRG}, \code{CRG}). The estimates cover
+#' 2004--2024.
 #'
 #' ## Step 5 — Yield and Production Imputation
-#' Missing yields are imputed using SAA Agreste reference yields, matched by
-#' crop type and NUTS3 département. Missing production quantities are then
+#' Missing forage yields are imputed using the Copernicus-based reference yield
+#' for the crop type, region, and year. Missing production quantities are then
 #' derived as \eqn{prod_t = area\_ha \times yield}.
 #'
 #' @note
 #' \itemize{
 #'   \item Input area variables must be in **hectares** and production
 #'     variables in **tonnes**. A message is issued as a reminder.
-#'   \item The SAA Agreste yield imputation is currently calibrated for the
-#'     French FADN (RICA). Adaptation for other national FADNs or the EU FADN
-#'     is a planned development.
-#'   \item Reference yields (\code{ref_yields}) are recomputed at each call.
-#'     Pre-computation and storage in \code{sysdata.rda} is planned to
-#'     improve performance.
+#'   \item Copernicus-based reference yields are available for 2004--2024.
+#'     Outside this period, or when no matching NUTS3/NUTS2 estimate exists,
+#'     the parser continues to its existing FADN-average yield imputation.
+#'   \item Only the listed crop codes with a corresponding workbook forage type
+#'     receive Copernicus-based yields; other forage crops use the existing
+#'     FADN-average fallback.
+#'   \item The reference workbook is read at each call.
 #' }
 #'
 #' @param df_harmonized A \code{\link[tibble]{tibble}} or
@@ -249,8 +254,8 @@
 #'   \code{WW_PRQ}).
 #' @param farm_data A \code{\link[tibble]{tibble}} or
 #'   \code{\link[base]{data.frame}} containing farm-level metadata, including
-#'   at minimum the identifier columns (\code{id_cols}) and optionally
-#'   \code{NUTS3} (département code for France) used for yield imputation.
+#'   at minimum the identifier columns (\code{id_cols}) and, for forage yield
+#'   imputation, optionally \code{NUTS3} and/or \code{NUTS2} regional codes.
 #' @param id_cols A \code{character} vector of column names to be used as
 #'   farm × year identifiers (e.g., \code{c("FADN_ID", "YEAR")}).
 #'
@@ -261,11 +266,13 @@
 #'   \item{FADN_code_letter}{\code{character}. FADN crop category code.}
 #'   \item{area_ha}{\code{numeric}. Utilised crop area (ha).}
 #'   \item{prod_t}{\code{numeric}. Crop production quantity (t yr\eqn{^{-1}}),
-#'     imputed from SAA Agreste yields where missing.}
+#'     imputed from Copernicus-based forage yields (t DM yr\eqn{^{-1}}) where
+#'     available.}
 #'   \item{sales_t}{\code{numeric}. Crop sales quantity (t yr\eqn{^{-1}}),
 #'     where available.}
-#'   \item{yield}{\code{numeric}. Crop yield (t ha\eqn{^{-1}}), imputed from
-#'     SAA Agreste reference yields where missing.}
+#'   \item{yield}{\code{numeric}. Crop yield (t ha\eqn{^{-1}}); forage yields
+#'     imputed from Copernicus-based references are in t DM ha\eqn{^{-1}}
+#'     yr\eqn{^{-1}}.}
 #'   \item{land_use_type}{\code{character}. Land use type
 #'     (\code{"arable"}, \code{"grassland"}, etc.) from
 #'     \code{data_extra$crops}.}
@@ -276,12 +283,13 @@
 #' }
 #'
 #' @references
-#' Agreste (2021). \emph{Statistiques agricoles annuelles 2020, Chiffres
-#' définitifs}. Ministère de l'Agriculture et de la Souveraineté alimentaire,
-#' Paris. \url{https://agreste.agriculture.gouv.fr}
+#' \emph{Regional forage yield estimates for Europe}. Copernicus Dry Matter
+#' Production-derived dataset, included as
+#' \code{inst/ext_data/forage_yield/forage_yields_EU.xlsx}; see the bundled
+#' working paper for methodology.
 #'
 #' @seealso
-#' \code{\link{.parse_farm_data}}, \code{\link{.parse_livestock_data}},
+#' \code{\link{.parse_farm_data}}, \code{\link{.parse_herd_data}},
 #' \code{\link{data_4FADN2Footprint}}, \code{\link{data_extra}}
 #'
 #' @importFrom dplyr select filter mutate rename left_join summarise coalesce pick where any_of all_of matches join_by
@@ -333,6 +341,10 @@
       id_cols = dplyr::all_of(c(id_cols, "FADN_code_letter")),
       names_from = variable,
       values_from = value
+    ) |>
+    # filter out rows with a sum of numeric variables equal to zero
+    dplyr::filter(
+      rowSums(dplyr::across(where(is.numeric)), na.rm = TRUE) != 0
     )
 
   # If both A and TA variables are present
@@ -395,14 +407,13 @@
   }
 
   # 3. Enhance with Metadata & Basic Yields ---------------------------------
-  crop_df <- crop_df |>
+  crop_df1 <- crop_df |>
     dplyr::left_join(
       data_extra$crops |>
         dplyr::select(dplyr::any_of(c(
           "FADN_code_letter",
           "land_use_type",
-          "species",
-          "SAA_Agreste_2020"
+          "species"
         ))),
       by = "FADN_code_letter"
     ) |>
@@ -423,109 +434,144 @@
         0
     )
 
-  # 4. Prepare External Yields (SAA Agreste) --------------------------------
-  # for forage crops and for grasslands, no production is registered in RICA, as specified in the French "Instruction de collecte" documentation
-  # so we used the French official yield data for 2020 (Statistiques agricoles annuelles 2020, Chiffres définitifs, Agreste, 11/2021)
-
-  ref_yields <- data_extra$yield_SAA_Agreste_2020 |>
-    dplyr::mutate(
-      Departement = dplyr::case_when(
-        Departement == "971 - Guadeloupe" ~ "9A",
-        Departement == "972 - Martinique" ~ "9B",
-        Departement == "973 - Guyane" ~ "9C",
-        Departement == "974 - La Réunion" ~ "9D",
-        TRUE ~ substr(Departement, 1, 2)
-      ),
-      # Calculate yield (t/ha) from production (100kg/cwt -> t) and area
-      # formula: (Vol * 0.1) / Area
-      yield_SAA = (Production_seche_volume * 0.1) /
-        Superficie_correspondante_hectare
-    ) |>
-    dplyr::rename(SAA_Agreste_2020 = Cultures_developpees_5) |>
-    # Aggregate average yield by Crop Type and Dept
-    dplyr::summarise(
-      yield_SAA = mean(yield_SAA, na.rm = TRUE),
-      .by = c(SAA_Agreste_2020, Departement)
-    ) |>
-    # fallback on global average
-    dplyr::mutate(
-      yield_SAA_country = mean(yield_SAA, na.rm = TRUE),
-      .by = SAA_Agreste_2020
+  # 4. Prepare External Yields (Copernicus DMP) ------------------------------
+  forage_yield_file <- system.file(
+    "ext_data",
+    "forage_yield",
+    "forage_yields_EU.xlsx",
+    package = "FADN2Footprint"
+  )
+  if (!nzchar(forage_yield_file)) {
+    stop(
+      "The Copernicus-based forage yield workbook ",
+      "'ext_data/forage_yield/forage_yields_EU.xlsx' was not found."
     )
+  }
+
+  forage_crop_mapping <- tibble::tribble(
+    ~FADN_code_letter , ~forage_type       ,
+    "CFODMZ"          , "green_maize"      ,
+    "CLEG"            , "artificial_grass" ,
+    "CFODOTH"         , "artificial_grass" ,
+    "CGRSTMP"         , "temporary_grass"  ,
+    "CGRSXRG"         , "permanent_grass"  ,
+    "CRG"             , "permanent_grass"
+  )
+  forage_types <- unique(forage_crop_mapping$forage_type)
+
+  read_forage_yields <- function(sheet, region_column) {
+    readxl::read_excel(forage_yield_file, sheet = sheet) |>
+      dplyr::select(
+        dplyr::all_of(c(region_column, "year", forage_types))
+      ) |>
+      tidyr::pivot_longer(
+        cols = dplyr::all_of(forage_types),
+        names_to = "forage_type",
+        values_to = "forage_yield"
+      ) |>
+      dplyr::transmute(
+        region = as.character(.data[[region_column]]),
+        year = as.integer(year),
+        forage_type,
+        forage_yield
+      )
+  }
+
+  ref_yields_nuts3 <- read_forage_yields("NUTS3", "nuts3")
+  ref_yields_nuts2 <- read_forage_yields("NUTS2", "nuts2")
 
   # 5. Impute Forage Yields -------------------------------------------------
-  # Strategy: Join NUTS3 and SAA yields to the main table.
-  # Use coalesce() to fill gaps only where needed.
-
-  final_df0 <- crop_df |>
-    # Attach NUTS3 region from farm_data (if available)
+  final_df0 <- crop_df1 |>
+    dplyr::left_join(forage_crop_mapping, by = "FADN_code_letter") |>
     dplyr::left_join(
       farm_data |>
         dplyr::select(dplyr::all_of(id_cols), dplyr::matches("NUTS")) |>
         dplyr::mutate(dplyr::across(dplyr::matches("NUTS"), as.character)),
       by = id_cols
     ) |>
-    # Attach Reference Yields based on Crop Mapping + NUTS3 (or global average per crop)
+    (\(df) {
+      if ("YEAR" %in% colnames(df)) {
+        dplyr::mutate(df, .forage_year = as.integer(as.character(YEAR)))
+      } else {
+        dplyr::mutate(df, .forage_year = NA_integer_)
+      }
+    })() |>
     (\(df) {
       if ("NUTS3" %in% colnames(df)) {
         dplyr::left_join(
           df,
-          ref_yields,
-          by = dplyr::join_by(SAA_Agreste_2020, NUTS3 == Departement)
+          ref_yields_nuts3,
+          by = c(
+            "NUTS3" = "region",
+            ".forage_year" = "year",
+            "forage_type"
+          )
         )
       } else {
-        # Attach global average reference yields per crop
-        dplyr::left_join(
-          df,
-          ref_yields |>
-            dplyr::select(SAA_Agreste_2020, yield_SAA_country) |>
-            dplyr::distinct() |>
-            dplyr::mutate(yield_SAA = yield_SAA_country),
-          by = dplyr::join_by(SAA_Agreste_2020)
-        )
+        dplyr::mutate(df, forage_yield = NA_real_)
       }
     })() |>
+    dplyr::rename(forage_yield_nuts3 = forage_yield) |>
+    (\(df) {
+      if ("NUTS2" %in% colnames(df)) {
+        dplyr::left_join(
+          df,
+          ref_yields_nuts2,
+          by = c(
+            "NUTS2" = "region",
+            ".forage_year" = "year",
+            "forage_type"
+          )
+        )
+      } else {
+        dplyr::mutate(df, forage_yield = NA_real_)
+      }
+    })() |>
+    dplyr::rename(forage_yield_nuts2 = forage_yield) |>
     dplyr::mutate(
-      # Impute Yield: Keep existing yield, otherwise use SAA yield
+      forage_reference_yield = dplyr::coalesce(
+        forage_yield_nuts3,
+        forage_yield_nuts2
+      ),
       default_forage_yield = ifelse(
-        !is.na(SAA_Agreste_2020) & (!is.finite(yield) | yield == 0),
+        !is.na(forage_type) &
+          !is.na(forage_reference_yield) &
+          (!is.finite(yield) | yield == 0),
         TRUE,
         FALSE
       ),
-      ## TODO: check for French FADN
-      #yield = dplyr::coalesce(yield, yield_SAA),
-      #yield = dplyr::case_when(
-      #  !is.na(SAA_Agreste_2020) & (!is.finite(yield) | yield ==0) ~ dplyr::coalesce(yield_SAA, yield_SAA_country),
-      #  .default = yield
-      #),
       yield = ifelse(
         default_forage_yield,
-        dplyr::coalesce(yield_SAA, yield_SAA_country),
+        forage_reference_yield,
         yield
       ),
-
-      # Impute Production: Keep existing prod, otherwise calc Area * Yield
       default_forage_prod = ifelse(
-        !is.na(SAA_Agreste_2020) & (!is.finite(prod_t) | prod_t == 0),
+        !is.na(forage_type) &
+          !is.na(forage_reference_yield) &
+          (!is.finite(prod_t) | prod_t == 0),
         TRUE,
         FALSE
       ),
-      #prod_t = dplyr::coalesce(prod_t, area_ha * yield)
-      #prod_t = dplyr::case_when(
-      #  !is.na(SAA_Agreste_2020) & (!is.finite(prod_t) | prod_t ==0) ~ area_ha * yield,
-      #  .default = prod_t
-      #)
-      prod_t = ifelse(default_forage_prod, area_ha * yield, prod_t)
+      prod_t = ifelse(
+        default_forage_prod,
+        area_ha * yield,
+        prod_t
+      )
     ) |>
-    # Clean up temporary columns
-    dplyr::select(-dplyr::matches("yield_SAA"), -SAA_Agreste_2020)
+    dplyr::select(
+      -forage_type,
+      -forage_yield_nuts3,
+      -forage_yield_nuts2,
+      -forage_reference_yield,
+      -.forage_year
+    )
 
   # 6. Replace other missing yield ---------------------------------------------
 
   # TODO: replace missing yields
 
   final_df <- final_df0 |>
-    # Attach Reference Yields based on Crop Mapping + NUTS3 (or global average per crop)
+    # Attach average FADN yields by crop and NUTS2
     dplyr::left_join(
       FADN_averages$crop_yields,
       by = c('FADN_code_letter', 'NUTS2')
@@ -537,12 +583,6 @@
         TRUE,
         FALSE
       ),
-      ## TODO: check for French FADN
-      #yield = dplyr::coalesce(yield, yield_SAA),
-      #yield = dplyr::case_when(
-      #  (!is.finite(yield) | yield ==0) ~ avrg_FADN_yield,
-      #  .default = yield
-      #),
       yield = ifelse(default_crop_yield, avrg_FADN_yield, yield),
 
       # Impute Production: Keep existing prod, otherwise calc Area * Yield
@@ -655,10 +695,23 @@
         FADN_code_letter == "CFLWOUT" & is.na(yield) ~ 0,
         FADN_code_letter == "CFLWUG" & is.na(yield) ~ 0,
         FADN_code_letter == "CNURS" & is.na(yield) ~ 0,
+
+        FADN_code_letter == "CARALNDSED" & is.na(yield) ~ 0,
+        FADN_code_letter == "CFLNDNOSUB" & is.na(yield) ~ 0,
+        FADN_code_letter == "CFLNDSUB" & is.na(yield) ~ 0,
+        FADN_code_letter == "CLNDREADSOW" & is.na(yield) ~ 0,
         FADN_code_letter == "CLNDOTH" & is.na(yield) ~ 0,
+        FADN_code_letter == "COTH" & is.na(yield) ~ 0,
+        FADN_code_letter == "CRENTOUTLND" & is.na(yield) ~ 0,
+        FADN_code_letter == "CUNUSEDLND" & is.na(yield) ~ 0,
+
         .default = yield
       ),
-      prod_t = ifelse(is.na(prod_t), area_ha * yield, prod_t)
+      prod_t = ifelse(
+        is.na(prod_t),
+        dplyr::coalesce(area_ha, 0) * yield,
+        prod_t
+      )
     )
 
   return(final_df)
@@ -1065,7 +1118,7 @@
 #'     animals reared under contract (\code{PCNTRCATL_SV},
 #'     \code{PCNTRSHEPGOAT_SV}, \code{PCNTRPIG_SV}, \code{PCNTRPLTR_SV}),
 #'     included where available as \code{sales_contract_*} columns. They are
-#'     used by \code{\link{f_feed_offfarm_animals_under_contract}} to impute
+#'     used for contract-animal feed imputation to
 #'     purchased feed supplied by the integrator.
 #' }
 #'
@@ -1239,8 +1292,10 @@
     )
   # Predict N_min_ferti_Q using GAM model
   eligible <- which(as.numeric(df_Nmin$YEAR) < 2017 & df_Nmin$N_min_ferti_V > 0)
-  pred_N_min_ferti_Q <- list(fit = rep(NA_real_, nrow(df_Nmin)),
-                            se.fit = rep(NA_real_, nrow(df_Nmin)))
+  pred_N_min_ferti_Q <- list(
+    fit = rep(NA_real_, nrow(df_Nmin)),
+    se.fit = rep(NA_real_, nrow(df_Nmin))
+  )
   if (length(eligible) > 0) {
     newdata <- df_Nmin[eligible, , drop = FALSE]
     # Maintainer-approved mock-data rule (2026-11-06): use dairy GAM
@@ -1248,19 +1303,34 @@
     newdata$TF14 <- as.character(newdata$TF14)
     grouped <- newdata$TF14 %in% c("46", "47")
     if (any(grouped)) {
-      message("N-fertiliser GAM: grouping TF14 46/47 with 45 for ",
-              sum(grouped), " pre-2017 observations.")
+      message(
+        "N-fertiliser GAM: grouping TF14 46/47 with 45 for ",
+        sum(grouped),
+        " pre-2017 observations."
+      )
       newdata$TF14[grouped] <- "45"
     }
     for (control in names(gam_reg$xlevels)) {
-      unknown <- setdiff(unique(as.character(newdata[[control]])),
-                         c(gam_reg$xlevels[[control]], NA_character_))
+      unknown <- setdiff(
+        unique(as.character(newdata[[control]])),
+        c(gam_reg$xlevels[[control]], NA_character_)
+      )
       if (length(unknown) > 0) {
-        stop("Unsupported N-fertiliser GAM levels for ", control, ": ",
-             paste(unknown, collapse = ", "), ".")
+        stop(
+          "Unsupported N-fertiliser GAM levels for ",
+          control,
+          ": ",
+          paste(unknown, collapse = ", "),
+          "."
+        )
       }
     }
-    prediction <- predict(gam_reg, newdata = newdata, type = "link", se.fit = TRUE)
+    prediction <- mgcv::predict.gam(
+      gam_reg,
+      newdata = newdata,
+      type = "link",
+      se.fit = TRUE
+    )
     pred_N_min_ferti_Q$fit[eligible] <- prediction$fit
     pred_N_min_ferti_Q$se.fit[eligible] <- prediction$se.fit
   }
@@ -1490,7 +1560,7 @@
 #'
 #' @seealso
 #' \code{\link{.parse_crop_data}}, \code{\link{.parse_herd_data}},
-#' \code{\link{.parse_farm_data}}, \code{\link{new_FADN2Footprint}},
+#' \code{\link{.parse_farm_data}}, \code{\link{data_4FADN2Footprint}},
 #' \code{\link{data_extra}}
 #'
 #' @importFrom dplyr select filter mutate left_join rename coalesce case_when if_else all_of matches starts_with pull
@@ -1639,30 +1709,12 @@
 
   # 4. Meat Output ----------------------------------------------------------
 
-  # Default animal weights
-  #UNFCCC_data$table3As2
-  livestock_weights <- data_extra$livestock |>
-    dplyr::filter(!is.na(UNFCCC_cat)) |>
-    dplyr::select(FADN_code_letter, UNFCCC_cat) |>
-    # add UNFCCC data
-    dplyr::left_join(
-      UNFCCC_data$table3As2 |>
-        dplyr::filter(!is.na(UNFCCC_cat)) |>
-        dplyr::summarise(
-          live_weight_kg = mean(Weight, na.rm = TRUE),
-          .by = c(species, UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)
-        ),
-      by = 'UNFCCC_cat',
-      relationship = "many-to-many"
-    ) |>
-    # estimate average per livestock category
-    dplyr::mutate(
-      mean_live_weight_kg = mean(live_weight_kg, na.rm = TRUE),
-      .by = FADN_code_letter
-    ) |>
-    # replace missing values by average
-    dplyr::mutate(
-      live_weight_kg = dplyr::coalesce(live_weight_kg, mean_live_weight_kg)
+  # Default animal live weights (kg head-1) by FADN category, country and year
+  livestock_weights <- UNFCCC_data$table3As2 |>
+    dplyr::filter(!is.na(FADN_code_letter)) |>
+    dplyr::summarise(
+      live_weight_kg = h_weighted_mean_or_na(Weight),
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3, YEAR)
     )
 
   # Animals sold for slaughter
@@ -1674,10 +1726,12 @@
     #                  Country_ISO_3166_1_A3),
     #  by = 'COUNTRY'
     #) |>
-    # add animal live weights
-    dplyr::left_join(
+    # add animal live weights (kg head-1); missing country-years fall back to
+    # the country mean across years, then to the FADN category mean
+    h_unfccc_fallback(
       livestock_weights,
-      by = c("FADN_code_letter", 'species', 'Country_ISO_3166_1_A3', 'YEAR')
+      values = "live_weight_kg",
+      category = "FADN_code_letter"
     ) |>
     # define output
     dplyr::mutate(

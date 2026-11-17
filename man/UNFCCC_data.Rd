@@ -23,7 +23,8 @@ and manure management system.}
 \item{table3Bb}{\strong{Table 3.B(b): N2O Emissions from Manure Management.}
 Contains directly reported N2O implied emission factors by country, year,
 and manure management system. Factors are in kg N2O-N per kg N handled;
-missing reported values remain missing for the runtime IPCC fallback.}
+missing reported values fall back to UNFCCC averages, then to IPCC
+defaults at runtime.}
 
 \item{table3D}{\strong{Table 3.D: Agricultural Soils.}
 Contains the long-form reported Table 3.D data, including activity,
@@ -58,5 +59,19 @@ in the agricultural footprint calculations.
 Country and year are retained as keys; individual table coverage varies by
 Party and reporting year. The Danish legacy annex duplicate is excluded in
 the data build so that each CRT cell contributes only once.
+
+Livestock tables (\code{table3As2}, \code{table3Bas1}, \code{table3Bas2}) keep the cleaned
+CRT label (\code{Animal_cat}) and its \code{species}, and are expanded to one row per
+matched FADN category (\code{FADN_code_letter}). \code{fadn_match} names the matching
+rule and \code{match_level} its specificity (1 = closest FADN category, e.g.
+dairy cattle to LCOWDAIR or sows to LSOWBRE; 2 = group of FADN categories,
+e.g. non-dairy cattle to all cattle except LCOWDAIR; 3 = whole species).
+Only the most specific level is kept for each FADN category, country and
+year, and aggregate CRT rows are dropped when sub-categories are reported,
+so populations are not double counted. CRT categories without an FADN
+equivalent (e.g. deer, fur-bearing animals) keep \code{NA} FADN_code_letter.
+At runtime, missing country-year values are replaced by the mean of the
+same category for the same country across years, then by the mean of the
+category across all countries and years.
 }
 \keyword{datasets}

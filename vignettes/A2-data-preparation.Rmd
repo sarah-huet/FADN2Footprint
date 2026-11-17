@@ -16,7 +16,8 @@ editor_options:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment  = "#>",
-  eval     = FALSE
+  eval     = FALSE,
+  purl     = FALSE
 )
 
 library(dplyr)
@@ -24,10 +25,6 @@ library(tidyr)
 library(readxl)
 library(gt)
 
-# Install package
-require("pak")
-pak::pak("sarah-huet/FADN2Footprint")
-Y
 library(FADN2Footprint)
 
 
@@ -113,7 +110,7 @@ pan table.
 ```{r variable-pattern-preview, echo=FALSE, eval=TRUE}
 
 # Load pre-filled dictionary
-dict_conversion <- h_read_dictionary("vignettes/dictionary_conversion_filled_FRA.xlsx")
+dict_conversion <- h_read_dictionary("dictionary_conversion_filled_FRA.xlsx")
 
 head(dict_conversion$variable_pattern) |> gt()
 
@@ -306,7 +303,7 @@ We strongly recommend to use this pre-filled dictionary for RICA.
 
 ```{r french-dict}
 # Load
-dict_conversion <- h_read_dictionary("vignettes/dictionary_conversion_filled_FRA.xlsx")
+dict_conversion <- h_read_dictionary("dictionary_conversion_filled_FRA.xlsx")
 
 ```
 
@@ -401,7 +398,7 @@ column to use for each EU FADN variable group:
 ```{r validate}
 
 issues <- h_validate_dictionary(
-  dictionary_path = "vignettes/dictionary_conversion_filled_FRA.xlsx",
+  dictionary_path = "dictionary_conversion_filled_FRA.xlsx",
   raw_tables      = raw_tables,
   id_cols = "IDENT",
   table_config    = list(
@@ -419,7 +416,7 @@ issues <- h_validate_dictionary(
 ```{r convert}
 
 # Load dictionary
-dict_conversion <- h_read_dictionary("vignettes/dictionary_conversion_filled_FRA.xlsx")
+dict_conversion <- h_read_dictionary("dictionary_conversion_filled_FRA.xlsx")
 
 # Convert (pivot + rename + aggregate + unit conversion)
 RICA_2020 <- h_pivot_national_fadn(

@@ -98,7 +98,7 @@ n_idx <- idx_lab |>
 # We then estimate the ratio of nitrogen fertiliser use (use on expenditure) for 2020
 # based on our test FADN dataset (EU_17_21)
 load(
-    "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/data_raw/raw_FADN_EU_17_21.RData"
+    file.path("data_raw", "raw_FADN_EU_17_21.RData")
 )
 devtools::load_all(getwd())
 # INUSE_Q		H_SC_3031_Q	Quantity of N used in mineral fertilisers Quantity

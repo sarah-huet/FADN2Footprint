@@ -23,6 +23,7 @@
 #' The tibble includes columns for each of the \code{target_vars} and the grouping columns specified in \code{primary_grp}.
 #' 
 #' @import dplyr
+#' @importFrom stats approx pnorm qgamma qnorm rgamma runif
 #'
 #' @concept utils
 #' @export
@@ -33,8 +34,6 @@ h_average_practices <- function(data,
                                 secondary_grp,
                                 weight_var = NULL,
                                 min_obs = 15) {
-
-  require(dplyr)
 
   # Check that target variables are in the data set
 
@@ -185,7 +184,7 @@ h_average_practices <- function(data,
 #' \code{manual_matches} sheet (farm-level variables), and reference sheets.
 #'
 #' @param output_path Character. File path for the output Excel workbook.
-#' @param raw_tables Named list of data frames — the raw national FADN tables.
+#' @param raw_tables Named list of data frames - the raw national FADN tables.
 #' @param id_cols Character vector. Column name(s) identifying individual farms
 #'   (e.g., \code{c("IDENT")}). These columns are preserved as-is in the output
 #'   and used as grouping keys during pivoting.
@@ -224,7 +223,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
 
     wb <- openxlsx::createWorkbook()
 
-    # ── Instructions sheet ──
+    # -- Instructions sheet --
     openxlsx::addWorksheet(wb, "instructions")
     instructions <- data.frame(
       Step = 1:6,
@@ -239,7 +238,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
     )
     openxlsx::writeDataTable(wb, "instructions", instructions)
 
-    # ── Variable pattern sheet ──
+    # -- Variable pattern sheet --
     openxlsx::addWorksheet(wb, "variable_pattern")
 
     # Collect FADN suffixes from internal reference (or build from known list)
@@ -261,7 +260,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
     })
     national_suffixes_df <- do.call(rbind, national_suffixes_list)
 
-    # Build the template: one row per FADN suffix × group, with national suffixes
+    # Build the template: one row per FADN suffix by group, with national suffixes
     # listed as a reference comment
     vp_template <- fadn_suffixes %>%
       dplyr::mutate(
@@ -285,7 +284,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
 
     openxlsx::writeDataTable(wb, "variable_pattern", vp_template)
 
-    # ── Category pattern sheet ──
+    # -- Category pattern sheet --
     openxlsx::addWorksheet(wb, "category_pattern")
 
     group_map <- c(crops = "CROPS", livestock = "LIVESTOCK", output = "ANIMAL PRODUCTS AND SERVICES")
@@ -329,7 +328,7 @@ h_create_dictionary_template <- function(output_path = "dictionary_conversion.xl
 
     openxlsx::writeDataTable(wb, "category_pattern", cat_pattern)
 
-    # ── Manual matches sheet ──
+    # -- Manual matches sheet --
     openxlsx::addWorksheet(wb, "manual_matches")
     manual_template <- data.frame(
       fadn_variable = c('ORGANIC', 'IGRFEDCNCTRPUR_V', 'IGRFEDCRSPUR_V', 'IGRFEDCNCTRPUR_V', 'IGRFEDCRSPUR_V', 'NUTS3', 'SIZC', 'IFULS_Q', 'IFULS_V', 'IHFULS_Q', 'IHFULS_V', 'IPROT_V', 'IKUSE_Q', 'INUSE_Q', 'IPUSE_Q', 'IELE_V', 'IELE_Q', 'SYS02', 'ID', 'YEAR', 'NUTS1', 'TF_PART3', 'TF_SUBP4', 'TF', 'TF8', 'TF14', 'TF_PRIN2', 'IPIGFEDPUR_V', 'NUTS2', 'IRRAA_X', 'SE025', 'SIRET', 'SE080', 'IPLTRFEDPUR_V'),
@@ -572,9 +571,9 @@ h_validate_dictionary <- function(dictionary_path,
 
   # Report
   if (verbose) {
-    cat("══════════════════════════════════════════════════════\n")
+    cat("======================================================\n")
     cat("  Dictionary Validation Report\n")
-    cat("══════════════════════════════════════════════════════\n")
+    cat("======================================================\n")
     if (length(issues) == 0) {
       cat("  \u2713 No issues found. Dictionary looks good!\n")
     } else {
@@ -583,7 +582,7 @@ h_validate_dictionary <- function(dictionary_path,
         print(issues[[nm]])
       }
     }
-    cat("══════════════════════════════════════════════════════\n")
+    cat("======================================================\n")
   }
 
   invisible(issues)
@@ -625,7 +624,7 @@ h_pivot_national_fadn <- function(raw_tables,
     dplyr::filter(!is.na(FADN_code_letter) & !is.na(national_code))
   mm <- dict_conversion$manual_matches
 
-  # ── Pivot each product group ──
+  # -- Pivot each product group --
   pivoted_tables <- list()
 
   for (grp in names(table_config)) {
@@ -731,7 +730,7 @@ h_pivot_national_fadn <- function(raw_tables,
 
   }
 
-  # ── Build base skeleton: union of all farm-year ids ──
+  # -- Build base skeleton: union of all farm-year ids --
   # Priority: tables referenced in manual_matches (farm register), then product tables
   base_tables <- unique(c(
     if (!is.null(mm)) intersect(unique(mm$national_table), names(raw_tables)) else character(0),
@@ -752,14 +751,14 @@ h_pivot_national_fadn <- function(raw_tables,
     stop("Could not build farm-year skeleton: no table contains all id_cols.")
   }
 
-  # ── Join all pivoted product tables onto the skeleton ──
+  # -- Join all pivoted product tables onto the skeleton --
   result <- id_skeleton
   for (k in seq_along(pivoted_tables)) {
     result <- dplyr::left_join(result, pivoted_tables[[k]], by = id_cols)
   }
 
 
-  # ── Add manual matches (farm-level variables) ──
+  # -- Add manual matches (farm-level variables) --
   if (!is.null(mm) && nrow(mm) > 0) {
 
     # Collect all missing variables for a single summary warning
@@ -865,7 +864,10 @@ h_pivot_national_fadn <- function(raw_tables,
           if (is_char || !is.numeric(result[[fadn_var]])) {
             stop("Cannot aggregate non-numeric mappings for ", fadn_var, ".")
           }
-          incoming <- tail(make.unique(c(names(result), ".manual_value")), 1L)
+          incoming <- utils::tail(
+            make.unique(c(names(result), ".manual_value")),
+            1L
+          )
           names(vals)[names(vals) == fadn_var] <- incoming
           result <- dplyr::left_join(result, vals, by = id_cols)
           both_missing <- is.na(result[[fadn_var]]) & is.na(result[[incoming]])
@@ -1157,9 +1159,9 @@ h_stack_country_tables <- function(country_data, country_col = "COUNTRY") {
 #' Generate mock FADN data from descriptive statistics
 #'
 #' Handles three cases:
-#'   1. General stats (no grouping) → one block of n rows
+#'   1. General stats (no grouping) -> one block of n rows
 #'   2. Stats grouped by one or more factors (e.g., farm_type, country)
-#'      → generates rows per group proportionally or with explicit counts
+#'      -> generates rows per group proportionally or with explicit counts
 #'
 #' @param n Total number of rows to generate.
 #' @param continuous_stats Data.frame with columns: variable, mean, sd, min, max,
@@ -1224,7 +1226,7 @@ h_generate_mock_data <- function(n = 500,
 
 
   # ========================================================
-  # CASE 1: No grouping — general stats
+  # CASE 1: No grouping - general stats
   # ========================================================
   if (is.null(group_cols)) {
     return(generate_block(n, continuous_stats, categorical_stats))
@@ -1818,4 +1820,180 @@ h_generate_mock_child_panel <- function(parent_latent,
   result <- do.call(rbind, blocks)
   rownames(result) <- NULL
   result
+}
+
+
+# UNFCCC CRT parameter fallbacks ------------------------------------------------
+
+#' Weighted mean that tolerates missing values and weights
+#'
+#' @param x Numeric vector of parameter values (any unit; returned unchanged).
+#' @param w Numeric vector of non-negative weights (e.g. UNFCCC population,
+#'   heads). Missing weights are ignored; when no positive weight is available
+#'   the simple mean of `x` is returned.
+#' @return A single numeric value in the unit of `x`, or `NA_real_` when `x`
+#'   has no non-missing value.
+#' @noRd
+h_weighted_mean_or_na <- function(x, w = NULL) {
+  ok <- !is.na(x)
+  if (!any(ok)) return(NA_real_)
+  if (is.null(w)) return(mean(x[ok]))
+  ok_w <- ok & !is.na(w) & w > 0
+  if (!any(ok_w)) return(mean(x[ok]))
+  sum(x[ok_w] * w[ok_w]) / sum(w[ok_w])
+}
+
+#' Join UNFCCC country-year parameters with hierarchical fallbacks
+#'
+#' Joins country- and year-specific UNFCCC CRT parameters to `data` and fills
+#' values that remain missing with (1) the mean of the same category for the
+#' same country across all available years, then (2) the mean of the same
+#' category across all countries and years of `reference`. When `category` is
+#' empty, level (2) is the mean across all countries and years.
+#'
+#' @param data Data frame containing the `category`, `country` and `year`
+#'   columns. It must not already contain the `values` columns.
+#' @param reference Data frame with at most one row per category x country x
+#'   year and the `values` columns. Units are not converted.
+#' @param values Character vector of parameter columns to transfer.
+#' @param category Character vector of category key columns (e.g.
+#'   `"FADN_code_letter"` or `"MMS"`), or `character()` for country-level
+#'   parameters.
+#' @param country,year Names of the ISO 3166-1 alpha-3 country and year
+#'   columns.
+#' @return `data` with the same rows (same order) and the `values` columns
+#'   added, in the units of `reference`. Values stay `NA` only when the
+#'   category has no non-missing value in `reference`.
+#' @noRd
+h_unfccc_fallback <- function(data, reference, values,
+                              category = character(),
+                              country = "Country_ISO_3166_1_A3",
+                              year = "YEAR") {
+  keys <- c(category, country, year)
+  ref <- reference |>
+    dplyr::select(dplyr::all_of(c(keys, values))) |>
+    dplyr::filter(dplyr::if_all(dplyr::all_of(keys), ~ !is.na(.x))) |>
+    dplyr::filter(dplyr::if_any(dplyr::all_of(values), ~ !is.na(.x)))
+  if (anyDuplicated(ref[keys]) > 0) {
+    stop("`reference` must have one row per ",
+         paste(keys, collapse = " x "), ".")
+  }
+
+  out <- dplyr::left_join(data, ref, by = keys)
+  fb_names <- paste0(".fb_", values)
+  for (by in list(c(category, country), category)) {
+    fill <- ref |>
+      dplyr::summarise(
+        dplyr::across(dplyr::all_of(values), h_weighted_mean_or_na),
+        .by = dplyr::all_of(by))
+    names(fill)[match(values, names(fill))] <- fb_names
+    out <- if (length(by) > 0) {
+      dplyr::left_join(out, fill, by = by)
+    } else {
+      dplyr::cross_join(out, fill)
+    }
+    for (i in seq_along(values)) {
+      out[[values[i]]] <- dplyr::coalesce(out[[values[i]]], out[[fb_names[i]]])
+    }
+    out <- out[setdiff(names(out), fb_names)]
+  }
+  out
+}
+
+#' Join UNFCCC share distributions with hierarchical fallbacks
+#'
+#' Expands each row of `data` into one row per component (e.g. manure
+#' management system) using the country-year distribution of `reference`.
+#' When the exact category x country x year distribution is missing, the
+#' mean distribution of the same category for the same country across its
+#' available years is used, then the mean distribution of the category across
+#' all countries and years. Mean distributions are computed as the sum of
+#' shares divided by the number of country-years, so that they still sum to 1.
+#'
+#' @param data Data frame containing the `category`, `country` and `year`
+#'   columns.
+#' @param reference Data frame with the `category`, `country`, `year`,
+#'   `component` and `share` columns. Shares are dimensionless fractions
+#'   summing to 1 within each category x country x year.
+#' @param share,component Names of the share and component columns.
+#' @param category Character vector of category key columns.
+#' @param country,year Names of the ISO 3166-1 alpha-3 country and year
+#'   columns.
+#' @return `data` expanded to one row per component with `component` and
+#'   `share` (dimensionless fraction) added. Rows without any reference
+#'   distribution are kept once with `NA` component and share.
+#' @noRd
+h_unfccc_fallback_shares <- function(data, reference, share, component,
+                                     category,
+                                     country = "Country_ISO_3166_1_A3",
+                                     year = "YEAR") {
+  ref <- reference |>
+    dplyr::select(dplyr::all_of(c(category, country, year, component, share))) |>
+    dplyr::filter(dplyr::if_all(dplyr::all_of(c(category, country, year, component)),
+                                ~ !is.na(.x))) |>
+    dplyr::filter(!is.na(.data[[share]]) & .data[[share]] > 0)
+
+  mean_shares <- function(by) {
+    ref |>
+      dplyr::mutate(
+        .n = dplyr::n_distinct(.data[[country]], .data[[year]]),
+        .by = dplyr::all_of(by)) |>
+      dplyr::summarise(
+        !!share := sum(.data[[share]]) / .n[1],
+        .by = dplyr::all_of(c(by, component)))
+  }
+  levels <- list(
+    list(ref = ref, by = c(category, country, year)),
+    list(ref = mean_shares(c(category, country)), by = c(category, country)),
+    list(ref = mean_shares(category), by = category)
+  )
+
+  rest <- data
+  rest$.fb_row <- seq_len(nrow(rest))
+  matched <- list()
+  for (lvl in levels) {
+    m <- if (length(lvl$by) > 0) {
+      dplyr::inner_join(rest, lvl$ref, by = lvl$by,
+                        relationship = "many-to-many")
+    } else {
+      dplyr::cross_join(rest, lvl$ref)
+    }
+    matched[[length(matched) + 1L]] <- m
+    rest <- rest[!rest$.fb_row %in% m$.fb_row, , drop = FALSE]
+  }
+
+  out <- dplyr::bind_rows(c(matched, list(rest)))
+  out <- out[order(out$.fb_row), , drop = FALSE]
+  out$.fb_row <- NULL
+  out
+}
+
+#' Country-year AWMS distribution by FADN livestock category
+#'
+#' @param table3Bas2 `UNFCCC_data$table3Bas2`, with `AWMS` in percent of the
+#'   UNFCCC animal category manure and `Population__size` in heads.
+#' @return A data frame with one row per `FADN_code_letter` x
+#'   `Country_ISO_3166_1_A3` x `YEAR` x `MMS` and `AWMS` as a dimensionless
+#'   fraction summing to 1 within each FADN category x country x year.
+#'   Several UNFCCC categories matched to one FADN category are weighted by
+#'   population (equal weights when population is missing).
+#' @noRd
+h_unfccc_awms_shares <- function(table3Bas2) {
+  table3Bas2 |>
+    dplyr::filter(!is.na(FADN_code_letter) & !is.na(AWMS) & AWMS > 0) |>
+    dplyr::mutate(
+      .w = if (any(!is.na(Population__size) & Population__size > 0)) {
+        dplyr::coalesce(Population__size, 0)
+      } else {
+        1
+      },
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3, YEAR)) |>
+    dplyr::mutate(pop_MMS = .w * AWMS / 100) |>
+    dplyr::mutate(
+      AWMS = pop_MMS / sum(pop_MMS, na.rm = TRUE),
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3, YEAR)) |>
+    dplyr::filter(!is.na(AWMS)) |>
+    dplyr::summarise(
+      AWMS = sum(AWMS),
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3, YEAR, MMS))
 }

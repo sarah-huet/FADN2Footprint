@@ -17,7 +17,7 @@ h_create_dictionary_template(
 \arguments{
 \item{output_path}{Character. File path for the output Excel workbook.}
 
-\item{raw_tables}{Named list of data frames — the raw national FADN tables.}
+\item{raw_tables}{Named list of data frames - the raw national FADN tables.}
 
 \item{id_cols}{Character vector. Column name(s) identifying individual farms
 (e.g., \code{c("IDENT")}). These columns are preserved as-is in the output

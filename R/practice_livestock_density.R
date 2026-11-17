@@ -8,9 +8,13 @@
 #'   cached GHGE results are ignored and computations are re-run.
 #' @returns a tibble
 #' @examples
-#' data(fadn_fict)
+#' data("mock_data", package = "FADN2Footprint")
+#' fadn_fict <- mock_data$fadn_fict[
+#'   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+#'   drop = FALSE
+#' ]
 #' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-#' livestock_density(object = fadn_fict_obj)
+#' f_livestock_density(object = fadn_fict_obj)
 #'
 #' @concept practice-herding
 #' @export

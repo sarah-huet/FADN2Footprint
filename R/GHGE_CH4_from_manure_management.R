@@ -31,7 +31,7 @@
 #'   \item \eqn{GE} = gross energy intake (MJ head\eqn{^{-1}} day\eqn{^{-1}})
 #'          (see \code{\link{f_herd_feed}})
 #'   \item \eqn{DE} = digestibility of feed (\%)  (see \code{\link{f_herd_feed}})
-#'   \item \eqn{UE_{GE}} = urinary energy as a dimensionless fraction 
+#'   \item \eqn{UE_{GE}} = urinary energy as a dimensionless fraction
 #'     is set to 0.04 by default (IPCC 2019, Eq. 10.24).
 #'     It is reduced to 0.02 for swine, or for any
 #'     livestock category whose concentrate feed share (dry matter basis)
@@ -91,7 +91,7 @@
 #'     against UNFCCC reported values are included as internal comments for
 #'     validation purposes.
 #' }
-#' @note 
+#' @note
 #' \itemize{
 #'   \item The urinary energy fraction \eqn{UE_{GE}} is currently hardcoded
 #'     to 0.02 for swine and 0.04 for all other livestock categories;
@@ -108,6 +108,7 @@
 #'   \item Country-specific Bo, VS, MCF, AWMS, and DE values are sourced from
 #'     UNFCCC national inventory submissions compiled in
 #'     \code{\link{UNFCCC_data}}.
+#' }
 #'
 #' @param object An object of class \code{\link{FADN2Footprint}}.
 #' @param overwrite Logical (default FALSE). If FALSE and cached results exist,
@@ -145,9 +146,9 @@
 #' \url{https://unfccc.int/ghg-inventories-annex-i-parties/2023}
 #'
 #' @seealso
-#' \code{\link{f_GHGE_ch4_enteric()}}, \code{\link{f_feed_onfarm()}},
-#' \code{\link{f_feed_offfarm()}}, \code{\link{GWP}},
-#' \code{\link{UNFCCC_data}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_GHGE_ch4_enteric}}, \code{\link{f_feed_onfarm}},
+#' \code{\link{f_feed_offfarm}}, \code{\link{GWP}},
+#' \code{\link{UNFCCC_data}}, \code{\linkS4class{FADN2Footprint}}
 #'
 #' @importFrom dplyr left_join filter select rename inner_join mutate group_by summarise across all_of bind_rows case_when join_by distinct
 #'
@@ -156,10 +157,7 @@
 #' @concept footprint-ghge
 #' @export
 
-
-f_GHGE_ch4_manure <- function(object,
-                            overwrite = F,
-                            ...){
+f_GHGE_ch4_manure <- function(object, overwrite = FALSE, ...) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -175,62 +173,88 @@ f_GHGE_ch4_manure <- function(object,
   # 1. Retrieve observed herd structure ---------------------------------------------------------------------------------
 
   herd_data <- object@herd |>
-    dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,species,Qobs) |>
-    # add IPCC and UNFCCC categories
-    dplyr::left_join(
-      data_extra$livestock |>
-        dplyr::select(FADN_code_letter,IPCC_mix_cat,UNFCCC_cat),
-      by = join_by(FADN_code_letter)
-    ) |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, species, Qobs) |>
     # add country ISO codes
     dplyr::left_join(
       data_extra$country_names |>
-        dplyr::select(country_FADN,Country_ISO_3166_1_A3) |>
+        dplyr::select(country_FADN, Country_ISO_3166_1_A3) |>
         dplyr::distinct(),
       by = dplyr::join_by(COUNTRY == country_FADN)
-      )
+    )
 
   # 2. Estimate livestock intake of feed (both produced and purchased) ---------------------------------------------------------------------------------
 
   # feed
-  feed_intake = f_herd_feed(object, overwrite = overwrite)
+  feed_intake <- f_herd_feed(object, overwrite = overwrite)
 
-# Extract total feed per animal category (current behavior)
-feed_intake_total = feed_intake$feed_intake$total |>
-  dplyr::select(-dplyr::matches("Qobs"))
+  # Extract total feed per animal category (current behavior)
+  feed_intake_total <- feed_intake$feed_intake$total |>
+    dplyr::select(-dplyr::matches("Qobs"))
 
-# Compute concentrate share from the DETAIL table (which retains feed_type)
-feed_concent_share <- feed_intake$feed_intake$detail |>
-  dplyr::summarise(
-    DM_t_anim_concent = sum(DM_t_anim[feed_type == "feed_concent"], na.rm = TRUE),
-    DM_t_anim_total = sum(DM_t_anim, na.rm = TRUE),
-    .by = c(dplyr::all_of(id_cols), FADN_code_letter, species)) |>
-  dplyr::mutate(
-    concentrate_share = DM_t_anim_concent / DM_t_anim_total
-  ) |>
-  dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, species, concentrate_share)
+  # Compute concentrate share from the DETAIL table (which retains feed_type)
+  feed_concent_share <- feed_intake$feed_intake$detail |>
+    dplyr::summarise(
+      DM_t_anim_concent = sum(
+        DM_t_anim[feed_type == "feed_concent"],
+        na.rm = TRUE
+      ),
+      DM_t_anim_total = sum(DM_t_anim, na.rm = TRUE),
+      .by = c(dplyr::all_of(id_cols), FADN_code_letter, species)
+    ) |>
+    dplyr::mutate(
+      concentrate_share = DM_t_anim_concent / DM_t_anim_total
+    ) |>
+    dplyr::select(
+      dplyr::all_of(id_cols),
+      FADN_code_letter,
+      species,
+      concentrate_share
+    )
 
-# Join concentrate share back to total feed intake
-feed_intake <- feed_intake_total |>
-  dplyr::left_join(feed_concent_share,
-                   by = c(id_cols, "FADN_code_letter", "species"))
+  # Join concentrate share back to total feed intake
+  feed_intake <- feed_intake_total |>
+    dplyr::left_join(
+      feed_concent_share,
+      by = c(id_cols, "FADN_code_letter", "species")
+    )
 
   # Number of climate regions by country ----
 
   # TODO: adapt for overseas territories and by climate regions
 
-  # which country-year combinations have more than one climate region?
-  UNFCCC_data$table3Bas2 |>
-    dplyr::filter(AWMS >0) |>
-    dplyr::summarise(
-      nb_climate_reg = length(unique(climate_region)),
-      .by = c(Country_ISO_3166_1_A3, YEAR)) |>
-    dplyr::filter(nb_climate_reg >1)
-  # for now, I use the climate region allocation in UNFCCC_MMS_Bo
+  # Some country-years report AWMS for more than one climate region; for now,
+  # MCF x AWMS products are summed across climate regions.
 
+  # UNFCCC country-specific references by FADN livestock category ----
+  ## Bo = maximum methane producing capacity, m3 CH4 kg-1 VS (population-weighted)
+  ref_Bo <- UNFCCC_data$table3Bas1 |>
+    dplyr::filter(!is.na(FADN_code_letter)) |>
+    dplyr::summarise(
+      Bo = h_weighted_mean_or_na(
+        `CH4_producing_potential_(Bo)(2)_(average)`,
+        Population__size
+      ),
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3, YEAR)
+    )
+
+  ## sum_MCF_AWMS = sum over MMS and climate regions of MCF (fraction) x AWMS
+  ## (fraction), dimensionless; population-weighted across UNFCCC categories
+  ref_MCF_AWMS <- UNFCCC_data$table3Bas2 |>
+    dplyr::filter(
+      !is.na(FADN_code_letter) & !is.na(MCF) & !is.na(AWMS) & AWMS > 0
+    ) |>
+    dplyr::summarise(
+      Population__size = dplyr::first(Population__size),
+      sum_MCF_AWMS = sum((MCF / 100) * (AWMS / 100)),
+      #sum_MCF_AWMS = sum(MCF * AWMS) / 100,
+      .by = c(Animal_cat, FADN_code_letter, Country_ISO_3166_1_A3, YEAR)
+    ) |>
+    dplyr::summarise(
+      sum_MCF_AWMS = h_weighted_mean_or_na(sum_MCF_AWMS, Population__size),
+      .by = c(FADN_code_letter, Country_ISO_3166_1_A3, YEAR)
+    )
 
   # IPCC 2019 Ref to 2006 Guidlines vol4 p10.127 ???
-
 
   # 3. Calculate the total CH4 emissions from manure management ---------------------------------------------------------------------------------
 
@@ -249,7 +273,8 @@ feed_intake <- feed_intake_total |>
     # add feed intake data
     dplyr::inner_join(
       feed_intake,
-      by = c(id_cols, "FADN_code_letter", 'species')) |>
+      by = c(id_cols, "FADN_code_letter", 'species')
+    ) |>
 
     # add UNFCCC country specific values for:
     ## Bo = maximum methane producing capacity for manure produced by livestock category T, m3 CH4 kg-1 of VS excreted
@@ -257,39 +282,22 @@ feed_intake <- feed_intake_total |>
     ## AWMS = fraction of livestock category T's manure handled using animal waste management system S in climate region k, dimensionless
     ## DE: digestibility of feed expressed as a fraction of gross energy (digestible energy/gross energy*100, i.e. DE%)
 
-    # VS and Bo
-    dplyr::left_join(
-      UNFCCC_data$table3Bas1 |>
-        #dplyr::filter(species == "cattle") |>
-        dplyr::summarise(
-          #VS = weighted.mean(`VS(2)_daily_excretion_(average)`, Population__size),
-          Bo = weighted.mean(`CH4_producing_potential_(Bo)(2)_(average)`, Population__size),
-          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)),
-      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3', 'YEAR')
+    # Bo, then sum of MCF weighted by AWMS, by FADN category, country and
+    # year; missing values fall back to the country mean across years, then
+    # to the mean of the FADN category across all countries and years.
+    h_unfccc_fallback(ref_Bo, values = "Bo", category = "FADN_code_letter") |>
+    h_unfccc_fallback(
+      ref_MCF_AWMS,
+      values = "sum_MCF_AWMS",
+      category = "FADN_code_letter"
     ) |>
-
-    # sum of MCF weighted by AWMS
-    ## MCF = methane conversion factors for each manure management system S by climate region k, percent
-    ## AWMS = fraction of livestock category T's manure handled using animal waste management system S in climate region k, dimensionless
-    dplyr::left_join(
-      UNFCCC_data$table3Bas2 |>
-        #dplyr::filter(species == "cattle") |>
-        dplyr::summarise(
-          Population__size = unique(Population__size),
-          sum_MCF_AWMS = sum(MCF/100 * AWMS/100, na.rm = T),
-          .by = c(Animal_cat, UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)) |>
-        dplyr::summarise(
-          sum_MCF_AWMS = weighted.mean(sum_MCF_AWMS, Population__size),
-          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)),
-      by = dplyr::join_by(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)) |>
 
     # estimate
     dplyr::mutate(
-
       # EQUATION 10.24 VOLATILE SOLID EXCRETION RATES
       ## VS = volatile solid excretion per day on a dry-organic matter basis, kg VS day-1
       ## GE = gross energy intake, MJ day-1
-      GE = GE_MJ_anim /365,
+      GE = GE_MJ_anim / 365,
       ## DE% = digestibility of the feed in percent (e.g. 60%)
       ## (UE •GE) = urinary energy expressed as fraction of GE. Typically 0.04GE can be considered urinary energy excretion by most ruminants (reduce to 0.02 for ruminants fed with 85 percent or more grain in the diet or for swine). Use country-specific values where available.
       UE_GE = dplyr::case_when(
@@ -298,9 +306,9 @@ feed_intake <- feed_intake_total |>
         TRUE ~ 0.04 * GE
       ),
       ## ASH = the ash content of feed calculated as a fraction of the dry matter feed intake (e.g., 0.06 for sows: Dämmgen et al. 2011). Use country-specific values where available.
-      ASH = Ash_p100/100,
+      ASH = Ash_p100 / 100,
       ## 18.45 = conversion factor for dietary GE per kg of dry matter (MJ kg-1). This value is relatively constant across a wide range of forage and grain-based feeds commonly consumed by livestock.
-      VS = (GE*(1-(DE_pc/100))+(UE_GE))*((1-ASH)/18.45),
+      VS = (GE * (1 - (DE_pc / 100)) + (UE_GE)) * ((1 - ASH) / 18.45),
 
       # EQUATION 10.23 CH4 EMISSION FACTOR FROM MANURE MANAGEMENT
       ## EF = annual CH4 emission factor for livestock category T, kg CH4 animal-1 yr-1
@@ -311,7 +319,7 @@ feed_intake <- feed_intake_total |>
       ## MCF = methane conversion factors for each manure management system S by climate region k, percent
       ## AWMS = fraction of livestock category T's manure handled using animal waste management system S in climate region k, dimensionless
 
-      EF = (VS*365) * (Bo* 0.67 * sum_MCF_AWMS),
+      EF = (VS * 365) * (Bo * 0.67 * sum_MCF_AWMS),
 
       # Total CH4 emission from manure management
       ## To estimate total emissions, the country specific emission factor is then multiplied by the population number (Step 1).
@@ -321,12 +329,7 @@ feed_intake <- feed_intake_total |>
 
       ### Conversion of CH4 to CO2 equivalents
       CH4_MM_kgCO2e_livcat = CH4_MM * GWP[["CH4"]]
-
     )
-
-
-
-
 
   # quality check => WIP pb avec sum_MCF_AWMS
   ## VS
@@ -347,18 +350,16 @@ feed_intake <- feed_intake_total |>
   ### EF Dairy cattle = 56.66 (kg CH4/head/yr)
   # quantile(tmp_cattle_CH4_MM$EF[tmp_cattle_CH4_MM$COUNTRY == 'DAN' & tmp_cattle_CH4_MM$IPCC_mix_cat == 'cows_milk_prod'])
 
-
-
-
-
   # Output ----
 
   CH4_MM <- tmp_CH4_MM |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols),
-                  FADN_code_letter,
-                  species,Qobs,
-                  CH4_MM_kgCO2e_livcat)
+    dplyr::select(
+      dplyr::all_of(object@traceability$id_cols),
+      FADN_code_letter,
+      species,
+      Qobs,
+      CH4_MM_kgCO2e_livcat
+    )
 
   return(CH4_MM)
-
 }

@@ -11,7 +11,11 @@
 #'   - th_feed_value: the theoretical feed value per crop and feed type
 #' 
 #' @examples
-#' data(fadn_fict)
+#' data("mock_data", package = "FADN2Footprint")
+#' fadn_fict <- mock_data$fadn_fict[
+#'   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+#'   drop = FALSE
+#' ]
 #' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
 #' f_feed_theo_ration(object = fadn_fict_obj)
 #'

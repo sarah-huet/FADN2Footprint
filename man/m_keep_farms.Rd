@@ -2,9 +2,12 @@
 % Please edit documentation in R/FADN2Footprint_methods.R
 \name{m_keep_farms}
 \alias{m_keep_farms}
+\alias{m_keep_farms,FADN2Footprint-method}
 \title{Keep (retain) only specific farms in a FADN2Footprint object}
 \usage{
 m_keep_farms(object, farms_to_keep)
+
+\S4method{m_keep_farms}{FADN2Footprint}(object, farms_to_keep)
 }
 \arguments{
 \item{object}{A \code{FADN2Footprint} object.}

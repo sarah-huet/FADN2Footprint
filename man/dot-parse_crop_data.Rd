@@ -15,8 +15,8 @@ wide format, with column names following the convention
 
 \item{farm_data}{A \code{\link[tibble]{tibble}} or
 \code{\link[base]{data.frame}} containing farm-level metadata, including
-at minimum the identifier columns (\code{id_cols}) and optionally
-\code{NUTS3} (département code for France) used for yield imputation.}
+at minimum the identifier columns (\code{id_cols}) and, for forage yield
+imputation, optionally \code{NUTS3} and/or \code{NUTS2} regional codes.}
 
 \item{id_cols}{A \code{character} vector of column names to be used as
 farm × year identifiers (e.g., \code{c("FADN_ID", "YEAR")}).}
@@ -29,11 +29,13 @@ farm × year × crop category, containing:
 \item{FADN_code_letter}{\code{character}. FADN crop category code.}
 \item{area_ha}{\code{numeric}. Utilised crop area (ha).}
 \item{prod_t}{\code{numeric}. Crop production quantity (t yr\eqn{^{-1}}),
-imputed from SAA Agreste yields where missing.}
+imputed from Copernicus-based forage yields (t DM yr\eqn{^{-1}}) where
+available.}
 \item{sales_t}{\code{numeric}. Crop sales quantity (t yr\eqn{^{-1}}),
 where available.}
-\item{yield}{\code{numeric}. Crop yield (t ha\eqn{^{-1}}), imputed from
-SAA Agreste reference yields where missing.}
+\item{yield}{\code{numeric}. Crop yield (t ha\eqn{^{-1}}); forage yields
+imputed from Copernicus-based references are in t DM ha\eqn{^{-1}}
+yr\eqn{^{-1}}.}
 \item{land_use_type}{\code{character}. Land use type
 (\code{"arable"}, \code{"grassland"}, etc.) from
 \code{data_extra$crops}.}
@@ -53,8 +55,8 @@ one row per farm × year × crop category. The function handles:
 \item Enrichment with crop metadata (land use type, species) from
 \code{\link{data_extra}}.
 \item Imputation of missing yields and production quantities for forage
-crops and grasslands using French official statistics (SAA Agreste
-2020), matched at NUTS3 (département) level.
+crops and grasslands using regional estimates based on Copernicus Dry
+Matter Production, matched by year and NUTS3 or NUTS2 region.
 }
 }
 \details{
@@ -87,20 +89,23 @@ Crop metadata (\code{land_use_type}, \code{species}) are joined from
 calculated.
 }
 
-\subsection{Step 4 — Reference Yields (SAA Agreste 2020)}{
+\subsection{Step 4 — Reference Yields (Copernicus Dry Matter Production)}{
 
-For forage crops and grasslands, production quantities are not recorded in
-the French FADN (RICA), as specified in the French \emph{Instruction de
-collecte}. Reference yields are derived from the French official
-agricultural statistics (SAA Agreste 2020, Chiffres définitifs, 11/2021),
-averaged by crop type and département (NUTS3). Département codes are
-harmonised, including overseas territories (DOM).
+Forage reference yields are read from
+\code{inst/ext_data/forage_yield/forage_yields_EU.xlsx}. The workbook
+provides annual estimates in tonnes of dry matter per hectare for four
+forage types at NUTS3 and NUTS2 levels. Matching uses the farm's NUTS3 code
+first and falls back to its NUTS2 code when a NUTS3 estimate is unavailable.
+FADN crop codes are mapped to green maize (\code{CFODMZ}), artificial grass
+(\code{CLEG}, \code{CFODOTH}), temporary grass (\code{CGRSTMP}), and
+permanent grass (\code{CGRSXRG}, \code{CRG}). The estimates cover
+2004--2024.
 }
 
 \subsection{Step 5 — Yield and Production Imputation}{
 
-Missing yields are imputed using SAA Agreste reference yields, matched by
-crop type and NUTS3 département. Missing production quantities are then
+Missing forage yields are imputed using the Copernicus-based reference yield
+for the crop type, region, and year. Missing production quantities are then
 derived as \eqn{prod_t = area\_ha \times yield}.
 }
 }
@@ -108,21 +113,23 @@ derived as \eqn{prod_t = area\_ha \times yield}.
 \itemize{
 \item Input area variables must be in \strong{hectares} and production
 variables in \strong{tonnes}. A message is issued as a reminder.
-\item The SAA Agreste yield imputation is currently calibrated for the
-French FADN (RICA). Adaptation for other national FADNs or the EU FADN
-is a planned development.
-\item Reference yields (\code{ref_yields}) are recomputed at each call.
-Pre-computation and storage in \code{sysdata.rda} is planned to
-improve performance.
+\item Copernicus-based reference yields are available for 2004--2024.
+Outside this period, or when no matching NUTS3/NUTS2 estimate exists,
+the parser continues to its existing FADN-average yield imputation.
+\item Only the listed crop codes with a corresponding workbook forage type
+receive Copernicus-based yields; other forage crops use the existing
+FADN-average fallback.
+\item The reference workbook is read at each call.
 }
 }
 \references{
-Agreste (2021). \emph{Statistiques agricoles annuelles 2020, Chiffres
-définitifs}. Ministère de l'Agriculture et de la Souveraineté alimentaire,
-Paris. \url{https://agreste.agriculture.gouv.fr}
+\emph{Regional forage yield estimates for Europe}. Copernicus Dry Matter
+Production-derived dataset, included as
+\code{inst/ext_data/forage_yield/forage_yields_EU.xlsx}; see the bundled
+working paper for methodology.
 }
 \seealso{
-\code{\link{.parse_farm_data}}, \code{\link{.parse_livestock_data}},
+\code{\link{.parse_farm_data}}, \code{\link{.parse_herd_data}},
 \code{\link{data_4FADN2Footprint}}, \code{\link{data_extra}}
 }
 \concept{data-preparation}

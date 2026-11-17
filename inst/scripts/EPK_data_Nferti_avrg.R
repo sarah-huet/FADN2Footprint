@@ -21,7 +21,7 @@ library(tidyverse)
  # mutate(NOM_DOSSIER = as.character(NOM_DOSSIER))
 # in this table : NOM_DOSSIER = id farm
 
-load("~/BiodivLabel/data_CASD/EPK_2017.RData")
+load(file.path("data_raw", "EPK_2017.RData"))
 
 # mean by crop & production mode
 

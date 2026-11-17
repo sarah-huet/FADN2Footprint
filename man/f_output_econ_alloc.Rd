@@ -125,9 +125,4 @@ Requirements and guidelines.
 Rules Guidance (PEFCR Guidance v6.3).
 }
 }
-\seealso{
-\code{\link{f_herd_output}} for herd output estimation,
-\code{\link{f_crop_output}} for crop output estimation,
-\code{\link{f_feed_intake}} for on-farm feed production estimation.
-}
 \concept{data-preparation}

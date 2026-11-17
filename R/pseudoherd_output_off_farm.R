@@ -42,11 +42,12 @@
 #' sales values are derived using the average value-to-number ratios
 #' (ratio_SS_V_N, ratio_SR_V_N).
 #'
-#' **5. Assign live weights:** average live weights (live_weight_kg) are
-#' derived per FADN_code_letter, species and country from
-#' `UNFCCC_data$table3As2`, based on `data_extra$livestock`'s UNFCCC_cat
-#' mapping. Missing country-specific weights are replaced by the
-#' FADN_code_letter-level mean.
+#' **5. Assign live weights:** average live weights (live_weight_kg, kg per
+#' head) are derived per FADN_code_letter, country and year from
+#' `UNFCCC_data$table3As2`, whose UNFCCC categories are mapped to
+#' FADN_code_letter when the data are built. Missing country-year weights are
+#' replaced by the mean of the same FADN_code_letter and country across years,
+#' then by the mean of the FADN_code_letter across all countries and years.
 #'
 #' **6. Build output tables:**
 #' - **Meat**: for each farm and livestock category, the number of animals
@@ -203,31 +204,13 @@ f_pseudoherd_output_off_farm <- function(object,
                 )
 
 
-                # Default animal weights
-                #UNFCCC_data$table3As2
-                livestock_weights <- data_extra$livestock |>
-                dplyr::filter(!is.na(UNFCCC_cat)) |>
-                dplyr::select(FADN_code_letter, UNFCCC_cat) |>
-                # add UNFCCC data
-                dplyr::left_join(
-                        UNFCCC_data$table3As2 |>
-                                dplyr::filter(!is.na(UNFCCC_cat)) |>
-                                dplyr::summarise(
-                                        live_weight_kg = mean(Weight, na.rm = TRUE),
-                                        .by = c(species, UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)
-                                ),
-                        by = 'UNFCCC_cat',
-                        relationship = "many-to-many"
-                ) |>
-                # estimate average per livestock category
-                dplyr::mutate(
-                        mean_live_weight_kg = mean(live_weight_kg, na.rm = TRUE),
-                        .by = FADN_code_letter
-                ) |>
-                # replace missing values by average
-                dplyr::mutate(
-                        live_weight_kg = dplyr::coalesce(live_weight_kg, mean_live_weight_kg)
-                )
+                # Default animal live weights (kg head-1) by FADN category, country and year
+                livestock_weights <- UNFCCC_data$table3As2 |>
+                        dplyr::filter(!is.na(FADN_code_letter)) |>
+                        dplyr::summarise(
+                                live_weight_kg = h_weighted_mean_or_na(Weight),
+                                .by = c(FADN_code_letter, Country_ISO_3166_1_A3, YEAR)
+                        )
 
 
 
@@ -240,10 +223,10 @@ f_pseudoherd_output_off_farm <- function(object,
                                               Country_ISO_3166_1_A3),
                         by = 'COUNTRY'
                 ) |>
-                # add animal live weights
-                dplyr::left_join(
-                        livestock_weights,
-                        by = c("FADN_code_letter", 'species', 'Country_ISO_3166_1_A3', 'YEAR')) |>
+                # add animal live weights (kg head-1); missing country-years fall
+                # back to the country mean across years, then to the FADN category mean
+                h_unfccc_fallback(livestock_weights, values = "live_weight_kg",
+                                  category = "FADN_code_letter") |>
                 # define output
                 dplyr::mutate(
                         # Categorize Output

@@ -25,7 +25,11 @@ Function to estimate theoretical rations of feed by livestock category
 \code{f_feed_theo_ration} Estimate the theoretical herd ration of the farm per livestock category and per crop using the total amount of dry matter per livestock category in AROPAJ and the total dry matter per crop in Sailley.
 }
 \examples{
-data(fadn_fict)
+data("mock_data", package = "FADN2Footprint")
+fadn_fict <- mock_data$fadn_fict[
+  which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+  drop = FALSE
+]
 fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
 f_feed_theo_ration(object = fadn_fict_obj)
 

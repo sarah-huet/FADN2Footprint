@@ -70,6 +70,6 @@ too much, sufficient).
 }
 }
 \references{
-EPK: Ministère De L’Agriculture - SSP, 2019. Pratiques culturales sur les grandes cultures - 2017. https://doi.org/10.34724/CASD.56.3033.V1
+EPK: Ministère De L’Agriculture - SSP, 2019. Pratiques culturales sur les grandes cultures - 2017. \doi{10.34724/CASD.56.3033.V1}
 }
 \concept{practice-crop}

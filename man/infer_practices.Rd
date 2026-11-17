@@ -14,6 +14,10 @@ infer_practices(object, overwrite = FALSE, account_pseudoherd = TRUE, ...)
 the function returns
 the cached object and no recomputation is performed. If TRUE, existing
 cached GHGE results are ignored and computations are re-run.}
+
+\item{account_pseudoherd}{Logical. Whether to compute pseudo-herd practices.}
+
+\item{...}{Additional arguments reserved for future extensions.}
 }
 \value{
 a tibble
@@ -23,7 +27,11 @@ Function to estimate agricultural practices based on FADN data
 \code{infer_practices} Create a tibble with 4 variables: 'farm_id', 'land_use_type', 'crop', 'A.4.3'
 }
 \examples{
-data(fadn_fict)
+data("mock_data", package = "FADN2Footprint")
+fadn_fict <- mock_data$fadn_fict[
+  which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
+  drop = FALSE
+]
 fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
 infer_practices(object = fadn_fict_obj)
 

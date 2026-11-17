@@ -111,8 +111,8 @@ UNFCCC (2023). \emph{National Inventory Submissions 2023}.
 \url{https://unfccc.int/ghg-inventories-annex-i-parties/2023}
 }
 \seealso{
-\code{\link{GHGE_elec}}, \code{\link{f_GHGE_crops}},
+\code{\link{f_GHGE_elec}}, \code{\link{f_GHGE_crops}},
 \code{\link{UNFCCC_data}}, \code{\link{infer_practices}},
-\code{\link{FADN2Footprint-class}}
+\code{\linkS4class{FADN2Footprint}}
 }
 \concept{footprint-ghge}

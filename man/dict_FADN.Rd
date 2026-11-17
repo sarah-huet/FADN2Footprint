@@ -64,8 +64,8 @@ Since source datasets differ across countries, years, and extract formats, \code
 \subsection{Typical workflow}{
 
 \enumerate{
-\item Extract a template of the dictionary using \code{\link{get_dictionary_template}}.
-This ensures you are working with the correct structure.
+\item Use the packaged \code{\link{dict_FADN}} dataset as a reference for
+internal variable names and descriptions.
 
 \item Fill the \code{var_user} column with your dataset's column names for the corresponding variables.
 \emph{Tip: Filter for \code{needed_in_FADN2Footprint == TRUE} to prioritize essential mappings.}
@@ -107,7 +107,8 @@ to the area variable name \code{SUPER3}. The same approach is implemented for th
 \examples{
 \dontrun{
 ## 1) Get the template dictionary shipped with the package
-dict_tpl <- FADN2Footprint::get_dictionary_template()
+data("dict_FADN", package = "FADN2Footprint")
+dict_tpl <- dict_FADN
 
 ## 2) Fill `var_user` with your dataset's column names
 ## Option 1: manual fill in R (example only: replace right-hand side with your real column names)

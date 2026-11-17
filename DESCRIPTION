@@ -1,6 +1,6 @@
 Package: FADN2Footprint
 Type: Package
-Title: Infer agricultural practices and compute environmental footprints from FADN data
+Title: Infer Agricultural Practices and Compute Environmental Footprints from FADN Data
 Version: 1.1.1
 Authors@R: c(person("Sarah", "Huet",
                     email = "huetsarah49@live.fr",
@@ -11,7 +11,7 @@ Authors@R: c(person("Sarah", "Huet",
                     comment = c(ORCID = "0000-0001-8581-2814"),
                     role = c("aut")),
              person("INRAE", role = "cph"))
-URL: https://sarah-huet.github.io/FADN2Footprint/, https://github.com/sarah-huet/FADN2Footprint
+URL: https://github.com/sarah-huet/FADN2Footprint
 BugReports: https://github.com/sarah-huet/FADN2Footprint/issues
 Description: Infers agricultural practices and computes environmental footprints
     from Farm Accountancy Data Network (FADN) data.
@@ -22,51 +22,51 @@ Description: Infers agricultural practices and computes environmental footprints
     feed composition tables, and parameters from national greenhouse gas
     inventories or Intergovernmental Panel on Climate Change (IPCC) guidelines.
     Following a life cycle assessment approach (scope 3), it derives farm practices
-    (fertilizer use, pesticides, tillage, crop diversity, hedge density, 
+    (fertilizer use, pesticides, tillage, crop diversity, hedge density,
     field size, ground cover, livestock density, feed intake,
     rearing parameters, manure management, animal weight) and estimates
-    environmental footprints (greenhouse gas emissions, biodiversity
-    impact, water consumption and pollution). Results
+    environmental footprints (greenhouse gas emissions and biodiversity
+    impact). Results
     are estimated at farm, activity, and product level.
-License: GPL (>= 3)
+License: CC BY-NC-SA 4.0 + file LICENSE
 Encoding: UTF-8
 LazyData: true
+LazyDataCompression: xz
 Imports: 
     dplyr,
-    flextable,
-    ggplot2,
-    gt,
-    kableExtra,
+    mgcv,
     methods,
-    officer,
     openxlsx,
-    patchwork,
-    pkgdown,
     purrr,
     readxl,
-    renv,
-    rlang,rmarkdown,
-    scales,
+    rlang,
     stats,
     stringr,
     tibble,
     tidyr,
     tidyselect,
-    tidyverse,
-    usethis,
-    utils,
-    zip
+    utils
 Suggests:
     devtools,
+    flextable,
+    ggplot2,
+    gt,
     knitr,
-    rmarkdown,
+    kableExtra,
+    officer,
+    patchwork,
+    pkgdown,
+    renv,
+    scales,
+    tidyverse,
+    usethis,
+    zip,
     bookdown,
     testthat (>= 3.0.0)
 Collate: 
     'BVIAS_crops.R'
     'BVIAS_data.R'
     'BVIAS_feed.R'
-    'BVIAS_feed_pseudoherd.R'
     'BVIAS_herd_products.R'
     'FADN2Footprint-package.R'
     'FADN2Footprint_constructor.R'
@@ -123,7 +123,6 @@ Collate:
     'practice_tillage.R'
     'pseudoherd_animals.R'
     'pseudoherd_cattle.R'
-    'pseudoherd_goat.R'
     'pseudoherd_output_off_farm.R'
     'pseudoherd_poultry.R'
     'pseudoherd_sheep.R'
@@ -134,5 +133,5 @@ Config/roxygen2/version: 8.0.0
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
 Depends: 
-    R (>= 3.5)
+    R (>= 4.1.0)
 Config/testthat/edition: 3

@@ -16,7 +16,8 @@ editor_options:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment  = "#>",
-  eval     = FALSE
+  eval     = FALSE,
+  purl     = FALSE
 )
 library(FADN2Footprint)
 library(dplyr)
@@ -328,8 +329,6 @@ grassland management), are not yet included in the current implementation.
 
 ```{r GHGE_results_wheat_ha, fig.cap="Distribution and decomposition of wheat GHGE estimated by FADN2Footprint (2016–2018)."}
 
-#load("C:/Users/srhuet/OneDrive/Research/GitHub/Organic_prod_in_Europe/data_raw/FADN_16_18_GHGE.RData")
-
 
 # ── 1. Extract wheat GHGE ──────────────────────────────────────────────────────
 
@@ -374,9 +373,9 @@ ggplot(wheat_total ) +
   geom_histogram(bins = 30L, fill = "#112446") +
   facet_wrap(vars(COUNTRY)) +
   labs(
-    title    = "Wheat – Distribution of total GHGE (kg CO2e ha\u207b\u00b9)",
+    title    = "Wheat - Distribution of total GHGE (kg CO2e/ha)",
     subtitle = "Farms above the 95th percentile not displayed",
-    x        = "kg CO2e ha\u207b\u00b9",
+    x        = "kg CO2e/ha",
     y        = "Number of observation (farm x year)"
   ) +
   theme_minimal(base_size = 12)
@@ -386,9 +385,9 @@ ggplot(wheat_total ) +
   geom_boxplot(fill = "#2c7bb6", alpha = 0.7) +
   coord_flip() +
   labs(
-    title = "Wheat – GHGE by country (kg CO2e ha\u207b\u00b9)",
+    title = "Wheat - GHGE by country (kg CO2e/ha)",
     x     = NULL,
-    y     = "kg CO2e ha\u207b\u00b9"
+    y     = "kg CO2e/ha"
   ) +
   theme_minimal(base_size = 12)
 
@@ -398,9 +397,9 @@ ggplot(wheat_total ) +
   geom_histogram(bins = 30L, fill = "#112446") +
   facet_wrap(vars(COUNTRY)) +
   labs(
-    title    = "Wheat – Distribution of total GHGE (kg CO2e t\u207b\u00b9)",
+    title    = "Wheat - Distribution of total GHGE (kg CO2e/t)",
     subtitle = "Farms above the 95th percentile excluded",
-    x        = "kg CO2e t\u207b\u00b9",
+    x        = "kg CO2e/t",
     y        = "Number of observation (farm x year)"
   ) +
   theme_minimal(base_size = 12)
@@ -410,9 +409,9 @@ ggplot(wheat_total ) +
   geom_boxplot(fill = "#2c7bb6", alpha = 0.7) +
   coord_flip() +
   labs(
-    title = "Wheat – GHGE by country (kg CO2e t\u207b\u00b9)",
+    title = "Wheat - GHGE by country (kg CO2e/t)",
     x     = NULL,
-    y     = "kg CO2e t\u207b\u00b9"
+    y     = "kg CO2e/t"
   ) +
   theme_minimal(base_size = 12)
 
@@ -444,9 +443,9 @@ ggplot(wheat_compo_summary ) +
   coord_flip() +
   scale_fill_brewer(palette = "Set2") +
   labs(
-    title = "Wheat \u2013 Mean GHGE by component and country (kg CO2e ha\u207b\u00b9)",
+    title = "Wheat - Mean GHGE by component and country (kg CO2e/ha)",
     x     = NULL,
-    y     = "kg CO2e ha\u207b\u00b9",
+    y     = "kg CO2e/ha",
     fill  = "Component"
   ) +
   theme_minimal(base_size = 12) +
@@ -481,9 +480,9 @@ ggplot(wheat_compo_summary ) +
   coord_flip() +
   scale_fill_brewer(palette = "Set2") +
   labs(
-    title = "Wheat \u2013 Mean GHGE by component and country (kg CO2e t\u207b\u00b9)",
+    title = "Wheat - Mean GHGE by component and country (kg CO2e/t)",
     x     = NULL,
-    y     = "kg CO2e t\u207b\u00b9",
+    y     = "kg CO2e/t",
     fill  = "Component"
   ) +
   theme_minimal(base_size = 12) +
@@ -495,10 +494,10 @@ ggplot(wheat_compo_summary ) +
 #XX this table contains many NaNs and NAs
 wheat_compo_summary  |>
   dplyr::mutate(
-    `Mean ± SD (kg CO2e t⁻¹)` = sprintf("%.1f ± %.1f", kgCO2e_per_t_mean, kgCO2e_per_t_sd)
+    `Mean +/- SD (kg CO2e/t)` = sprintf("%.1f +/- %.1f", kgCO2e_per_t_mean, kgCO2e_per_t_sd)
   ) |>
-  dplyr::select(COUNTRY, component, `Mean ± SD (kg CO2e t⁻¹)`) |>
-  tidyr::pivot_wider(names_from = COUNTRY, values_from = `Mean ± SD (kg CO2e t⁻¹)`) |>
+  dplyr::select(COUNTRY, component, `Mean +/- SD (kg CO2e/t)`) |>
+  tidyr::pivot_wider(names_from = COUNTRY, values_from = `Mean +/- SD (kg CO2e/t)`) |>
   kable(caption = "Wheat GHGE by component and country (FADN2Footprint estimate)") |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
 ```
@@ -548,9 +547,9 @@ ggplot(wheat_total ) +
   geom_histogram(bins = 30L, fill = "#112446") +
   facet_wrap(vars(COUNTRY)) +
   labs(
-    title    = "Wheat – Distribution of total GHGE (kg CO2e t\u207b\u00b9)",
+    title    = "Wheat - Distribution of total GHGE (kg CO2e/t)",
     subtitle = "Farms above the 95th percentile excluded",
-    x        = "kg CO2e t\u207b\u00b9",
+    x        = "kg CO2e/t",
     y        = "Number of observation (farm x year)"
   ) +
   theme_minimal(base_size = 12)
@@ -560,9 +559,9 @@ ggplot(wheat_total ) +
   geom_boxplot(fill = "#2c7bb6", alpha = 0.7) +
   coord_flip() +
   labs(
-    title = "Wheat – GHGE by country (kg CO2e t\u207b\u00b9)",
+    title = "Wheat - GHGE by country (kg CO2e/t)",
     x     = NULL,
-    y     = "kg CO2e t\u207b\u00b9"
+    y     = "kg CO2e/t"
   ) +
   theme_minimal(base_size = 12)
 
@@ -594,9 +593,9 @@ ggplot(wheat_compo_summary ) +
   coord_flip() +
   scale_fill_brewer(palette = "Set2") +
   labs(
-    title = "Wheat \u2013 Mean GHGE by component and country (kg CO2e t\u207b\u00b9)",
+    title = "Wheat - Mean GHGE by component and country (kg CO2e/t)",
     x     = NULL,
-    y     = "kg CO2e t\u207b\u00b9",
+    y     = "kg CO2e/t",
     fill  = "Component"
   ) +
   theme_minimal(base_size = 12) +
@@ -607,10 +606,10 @@ ggplot(wheat_compo_summary ) +
 # ── 5. Summary table ───────────────────────────────────────────────────────────
 wheat_compo_summary  |>
   dplyr::mutate(
-    `Mean ± SD (kg CO2e t⁻¹)` = sprintf("%.1f ± %.1f", kgCO2e_per_t_mean, kgCO2e_per_t_sd)
+    `Mean +/- SD (kg CO2e/t)` = sprintf("%.1f +/- %.1f", kgCO2e_per_t_mean, kgCO2e_per_t_sd)
   ) |>
-  dplyr::select(COUNTRY, component, `Mean ± SD (kg CO2e t⁻¹)`) |>
-  tidyr::pivot_wider(names_from = COUNTRY, values_from = `Mean ± SD (kg CO2e t⁻¹)`) |>
+  dplyr::select(COUNTRY, component, `Mean +/- SD (kg CO2e/t)`) |>
+  tidyr::pivot_wider(names_from = COUNTRY, values_from = `Mean +/- SD (kg CO2e/t)`) |>
   kable(caption = "Wheat GHGE by component and country (FADN2Footprint estimate)") |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
 ```

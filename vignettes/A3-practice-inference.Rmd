@@ -16,7 +16,8 @@ editor_options:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment  = "#>",
-  eval     = FALSE
+  eval     = FALSE,
+  purl     = FALSE
 )
 library(FADN2Footprint)
 library(dplyr)
@@ -76,14 +77,6 @@ my_object = FADN2Footprint::data_4FADN2Footprint(
 
 # Infer the practices
 my_object_w_practices <- FADN2Footprint::infer_practices(my_object)
-
-```
-
-```{r tmp}
-
-load("C:/Users/srhuet/OneDrive/Research/GitHub/Organic_prod_in_Europe/data_raw/FADN_16_18_object_w_practices.RData")
-
-my_object_w_practices = FADN_16_18_GHGE
 
 ```
 
@@ -199,12 +192,18 @@ mineral pesticides.
 
 Yield in FADN2Footprint are obtained directly from FADN when both crop
 area and production are registered. When FADN production is missing, we
-impute default average yields. For forage/grass, where FADN often
-records area but not production, we impute yields from external
-reference data (French forage yields aggregated by crop type and NUTS3;
-Agreste SAA 2020; `data_extra$yield_SAA_Agreste_2020`), joined at a
-NUTS3 level (when available, at country level when not) and used to
-infer the missing production. For missing production of others crops, we
+impute default average yields. For forage crops and grasslands, where
+FADN often records area but not production, we use annual reference
+yields from the Copernicus Dry Matter Production (DMP)-based dataset in
+`inst/ext_data/forage_yield/forage_yields_EU.xlsx`. It provides yields
+for green maize, artificial grass, temporary grass, and permanent grass
+in t DM/ha/year at NUTS3 and NUTS2 levels from 2004 to 2024. The parser
+maps the relevant FADN crop codes to these four types and matches by
+farm year and NUTS3 region, falling back to NUTS2 when a NUTS3 estimate
+is unavailable. Missing production is calculated as crop area multiplied
+by the imputed yield; observed yields and production are retained. If no
+regional reference is available, the existing FADN-average yield
+imputation is used. For missing production of other crops, we
 impute the user data set average of the same crop at the NUTS2 level if
 available, or at the whole data set level otherwise. For some crops
 where FADN record no production, we impute average of similar crops
@@ -260,6 +259,10 @@ library(ggplot2)
 library(dplyr)
 library(patchwork) # For combining the plots
 library(scales)
+
+my_data <- my_object@crop |>
+  dplyr::filter(FADN_code_letter %in% c("CGRSXRG", "CRG", "CGRSTMP")) |>
+  dplyr::select(COUNTRY, area_ha, yield)
 
 # --- 1. Grassland Area per Farm by Country ---
 # We use a log10 scale because FADN farm areas are highly skewed
@@ -355,9 +358,11 @@ both on-farm (i.e., farm-grown) and off-farm (i.e., purchased) feed to
 form a "pseudo-farm".
 
 On-farm produced feed quantity is calculated as the recorded crop
-production minus sales, with grass yield - not provided in FADN -
-assumed equal to the NUTS2 average (Agreste, 2020). This net available
-on-farm biomass is then allocated to the farm's livestock categories
+production minus sales. Where FADN records forage area but not
+production, the forage yield is imputed using annual Copernicus
+DMP-based estimates for the corresponding crop type and region (see
+Yield above). This net available on-farm biomass is then allocated to
+the farm's livestock categories
 proportional to their theoretical dry matter requirements for each crop.
 
 Purchased feed quantity is estimated based on FADN expenditures

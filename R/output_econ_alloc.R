@@ -90,11 +90,6 @@
 #'   \item \code{"farm"}: all other herd outputs.
 #' }
 #'
-#' @seealso
-#' \code{\link{f_herd_output}} for herd output estimation,
-#' \code{\link{f_crop_output}} for crop output estimation,
-#' \code{\link{f_feed_intake}} for on-farm feed production estimation.
-#'
 #' @references
 #' \itemize{
 #'   \item ISO 14044:2006. Environmental management — Life cycle assessment —

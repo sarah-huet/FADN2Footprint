@@ -141,8 +141,8 @@ Ngarize, S., Osako, A., Pyrozhenko, Y., Shermanau, P. and Federici, S. (eds).
 IPCC, Switzerland.
 }
 \seealso{
-\code{\link{f_GHGE_n2o_msoils()}}, \code{\link{f_GHGE_ferti_prod()}},
-\code{\link{f_GHGE_fuels()}}, \code{\link{f_GHGE_elec()}},
-\code{\link{f_GHGE_herd()}}, \code{\link{FADN2Footprint-class}}
+\code{\link{f_GHGE_n2o_msoils}}, \code{\link{f_GHGE_ferti_prod}},
+\code{\link{f_GHGE_fuels}}, \code{\link{f_GHGE_elec}},
+\code{\link{f_GHGE_herd}}, \code{\linkS4class{FADN2Footprint}}
 }
 \concept{footprint-ghge}

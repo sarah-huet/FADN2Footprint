@@ -167,6 +167,13 @@ f_herding_practices <- function(object,
                        names_from = feed_origin,
                        names_prefix = "area_")
 
+  for (feed_origin in c("feed_produced", "feed_purchased")) {
+    area_column <- paste0("area_", feed_origin)
+    if (!area_column %in% names(tmp_areas)) {
+      tmp_areas[[area_column]] <- numeric(nrow(tmp_areas))
+    }
+  }
+
   # Permanent grassland ----
   tmp_perm_grass <- herd_feed$feed_intake$detail |>
     # filter permanent grasslands
@@ -252,7 +259,18 @@ f_herding_practices <- function(object,
       #id_cols = c(dplyr::all_of(id_cols)),
       values_from = feed_t,
       names_from = feed_origin,
-      names_prefix = "t_DM_",values_fill = 0) |>
+      names_prefix = "t_DM_",values_fill = 0
+    )
+
+  for (feed_origin in c("feed_produced", "feed_purchased")) {
+    feed_column <- paste0("t_DM_", feed_origin)
+    if (!feed_column %in% names(tmp_sum_t_DM_feed_origin)) {
+      tmp_sum_t_DM_feed_origin[[feed_column]] <-
+        numeric(nrow(tmp_sum_t_DM_feed_origin))
+    }
+  }
+
+  tmp_sum_t_DM_feed_origin <- tmp_sum_t_DM_feed_origin |>
     dplyr::mutate(
       total_t_DM = t_DM_feed_produced + t_DM_feed_purchased
     )

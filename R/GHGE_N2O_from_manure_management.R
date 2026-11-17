@@ -92,6 +92,9 @@
 #'   the function returns
 #'   the cached object and no recomputation is performed. If TRUE, existing
 #'   cached GHGE results are ignored and computations are re-run.
+#' @param return_components Logical (default FALSE). If TRUE, return emissions
+#'   and diagnostic calculation tables; N quantities are in kg N/year, raw N2O
+#'   emissions in kg N2O/year, and CO2-equivalent emissions in kg CO2-eq/year.
 #' @param ... Additional arguments.
 #'
 #' @return A \code{\link[tibble]{tibble}} with one row per farm observation ×
@@ -113,6 +116,8 @@
 #'     nitrogen leaching and runoff (kg CO2-eq yr\eqn{^{-1}}), from IPCC
 #'     Eqs. 10.27 & 10.29.}
 #' }
+#' With \code{return_components = TRUE}, returns a list named \code{emissions},
+#' \code{direct}, \code{volatilisation}, and \code{leaching}, instead of the tibble.
 #'
 #' @references
 #' IPCC (2006). \emph{2006 IPCC Guidelines for National Greenhouse Gas
@@ -129,9 +134,9 @@
 #' (eds). IPCC, Switzerland.
 #'
 #' @seealso
-#' \code{\link{f_n_excr()}}, \code{\link{GHGE_ch4_manure()}},
-#' \code{\link{f_GHGE_n2o_msoils()}}, \code{\link{UNFCCC_data}},
-#' \code{\link{GWP}}, \code{\link{FADN2Footprint-class}}
+#' \code{\link{f_n_excr}}, \code{\link{f_GHGE_ch4_manure}},
+#' \code{\link{f_GHGE_n2o_msoils}}, \code{\link{UNFCCC_data}},
+#' \code{\link{GWP}}, \code{\linkS4class{FADN2Footprint}}
 #'
 #' @importFrom dplyr select left_join filter mutate summarise group_by across all_of case_when join_by distinct summarise
 #' @importFrom tidyr separate_longer_delim
@@ -139,15 +144,17 @@
 #' @concept footprint-ghge
 #' @export
 
-
-f_GHGE_n2o_manure <- function(object,
-                              overwrite = FALSE,
-                              ...){
+f_GHGE_n2o_manure <- function(
+  object,
+  overwrite = FALSE,
+  return_components = FALSE,
+  ...
+) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
-  id_cols = object@traceability$id_cols
+  id_cols <- object@traceability$id_cols
   ## Steps:
   ## 1. Retrieve observed herd structure
   ## 2. Estimate livestock N excretion
@@ -157,24 +164,33 @@ f_GHGE_n2o_manure <- function(object,
   # 1. Retrieve observed herd structure ---------------------------------------------------------------------------------
 
   herd_data <- object@herd |>
-    dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,species,Qobs) |>
-    # add IPCC and UNFCCC categories
-    dplyr::left_join(
-      data_extra$livestock |>
-        dplyr::select(FADN_code_letter,IPCC_mix_cat,UNFCCC_cat),
-      by = join_by(FADN_code_letter)
-    ) |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, species, Qobs) |>
     # add country ISO codes
     dplyr::left_join(
       data_extra$country_names |>
-        dplyr::select(country_FADN,Country_ISO_3166_1_A3) |>
+        dplyr::select(country_FADN, Country_ISO_3166_1_A3) |>
         dplyr::distinct(),
       by = dplyr::join_by(COUNTRY == country_FADN)
     )
 
+  ## AWMS = fraction of the FADN livestock category's manure N handled in each
+  ## manure management system (dimensionless, sums to 1 per category x country
+  ## x year). Missing country-years fall back to the country mean across
+  ## years, then to the category mean across all countries and years.
+  awms_ref <- h_unfccc_awms_shares(UNFCCC_data$table3Bas2)
+  add_awms <- function(data) {
+    h_unfccc_fallback_shares(
+      data,
+      awms_ref,
+      share = "AWMS",
+      component = "MMS",
+      category = "FADN_code_letter"
+    )
+  }
+
   # 2. Estimate livestock N excretion ---------------------------------------------------------------------------------
 
-  N_excr = f_n_excr(object, overwrite = overwrite)
+  N_excr <- f_n_excr(object, overwrite = overwrite)
 
   common_cols <- Reduce(intersect, lapply(N_excr, names))
 
@@ -182,7 +198,6 @@ f_GHGE_n2o_manure <- function(object,
     df[, common_cols, drop = FALSE]
   }) |>
     dplyr::bind_rows(.id = "species")
-
 
   # 3. Calculate the total N2O emissions from manure management ---------------------------------------------------------------------------------
 
@@ -202,42 +217,29 @@ f_GHGE_n2o_manure <- function(object,
     # add livestock N excretion
     dplyr::left_join(
       N_excr_tbl |>
-        dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,Nex_kgN_anim_y),
-      by = c(id_cols, "FADN_code_letter")) |>
+        dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, Nex_kgN_anim_y),
+      by = c(id_cols, "FADN_code_letter")
+    ) |>
 
     # add UNFCCC country specific values for:
 
     ## AWMS = fraction of livestock category T's manure handled using animal waste management system S in climate region k, dimensionless
-    dplyr::left_join(
-      UNFCCC_data$table3Bas2 |>
-        dplyr::filter(!is.na(UNFCCC_cat) & AWMS >0) |>
-        # population per MMS
-        dplyr::mutate(
-          pop_MMS = Population__size*AWMS/100
-        ) |>
-        # proportion by country and matching category
-        dplyr::mutate(
-          AWMS = pop_MMS/sum(pop_MMS,na.rm = T),
-          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)
-        ) |>
-        dplyr::summarise(AWMS = sum(AWMS, na.rm = T),
-                         .by = c(Country_ISO_3166_1_A3, YEAR, UNFCCC_cat, MMS)),
-      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3', 'YEAR'),
-      relationship = "many-to-many") |>
+    add_awms() |>
 
     ## EF3
     ### EF3_S = emission factor for direct N2O emissions from manure management system S in the country, kg N2O-N/kg N in manure management system S
-    dplyr::left_join(
-      UNFCCC_data$table3Bb |>
-        dplyr::filter(!is.na(EF3)) |>
-        dplyr::select(MMS, EF3, Country_ISO_3166_1_A3, YEAR),
-      by = c('MMS', 'Country_ISO_3166_1_A3', 'YEAR'),
-      relationship = "many-to-many"
-    ) |>
+    ### Missing country-year values fall back to the country mean across
+    ### years, then to the MMS mean across countries; IPCC defaults come last.
+    h_unfccc_fallback(UNFCCC_data$table3Bb, values = "EF3", category = "MMS") |>
     h_resolve_manure_ef3() |>
 
     # Estimate direct N2O emission from MM per livestock category
-    dplyr::group_by(dplyr::across(dplyr::all_of(id_cols)),species,FADN_code_letter,Qobs) |>
+    dplyr::group_by(
+      dplyr::across(dplyr::all_of(id_cols)),
+      species,
+      FADN_code_letter,
+      Qobs
+    ) |>
     dplyr::summarise(
       # EQUATION 10.25 (UPDATED) DIRECT N2O EMISSIONS FROM MANURE MANAGEMENT
       ## N2O_D_mm = direct N2O emissions from Manure Management in the country, kg N2O yr-1
@@ -246,15 +248,15 @@ f_GHGE_n2o_manure <- function(object,
       ### here, we already have total N excretion per livestock category
       ## AWMS_{(T,S)} = fraction of total annual nitrogen excretion for each livestock species/category T that is managed in manure management system S in the country, dimensionless
       N2O_D_MM = sum(
-        Nex_kgN_anim_y*Qobs*AWMS*EF3*(44/28),
-        na.rm = T),
+        Nex_kgN_anim_y * Qobs * AWMS * EF3 * (44 / 28),
+        na.rm = T
+      ),
       .groups = "drop"
     ) |>
     dplyr::mutate(
       ### Conversion of N20 to CO2 equivalents
       N2O_D_MM_kgCO2e_livcat = N2O_D_MM * GWP[["N20"]]
     )
-
 
   ## Indirect N2O from manure management - Volatilization ----
 
@@ -266,27 +268,13 @@ f_GHGE_n2o_manure <- function(object,
     dplyr::left_join(
       N_excr_tbl |>
         dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, Nex_kgN_anim_y),
-      by = c(id_cols, "FADN_code_letter")) |>
+      by = c(id_cols, "FADN_code_letter")
+    ) |>
 
     # add UNFCCC country specific values for:
 
     ## AWMS = fraction of livestock category T's manure handled using animal waste management system S in climate region k, dimensionless
-    dplyr::left_join(
-      UNFCCC_data$table3Bas2 |>
-        dplyr::filter(!is.na(UNFCCC_cat) & AWMS >0) |>
-        # population per MMS
-        dplyr::mutate(
-          pop_MMS = Population__size*AWMS/100
-        ) |>
-        # proportion by country and matching category
-        dplyr::mutate(
-          AWMS = pop_MMS/sum(pop_MMS,na.rm = T),
-          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)
-        ) |>
-        dplyr::summarise(AWMS = sum(AWMS, na.rm = T),
-                         .by = c(Country_ISO_3166_1_A3, YEAR, UNFCCC_cat, MMS)),
-      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3', 'YEAR'),
-      relationship = "many-to-many") |>
+    add_awms() |>
 
     ## add IPCC default values for country-specific missing parameters:
     ## Frac_{gasMS(T,S)} = fraction of managed manure nitrogen for livestock category T that volatilises as NH3 and NOx in the manure management system S (from Table 10.22)
@@ -297,7 +285,7 @@ f_GHGE_n2o_manure <- function(object,
       condition_species = dplyr::case_when(
         FADN_code_letter == "LCOWDAIR" ~ "dairy_cattle",
         species == "cattle" ~ "other_cattle",
-        species %in% c("swine","poultry") ~ species,
+        species %in% c("swine", "poultry") ~ species,
         .default = "other_animals"
       )
     ) |>
@@ -305,8 +293,9 @@ f_GHGE_n2o_manure <- function(object,
       data_extra$IPCC_default_values |>
         dplyr::filter(parameter == "frac_Gas_MS") |>
         dplyr::select(condition_tech, condition_species, value) |>
-        dplyr::summarise(frac_Gas_MS = mean(value, na.rm = T),
-                         .by = c(condition_tech, condition_species)
+        dplyr::summarise(
+          frac_Gas_MS = mean(value, na.rm = T),
+          .by = c(condition_tech, condition_species)
         ) |>
         dplyr::rename(MMS = condition_tech),
       by = c('condition_species', 'MMS')
@@ -314,32 +303,40 @@ f_GHGE_n2o_manure <- function(object,
 
     ## EF_4 = = emission factor for N2O emissions from atmospheric deposition of nitrogen on soils and water surfaces, kg N2O-N (kg NH3-N + NOx-N volatilised)-1 ; given in Chapter 11, Table 11.3
     dplyr::mutate(
-      EF4 = data_extra$IPCC_default_values$value[data_extra$IPCC_default_values$parameter == "EF4"]
+      EF4 = data_extra$IPCC_default_values$value[
+        data_extra$IPCC_default_values$parameter == "EF4"
+      ]
     ) |>
 
     # Estimate direct N2O emission from MM per livestock category
-    dplyr::group_by(dplyr::across(dplyr::all_of(id_cols)),species,FADN_code_letter,Qobs,EF4) |>
+    dplyr::group_by(
+      dplyr::across(dplyr::all_of(id_cols)),
+      species,
+      FADN_code_letter,
+      Qobs,
+      EF4
+    ) |>
     dplyr::summarise(
       # EQUATION 10.26 (UPDATED) N LOSSES DUE TO VOLATILISATION FROM MANURE MANAGEMENT
       ## N_{volatilization-MMS} = amount of manure nitrogen that is lost due to volatilisation of NH3 and NOx, kg N yr-1
       ## Frac_{gasMS(T,S)} = fraction of managed manure nitrogen for livestock category T that volatilises as NH3 and NOx in the manure management system S (from Table 10.22)
       N_vol_mms = sum(
-        Nex_kgN_anim_y*Qobs*AWMS*frac_Gas_MS,
-        na.rm = T),
+        Nex_kgN_anim_y * Qobs * AWMS * frac_Gas_MS,
+        na.rm = T
+      ),
       .groups = "drop"
     ) |>
     dplyr::mutate(
       # EQUATION 10.28 INDIRECT N2O EMISSIONS DUE TO VOLATILISATION OF N FROM MANURE MANAGEMENT
       ## N_2O_{G(mm)} = indirect N2O emissions due to volatilization of N from Manure Management in the country, kg N2O yr-1
       ## EF_4 = = emission factor for N2O emissions from atmospheric deposition of nitrogen on soils and water surfaces, kg N2O-N (kg NH3-N + NOx-N volatilised)-1 ; given in Chapter 11, Table 11.3
-      N2O_G_mm = (N_vol_mms * EF4) *(44/28),
+      N2O_G_mm = (N_vol_mms * EF4) * (44 / 28),
 
       ### Conversion of N20 to CO2 equivalents
       N2O_G_mm_kgCO2e_livcat = N2O_G_mm * GWP[["N20"]]
     )
 
   ## Indirect N2O from manure management - Leaching ----
-
 
   tmp_N2O_MM_leach <- herd_data |>
     # filter cattle
@@ -348,27 +345,14 @@ f_GHGE_n2o_manure <- function(object,
     # add livestock N excretion
     dplyr::left_join(
       N_excr_tbl |>
-        dplyr::select(dplyr::all_of(id_cols),FADN_code_letter,Nex_kgN_anim_y),
-      by = c(id_cols, "FADN_code_letter")) |>
+        dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, Nex_kgN_anim_y),
+      by = c(id_cols, "FADN_code_letter")
+    ) |>
 
     # add UNFCCC country specific values for:
 
     ## AWMS = fraction of livestock category T's manure handled using animal waste management system S in climate region k, dimensionless
-    dplyr::left_join(
-      UNFCCC_data$table3Bas2 |>
-        dplyr::filter(!is.na(UNFCCC_cat) & AWMS >0) |>
-        # population per MMS
-        dplyr::mutate(
-          pop_MMS = Population__size*AWMS/100
-        ) |>
-        # proportion by country and matching category
-        dplyr::mutate(
-          AWMS = pop_MMS/sum(pop_MMS,na.rm = T),
-          .by = c(UNFCCC_cat, Country_ISO_3166_1_A3, YEAR)) |>
-        dplyr::summarise(AWMS = sum(AWMS, na.rm = T),
-                         .by = c(Country_ISO_3166_1_A3, YEAR, UNFCCC_cat, MMS)),
-      by = c('UNFCCC_cat', 'Country_ISO_3166_1_A3', 'YEAR'),
-      relationship = "many-to-many") |>
+    add_awms() |>
 
     ## add IPCC default values for country-specific missing parameters:
     ## Frac_{LeachMS(T,S)} = fraction of managed manure nitrogen for livestock category T that is leached from the manure management system S (from Table 10.22)
@@ -379,7 +363,7 @@ f_GHGE_n2o_manure <- function(object,
       condition_species = dplyr::case_when(
         FADN_code_letter == "LCOWDAIR" ~ "dairy_cattle",
         species == "cattle" ~ "other_cattle",
-        species %in% c("swine","poultry") ~ species,
+        species %in% c("swine", "poultry") ~ species,
         .default = "other_animals"
       )
     ) |>
@@ -387,38 +371,47 @@ f_GHGE_n2o_manure <- function(object,
       data_extra$IPCC_default_values |>
         dplyr::filter(parameter == "frac_leach_MS") |>
         dplyr::select(condition_tech, condition_species, value) |>
-        dplyr::summarise(frac_leach_MS = mean(value, na.rm = T),
-                         .by = c(condition_tech, condition_species)) |>
+        dplyr::summarise(
+          frac_leach_MS = mean(value, na.rm = T),
+          .by = c(condition_tech, condition_species)
+        ) |>
         dplyr::rename(MMS = condition_tech),
       by = c('condition_species', 'MMS')
     ) |>
 
     ## EF_5 = emission factor for N2O emissions from nitrogen leaching and runoff, kg N 2O-N/kg N leached and runoff, given in Chapter 11, Table 11.3
     dplyr::mutate(
-      EF5 = data_extra$IPCC_default_values$value[data_extra$IPCC_default_values$parameter == "EF5"]
+      EF5 = data_extra$IPCC_default_values$value[
+        data_extra$IPCC_default_values$parameter == "EF5"
+      ]
     ) |>
 
     # Estimate direct N2O emission from MM per livestock category
-    dplyr::group_by(dplyr::across(dplyr::all_of(id_cols)), species, FADN_code_letter, Qobs, EF5) |>
+    dplyr::group_by(
+      dplyr::across(dplyr::all_of(id_cols)),
+      species,
+      FADN_code_letter,
+      Qobs,
+      EF5
+    ) |>
     dplyr::summarise(
-
       # EQUATION 10.27 (UPDATED) N LOSSES DUE TO LEACHING FROM MANURE MANAGEMENT
       ## N_{leaching-MMS} = amount of manure nitrogen that is lost due to leaching, kg N yr-1
       ## Frac_{LeachMS(T,S)} = fraction of managed manure nitrogen for livestock category T that is leached from the manure management system S (from Table 10.22)
       N_leach_mms = sum(
         Nex_kgN_anim_y * Qobs * AWMS * frac_leach_MS,
-        na.rm = T),
+        na.rm = T
+      ),
       .groups = "drop"
     ) |>
     dplyr::mutate(
       # EQUATION 10.29 INDIRECT N2O EMISSIONS DUE TO LEACHING FROM MANURE MANAGEMENT
       ## N_2O_{L(mm)} = indirect N2O emissions due to leaching and runoff from Manure Management in the country, kg N2O yr-1
       ## EF_5 = emission factor for N2O emissions from nitrogen leaching and runoff, kg N 2O-N/kg N leached and runoff, given in Chapter 11, Table 11.3
-      N2O_L_mm = (N_leach_mms * EF5) *(44/28),
+      N2O_L_mm = (N_leach_mms * EF5) * (44 / 28),
 
       ### Conversion of N20 to CO2 equivalents
       N2O_L_mm_kgCO2e_livcat = N2O_L_mm * GWP[["N20"]]
-
     )
 
   # quality check => WIP pb avec sum_MCF_AWMS
@@ -442,21 +435,37 @@ f_GHGE_n2o_manure <- function(object,
 
   # Output ----
 
-  N2O_MM <- Reduce(x = list(tmp_N2O_MM_d,
-                            tmp_N2O_MM_gas,
-                            tmp_N2O_MM_leach),
-                   f = function(x,y) dplyr::left_join(x,y,
-                                                      by = c(id_cols,
-                                                             "FADN_code_letter","species","Qobs"))) |>
-    dplyr::select(dplyr::all_of(id_cols),
-                  FADN_code_letter,
-                  species,Qobs,
-                  N2O_D_MM_kgCO2e_livcat,N2O_G_mm_kgCO2e_livcat,N2O_L_mm_kgCO2e_livcat)
+  N2O_MM <- Reduce(
+    x = list(tmp_N2O_MM_d, tmp_N2O_MM_gas, tmp_N2O_MM_leach),
+    f = function(x, y) {
+      dplyr::left_join(
+        x,
+        y,
+        by = c(id_cols, "FADN_code_letter", "species", "Qobs")
+      )
+    }
+  ) |>
+    dplyr::select(
+      dplyr::all_of(id_cols),
+      FADN_code_letter,
+      species,
+      Qobs,
+      N2O_D_MM_kgCO2e_livcat,
+      N2O_G_mm_kgCO2e_livcat,
+      N2O_L_mm_kgCO2e_livcat
+    )
 
+  if (return_components) {
+    return(list(
+      emissions = N2O_MM,
+      direct = tmp_N2O_MM_d,
+      volatilisation = tmp_N2O_MM_gas,
+      leaching = tmp_N2O_MM_leach
+    ))
+  }
   return(N2O_MM)
 
   #rm(list = names(.GlobalEnv)[grep("tmp",names(.GlobalEnv))])
-
 }
 
 #' Resolve direct manure-management emission factors
@@ -486,21 +495,26 @@ h_resolve_manure_ef3 <- function(activity) {
     mms_solid_storage = 0.010
   )
   fallback <- unname(defaults[as.character(activity$MMS)])
-  poultry_storage <- activity$species %in% "poultry" &
+  poultry_storage <- activity$species %in%
+    "poultry" &
     activity$MMS %in% c("mms_deep_bedding", "mms_solid_storage")
   fallback[poultry_storage] <- 0.001
   missing <- is.na(activity$EF3)
   activity$EF3[missing] <- fallback[missing]
 
-  invalid <- !is.na(activity$AWMS) & activity$AWMS > 0 &
+  invalid <- !is.na(activity$AWMS) &
+    activity$AWMS > 0 &
     (!is.finite(activity$EF3) | activity$EF3 < 0)
   if (any(invalid)) {
     systems <- unique(paste(
-      activity$species[invalid], activity$MMS[invalid], sep = "/"
+      activity$species[invalid],
+      activity$MMS[invalid],
+      sep = "/"
     ))
     stop(
       "No finite EF3 for positive manure allocation: ",
-      paste(systems, collapse = ", "), ".",
+      paste(systems, collapse = ", "),
+      ".",
       call. = FALSE
     )
   }

@@ -8,7 +8,7 @@
 A list of four dataframes: rica, veg, ani, pan
 }
 \source{
-Ministère De L’Agriculture - SSP, 2021. Réseau d’Information Comptable Agricole - 2020. https://doi.org/10.34724/CASD.66.4159.V1
+Ministère De L’Agriculture - SSP, 2021. Réseau d’Information Comptable Agricole - 2020. \doi{10.34724/CASD.66.4159.V1}
 }
 \usage{
 data(rica_fict)

@@ -151,8 +151,8 @@ Ecoalim (v9). LCA database for animal feed ingredients.
 INRAE, France. \url{https://ecoalim.inrae.fr}
 }
 \seealso{
-\code{\link{f_GHGE_crops()}}, \code{\link{infer_practices()}},
-\code{\link{f_feed_onfarm()}}, \code{\link{f_feed_offfarm()}},
-\code{\link{h_average_practices()}}, \code{\link{FADN2Footprint-class}}
+\code{\link{f_GHGE_crops}}, \code{\link{infer_practices}},
+\code{\link{f_feed_onfarm}}, \code{\link{f_feed_offfarm}},
+\code{\link{h_average_practices}}, \code{\linkS4class{FADN2Footprint}}
 }
 \concept{footprint-ghge}

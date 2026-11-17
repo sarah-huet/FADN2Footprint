@@ -2,13 +2,21 @@
 #' `data_for_BVIAS` Create a tibble with the following variables: "farm_id", "crop",  "land_use_type", "metric_code", "value", "max", "x_norm", "org_farming"
 #'
 #' @param object a FADN2Footprint object
-#' @param ... Additional arguments.
+#' @param ... Additional arguments passed to \code{\link{infer_practices}}.
 #'
 #' @returns a tibble
 #' @examples
-#' data(fadn_fict)
+#' data("mock_data", package = "FADN2Footprint")
+#' dairy_row <- which(
+#'   as.character(mock_data$fadn_fict$TF14) == "45" &
+#'     as.numeric(mock_data$fadn_fict$YEAR) >= 2017
+#' )[1]
+#' fadn_fict <- mock_data$fadn_fict[
+#'   dairy_row, ,
+#'   drop = FALSE
+#' ]
 #' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
-#' data_for_BVIAS(object = fadn_fict_obj)
+#' data_for_BVIAS(object = fadn_fict_obj, account_pseudoherd = FALSE)
 #' @export
 
 #' @importFrom dplyr select all_of matches bind_rows filter summarise left_join mutate case_when distinct semi_join
@@ -27,7 +35,7 @@ data_for_BVIAS <- function(object,
 
   # Parameters of the BVI model (Lindner et al., 2019) ------------------------------------------------------------------------------
 
-  object <- infer_practices(object)
+  object <- infer_practices(object, ...)
 
   input_data <- tibble()
   for (i in names(object@practices$crops)[!sapply(object@practices$crops, is.null)]) {

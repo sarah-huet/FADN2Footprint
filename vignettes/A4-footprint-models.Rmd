@@ -74,11 +74,12 @@ The package covers two main scopes of emissions and impacts:
     extend the approach by estimating the impact of the pseudo-herd, that is the complete
     herd consistent with the largest animal category: if fattening bovines are fewer than
     the expected number based on the number of suckling cows, fattening bovines are added
-    to the pseudo-herd, and vice versa. See XX for details.
+    to the pseudo-herd, and vice versa. See the [pseudo-herd method](B1-method-practice-inference.html#sec-method-practices-pseudoherd)
+    for details.
 
-![System boundary diagram](FADN2Footprint_system_bound.png) XX Bizarre, le diagramme a
-disparu .. En tous les cas, il faudrait visualiser farm, pseudo-farm et pseudo-herd
-dessus. Je peux le faire si tu me donnes le ppt.
+![System boundary diagram](FADN2Footprint_system_bound.png)
+
+<!-- TODO(author): Update the system-boundary diagram to distinguish the farm, pseudo-farm, and pseudo-herd. The source PowerPoint is needed to revise the figure. -->
 
 ## Impact Allocation Strategy
 

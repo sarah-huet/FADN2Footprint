@@ -484,10 +484,10 @@ three rearing stages: juveniles, fattening, and breeders
 animal occurs in the full dataset are included.
 
 ::: {#fig-herd-flows}
-![Cattle](FADN_prod_flow_cattle.png) 
-![Sheep](FADN_prod_flow_sheep.png)
+
+![Cattle](FADN_prod_flow_cattle.png)
 ![Swine](FADN_prod_flow_swine.png)
-![Poultry](FADN_prod_flow_poultry.png) 
+![Poultry](FADN_prod_flow_poultry.png)
 
 Rearing process charts for cattle, swine and poultry. For each livestock
 category, the corresponding rearing stage (i.e., juveniles in green,
@@ -495,38 +495,34 @@ fattening in red, and breeders in blue) and the FADN code are mentioned
 in brackets.
 :::
 
-FADN reports the average number of animals in each livestock category,
-as well as opening and closing stocks, purchases, and sales. We use the average number
-(variables ending by "AN") as the observed stock used in the following calculations.
-If the average number is not available, the observed stock is calculated from the average livestock unit using the conversion coefficient for the category.
+While stocks are registered in the FADN for each livestock category
+(i.e., average, opening, closing, purchases, and sales numbers), flows
+of animals transiting through each livestock category are unknown. We
+consider the observed animal stock as the reported average number of animals
+(variable "AN"), when available, or the average livestock unit converted to animal numbers
+using the conversion coefficient otherwise.
 
-##### Estimation of flows
+#### Estimation of flows
 
 While flows between categories are unknown, outflows of the last rearing
 stages (e.g., LCOWDAIR, LBOV2) correspond to $F^{out} = Q^{sales}$ and serve as basis to
-calculate other flows, by tracing back flows upward the rearing process.
+calculate other flows, by tracing back flows upward the rearing process (@fig-herd-flows).
 Hence, using outflows of the last rearing stage as well as quantities
 registered in the FADN for each livestock category (i.e., average,
 opening, closing, purchases, and sales numbers), we estimate flows of
 animals transiting through each livestock category as:
 
-$$F_{l}^{in} = Q_{l}^{purchases} + \Delta \text{Stock}_{l} + F_{l}^{out}$$
-{#eq-Fin}
+$$
+F_{l}^{in} = \Delta \text{Stock}_{l} + F_{l}^{out}
+$$ {#eq-Fin}
 
-Here, $F_l^{in}$ and $F_l^{out}$ are annual animal flows into and out of
-category $l$ (heads/year); $Q_l^{purchases}$ is the FADN number
-purchased for that category (heads/year); and $\Delta\text{Stock}_l$ is
-the change in stock (heads) defined below. The input quantities are
-FADN animal records.
+$$
+\Delta \text{Stock}_l = Q_{l}^{closing} - Q_{l}^{opening}
+$$ {#eq-delta_stock}
 
-$$\Delta \text{Stock}_l = Q_{l}^{closing} - Q_{l}^{opening}$$
-{#eq-delta_stock}
-
-Here, $Q_l^{closing}$ and $Q_l^{opening}$ are the FADN closing and
-opening stocks for category $l$ (heads).
-
-$$F_{l-1}^{out} = Q_{l-1}^{sales} + \sum_{k \in L} (F_{k}^{in} - Q_{k}^{purchases})$$
-{#eq-Fout}
+$$
+F_{l-1}^{out} = Q_{l-1}^{sales} + \sum_{k \in L} (\max(0, F_{k}^{in} - Q_{k}^{purchases}))
+$$ {#eq-Fout}
 
 Here, $F_{l-1}^{out}$ is the inferred outflow from the preceding
 rearing category (heads/year), $Q_{l-1}^{sales}$ is its FADN sales
@@ -577,31 +573,33 @@ For cattle, we also estimate the average age at first calving as the
 average of the minimal age (i.e., 1 or 2 y.o.) plus residence time in
 may-have-but-have-not-yet-calved breeding categories (e.g., breeding
 part of the female bovine between 1 and 2 y.o. and heifers for breeding
-which are \>2 y.o.) weighted by the observed number of animals.
+which are \>2 y.o.) weighted by the observed number of animals. While
+some female bovine may calve before 2 y.o. (LBOV1_2F), we consider that they pass
+by the heiffer category (LHEIFBRE) with a residence time of zero.
 
-Some livestock categories have zero quantities on some farms (for
-example, a pig fattener without piglets or sows), so their rearing
-parameters cannot be estimated. For cattle, non-finite parameters are
-first replaced by the median among farms in the same NUTS2 region where
-the category is present, when at least 15 such farms are available;
-otherwise, the pre-computed reference median is used. Observed and
-imputed values are then clipped to parameter-specific thresholds
-derived from the pan-European reference distribution. If a value is
-still missing, it is replaced by a weighted average for the same
-YEAR × COUNTRY × NUTS2, falling back to YEAR × COUNTRY, weighted by
-FADN economic size (`SYS02`). These corrections are applied to the
-primary rearing parameters and again after subdividing mixed categories.
+In some farms, some livestock categories have zero quantity (e.g., a pig
+fattener without piglets and sows), preventing the estimation of
+associated rearing parameters. When the rearing parameter is not
+available or infinite, we replace the missing value by a reference value
+based on our data. We estimate reference values for each rearing
+parameter as the median in farms of the same NUTS2 where the livestock
+category is present when at least 15 such farms are available.
+Otherwise, we use the reference median for that parameter (see below).
 
-##### Reference median and thresholds for rearing parameters {#sec-r}
+#### Reference median and thresholds for rearing parameters {#sec-r}
 
-The lower and upper thresholds are selected from the 1st, 5th, or 10th
-and 90th, 95th, or 99th percentiles, respectively, depending on the
-stringency chosen by visually examining each parameter distribution
-for outliers (`pseudoherd_reference_table.R`). A category with a
-specified age also has a logically determined maximum residence time
-(for example, female bovines aged 1–2 years cannot have a residence
-time longer than one year). Values outside the selected interval are
-replaced by the corresponding bound.
+We estimate reference median and thresholds below and above which a
+value is considered aberrant (see `pseudoherd_reference_table.R`). Lower
+and upper thresholds correspond to 1st, 5th, or 10th and 90th, 95th, or
+99th percentiles, respectively, of the considered rearing parameter
+distribution, depending on the stringency desired. The desired
+stringency is graphically estimated by examining the distribution of the
+rearing parameter and identifying outliers visually. Note that the
+maximum threshold for categories whose age is specified is logically
+determined by this definition (e.g., female bovine between 1 and 2 y.o.
+have a maximum residence time of 1). When a value is below or above
+these thresholds, we replace the aberrant value by the inferior or
+superior threshold, respectively.
 
 The reference medians and thresholds themselves are pre-computed once,
 from the pan-European FADN data over 20XX-20XX, and bundled with the
@@ -609,7 +607,7 @@ package as the `reference_rearing_param` dataset
 (`inst/scripts/pseudoherd_reference_table.R`); they are not recomputed
 from the farms being processed.
 
-##### Subdivision: estimation in mixed categories {#sec-method-practices-livestock-mixed-cat}
+#### Subdivision: estimation in mixed categories {#sec-mixed-categories}
 
 In rearing processes, some livestock categories encompass both animals
 for fattening and for breeding. For instance in cattle, while heifers
@@ -642,122 +640,74 @@ F_{B,l}^{down} &= F_l^{out} - F_{F,l}^{down} \\
 \end{aligned}
 $$ {#eq-mixed_cat}
 
-**Intuition.** A mixed category contains animals entering either the
-fattening or breeder pathway. We infer the share of each pathway from
-its downward flows, then allocate the category's observed stock in the
-same proportions.
+where $F_{F,l}^{down}$ and $F_{B,l}^{down}$ are inferred downward flows
+from mixed category $l$ into the fattening and breeder pathways,
+respectively. For LBOV1_2F, $l+1$ is LHEIFFAT. The observed stocks are
+split in proportion to these flows; this allocation does not use
+downstream stocks divided by residence times.
 
-Here, $F_{F,l}^{down}$ and $F_{B,l}^{down}$ are inferred annual
-outflows (heads/year) from mixed category $l$ into the fattening and
-breeder pathways; $Q_{l,\mathrm{slaughter}}^{sales}$ is the FADN number
-sold for slaughter from category $l$ (heads/year); $F_{l+1}^{in}$ and
-$Q_{l+1}^{purchases}$ are the inflow and purchases for the next
-category (heads/year); $\bar{Q}_l$ is the observed mixed-category stock
-(heads); and $\bar{Q}_{F,l}$ and $\bar{Q}_{B,l}$ are the resulting
-fattening and breeder stock estimates (heads). For `LBOV1_2F`,
-$l+1$ is `LHEIFFAT`. The stock split is proportional to the inferred
-downward flows; it does not use downstream stocks divided by residence
-times. The underlying counts are FADN variables and the split-flow
-terms are derived from @eq-Fin and @eq-Fout.
+### Restrain herd animals to farm activities {#sec-restrain-activities}
 
-##### Assigning cattle to farm activities
+We allocate observed animals between different farm activities (i.e., milk, meat,
+and eggs).
 
-The dairy-cow stock is assigned to milk. The required stocks of
-replacement heifers, the breeding share of `LBOV1_2F`, and calves are
-estimated from the dairy-cow turnover rate. The on-farm milk allocation
-for each category is capped at the observed stock; any cattle stock
-not needed for the dairy activity is allocated to beef.
+#### Cattle {#sec-restrain-cattle}
+
+**Cattle milk activity**
+For cattle, we first estimate animals involved in the dairy herd with
+Equation @eq-restrain_herd_act. We consider that farmers will prioritise
+the renewal of dairy cows and thus estimate which animals are needed to maintain
+the dairy herd as follows:
 
 $$
-\begin{aligned}
-\bar{Q}_{LCOWDAIR,\;milk} &= \bar{Q}_{LCOWDAIR} \\
-\widetilde{Q}_{LHEIFBRE,\;milk} &=
-  t_{LHEIFBRE}\left(\frac{\bar{Q}_{LCOWDAIR,\;milk}}{t_{LCOWDAIR}}\right) \\
-\widetilde{Q}_{LBOV1\_2F,\;breeders,\;milk} &=
-  t_{LBOV1\_2F,\;breeders}
-  \left(\frac{\bar{Q}_{LCOWDAIR,\;milk}}{t_{LCOWDAIR}}\right) \\
-\widetilde{Q}_{LBOV1,\;milk} &=
-  1\ \mathrm{year}
-  \left(\frac{\widetilde{Q}_{LBOV1\_2F,\;breeders,\;milk}}
-  {t_{LBOV1\_2F,\;breeders}}\right)
-\end{aligned}
-$$ {#eq-restrain-herd-act}
+\bar{Q}_{l-1, \; \text{milk}} = \max(\bar{Q}_{l-1}, t_{l-1} \cdot \frac{\bar{Q}_{l, \; \text{milk}} }{t_{l}})
+$$
+{#eq-restrain_herd_act}
 
-**Intuition.** The cow replacement rate is the observed dairy-cow
-stock divided by its residence time. Multiplying that rate by the
-residence time of each replacement category gives the stock needed
-there; the first juvenile step is treated as one year.
+Hence, the number of dairy cows
+(`LCOWDAIR`) fully determines the renewal chain.
+All dairy cows are attributed to the milk activity, and
+the renewal categories — heifers for breeding (`LHEIFBRE`) and the
+breeding share of `LBOV1_2F` — are derived from the dairy-cow turnover
+rate and their own turnover rate (@eq-restrain_herd_act); juveniles
+(`LBOV1`) needed to generate these future breeders are derived
+similarly, considering that the first rearing stage of `LBOV1` leading
+to `LBOV1_2F` breeders has, by definition, a residence time of 1 year.
 
-Here, $\bar{Q}_{l}$ is the observed on-farm stock of cattle category
-$l$ (heads); $\bar{Q}_{l,\;milk}$ is the part assigned to milk
-(heads); and $\widetilde{Q}_{l,\;milk}$ is the number needed for the
-dairy renewal chain before the on-farm cap (heads). The $t$ terms are
-the residence times in years from @eq-rearing_time; the category codes
-are FADN cattle variables. The `LBOV1_2F` breeder component is obtained
-from the mixed-category split in @eq-mixed_cat.
+The observed number of animals involved in the
+milk activity ($\bar{Q}_{l,\;milk}$, `f_herd_activities()`) are capped so that
+they never exceed a category's actual on-farm stock. 
 
-$$\bar{Q}_{l,\;milk} = \min(\bar{Q}_l,\widetilde{Q}_{l,\;milk})$$
-{#eq-cap-dairy-activity}
+**Cattle meat activity.**
+We consider all additional cattle (i.e., not needed for the milk activity) 
+as part of the meat activity (e.g. additional calves spawned from dairy cows).
 
-**Intuition.** A farm cannot allocate more animals to milk than it
-actually has in that category, so any unmet renewal requirement is
-left for the off-farm estimate in @sec-pseudoherd-dairy-cattle.
+#### Swine {#sec-restrain-swine}
+For swine, we consider all animals as involved in the meat activity. 
 
-Here, $\bar{Q}_{l,\;milk}$ is the on-farm number assigned to milk
-(heads), $\bar{Q}_l$ is the observed stock (heads), and
-$\widetilde{Q}_{l,\;milk}$ is the dairy-chain requirement (heads), for
-the replacement categories above. All stock quantities are based on
-FADN animal counts.
+#### Poultry {#sec-restrain-poultry}
 
-For the dairy-cattle activity, breeders are dairy cows (`LCOWDAIR`),
-juveniles are calves (`LBOV1`), and fattening animals are those that
-are neither juveniles nor breeders, namely `LBOV1_2F` and `LHEIFBRE`.
+For poultry, we consider that all animals needed in the production of either
+eggs (i.e., laying hens) or meat (i.e., broilers and other poultry) are
+present on-farm, the pseudo-herd thus equaling the herd.
 
-#### Beef cattle
+#### Sheep {#sec-restrain-sheep}
 
-All cattle on the farm that are not needed to maintain the dairy-cow
-herd are allocated to the beef activity, as described in
-@sec-restrain-dairy-cattle.
+For sheep, we assume that a ewe produce 255 l/year in France (CAP2ER, 2025) and thus
+estimate the number of ewes involved in the milk activity as
+$Qobs_{milk} = round(prod_t / 0.255)$ (where $prod_t$ is the milk
+production in tonnes and round gives the closest integer). We assign at
+least one ewe to the milk activity if the farm has any milk production,
+even if it is below 122.5 l/year. 
 
-#### Other animals {#sec-restrain-other-animals}
+As for cattle, all other ewes (LEWEBRE) and sheeps (LSHEPOTH) are assigned to the
+meat activity.
 
-##### Sheep
+#### Goats {#sec-restrain-goats}
 
-We estimate the number of dairy ewes from milk production, then
-estimate the animals needed to maintain that dairy-sheep flock using
-the same flow and rearing-parameter methodology as for dairy cattle
-(see @sec-restrain-dairy-cattle). All other sheep are allocated to the
-meat activity. In France, the assumed milk yield is 255 L/ewe/year
-(0.255 tonnes/ewe/year; CAP2ER, 2025). For positive milk production:
+For goats, we assign all animals to the milk activity.
 
-$$Q_{LEWEBRE,\;milk} =
-  \max\left(1,\operatorname{round}\left(\frac{prod_t}{0.255}\right)\right)$$
-{#eq-restrain-sheep}
-
-**Intuition.** Dividing farm milk production by the assumed annual
-yield gives the number of dairy ewes; the minimum of one assigns a ewe
-whenever the farm reports positive sheep-milk production.
-
-Here, $Q_{LEWEBRE,\;milk}$ is the estimated number of ewes assigned to
-milk (heads), and $prod_t$ is sheep-milk production reported in FADN
-(tonnes/year). The value 0.255 is the assumed annual milk yield
-(tonnes/ewe/year), from CAP2ER (2025); `round` rounds to the nearest
-whole ewe.
-
-##### Pigs
-
-There is a single pig activity, meat, so all pigs are allocated to it.
-
-##### Poultry
-
-Laying hens are allocated to the egg activity. All other poultry
-categories are allocated to the meat activity.
-
-##### Goats
-
-The existing activity allocation assigns all goats to milk.
-
-### Pseudo-herd {#sec-method-practices-pseudoherd}
+### Estimation of pseudo-herd {#sec-method-practices-pseudoherd}
 
 When considering only on-farm animals, one can miss the whole impact of
 a production. For instance, dairy cows spawn more calves than needed to
@@ -766,67 +716,51 @@ produce veal or raised longer to produce beef. Similarly, beef comes
 from bovine animals that were once calves spawned from suckler cows: the
 beef impact should hence encompass the slaughtered bovine impact as well
 as the calve and suckler cow ones, even when these are not present on
-the same farm. The pseudo-herd accounts for all animals involved in a
+the same farm.
+
+The pseudo-herd accounts for all animals involved in a
 specific activity (e.g., slaughtered bovine, calves and suckler cows for
 beef; fattening pigs, piglets and breeding sows for pork; etc.), whether
-they are present on-farm or not (i.e., off-farm).
+they are present on-farm or not (i.e., off-farm). We estimate the pseudo herd
+by calculating the balanced number of animals as follows.
 
-#### Dairy cattle {#sec-pseudoherd-dairy-cattle}
+To estimate the total number of both on- and off-farm animals involved
+in the rearing process, we compute what would be the herd at equilibrium
+based on the actual stock in each rearing stage (i.e., juveniles ,
+fattening or breeders), and the rearing parameters already estimated
+(@sec-method-practices-rearing-param).
 
-Start with all on-farm animals allocated to the dairy-renewal chain in
-@sec-restrain-dairy-cattle. If those animals are insufficient to
-maintain the observed dairy-cow herd, add the animals not present on the
-farm that are needed to reach equilibrium. For dairy cattle, use only
-the final (breeder) row of @tbl-pseudoherd_eq: the observed dairy cows
-are the breeder reference stock, and the row gives the corresponding
-juvenile and fattening headcounts. The rearing flows and parameters are
-those already defined in @sec-restrain-dairy-cattle; they are not
-re-estimated here.
+Equilibrium values estimated based on fattening quantities can only be
+estimated by going upwards (the fattening stage being a "dead-end"
+without downward stages). For the same reason, equlibrium fattening
+quantities based on other categories can only be estimated by going
+downwards. However, for estimating breeders based on juveniles or
+vice-versa, we could in principle go both ways. We choose the way with
+the fewest number of parameters, that is in both cases using the number
+of offspring per breeder and per year (upwards when estimating breeders
+based on juveniles, and downwards when estimating juveniles based on
+breeders).
 
-#### Beef cattle {#sec-pseudoherd-beef-cattle}
+### Cattle {#sec-pseudoherd-cattle}
 
-The beef pseudo-herd includes all animals required for the beef
-production chain, including animals not observed on the farm. First,
-aggregate on-farm beef animals into the three rearing stages:
-juveniles, fattening, and breeders. The observed quantity of stage
-$s$ is:
+**Cattle milk activity.** 
+The pseudo-herd equilibrium quantities
+($\widehat{Q}_{l,\;milk}$, `f_pseudoherd_cattle()`) are computed with
+the very same equations than for restraining activities but **without** the cap
+on observed number of animals (@sec-restrain-cattle).
+As a result, $\widehat{Q}_{l,\;milk}$ can exceed $\bar{Q}_{l,\;milk}$ for the renewal
+categories whenever a farm does not raise, on-farm, all of the heifers
+and calves required to renew its own dairy herd — these additional
+animals constitute the off-farm part of the dairy pseudo-herd.
 
-$$\bar{Q}_s = \sum_{l=1}^{L_s}\bar{Q}_{l,\;meat}$$
-{#eq-Qobs-stage}
+**Cattle meat activity.**
 
-**Intuition.** This combines the observed beef-activity stock of every
-livestock category belonging to a rearing stage into one stage total.
-
-Here, $\bar{Q}_s$ is the observed stock of stage $s$ (heads),
-$\bar{Q}_{l,\;meat}$ is the on-farm number of category $l$ allocated
-to beef (heads), and $L_s$ is the set of FADN categories in stage $s$.
-For cattle, juveniles comprise `LBOV1`; fattening comprises
-`LBOV1_2M`, `LBOV2`, `LBOV1_2F` fattening animals, and `LHEIFFAT`;
-breeders comprise the breeding share of `LBOV1_2F`, `LHEIFBRE`,
-`LCOWOTH`, and the dairy cows (`LCOWDAIR`) included in the observed
-breeder reference.
-
-The reference stage is the observed stage that is at least as large as
-the equilibrium quantity implied by each of the other stages. For
-cattle, if more than one stage satisfies this condition, the current
-selection order is fattening, then juveniles, then breeders. Fattening
-is inferred upwards from the juvenile and breeder stages; the juvenile
-and breeder quantities are inferred in the direction requiring fewer
-rearing parameters, using the offspring rate.
-
-To estimate the complete herd involved in beef production, including
-animals not on the farm, we calculate equilibrium headcounts from the
-observed stage totals and the flows and rearing parameters defined in
-@sec-restrain-dairy-cattle. Fattening is a terminal stage, so
-equilibrium quantities based on fattening are inferred upwards.
-Quantities in the fattening stage are inferred downwards from juveniles
-or breeders. Juvenile and breeder quantities are linked through the
-offspring rate. The cattle table below gives the equilibrium
-headcounts implied by each observed reference stage.
-
-For cattle, some juveniles are sold directly for veal rather than
-entering fattening. The table's `adj_veal` factor accounts for that
-direct-slaughter flow.
+For cattle involved in the meat activity, juveniles can either move downwards to another rearing stage
+or be slaughtered as veal. Estimated equilibrium fattening quantities
+involving the juvenile stage are therefore adjusted by the ratio of
+calves sold for rearing to total juvenile outflow,
+$Q_{LBOV1}^{rearing} / F_{LBOV1}^{out}$, when juvenile outflow is
+positive (@tbl-pseudoherd_eq).
 
 ::: {#tbl-pseudoherd_eq}
 ```{r tbl-pseudoherd_eq, echo=FALSE, message=FALSE, warning=FALSE}
@@ -954,50 +888,33 @@ allocation_data |>
     )
 ```
 
-Equilibrium headcount calculations from observed headcounts for the
-three rearing stages of cattle meat production. Each row is the observed
-reference stage and each column is the corresponding estimated
-equilibrium stage. Pigs use the same balancing approach by reference in
-@sec-pseudoherd-other-animals; sheep and poultry have the stage
-structures described there.
+Equations to estimate theoretical equilibrium stocks of meat
+pseudo-herds (cattle meat, sheep meat, swine, poultry) from the number
+of on-farm animals Q (encompassing stocks and sales for slaughter) and
+rearing parameters (i.e., times and offspring number) depending on the
+rearing stage (i.e., juveniles, fattening or breeders).
 :::
 
-**Intuition.** Each cell converts the observed count in the row's
-reference stage into an equilibrium count for the column's stage.
-Residence times convert between stock and flow, while the offspring
-rate links breeders and juveniles. The `adj_veal` factor accounts for
-calves sold directly for slaughter instead of entering fattening.
+For each rearing stage $s$ containing several livestock categories
+(i.e., fattening or breeders), we first aggregate the on-farm quantities
+attributed to the activity of interest (@eq-Qobs-stage). 
 
-Here, $\bar{Q}_j$, $\bar{Q}_f$, and $\bar{Q}_b$ are observed stage
-headcounts (heads); $\widehat{Q}_j$, $\widehat{Q}_f$, and
-$\widehat{Q}_b$ are equilibrium headcounts (heads); $t_j$ and $t_f$
-are the stage-level residence times (years); `Offsprings` is the
-offspring rate (offspring/breeder/year); and $Q_{LCOWDAIR}$ is the
-observed dairy-cow stock (heads), subtracted when juveniles or
-fattening animals imply beef breeders. In the breeder-column formulas,
-$\bar{Q}_{j,\;meat}$ and $\bar{Q}_{j,\;milk}$ are the observed juvenile
-headcounts assigned to beef and milk, respectively; the corresponding
-$\bar{Q}_{f,\;meat}$ and $\bar{Q}_{f,\;milk}$ are the observed
-fattening headcounts for those activities; and $t_{j,\;meat}$,
-$t_{j,\;milk}$, $t_{f,\;meat}$, and $t_{f,\;milk}$ are their
-activity-specific residence times (years). Animal counts and sales are
-FADN values; residence times and offspring rates are derived from the
-FADN flows and stocks using @sec-restrain-dairy-cattle.
+$$
+\bar{Q}_{s} = \sum_{l=1}^{L_s} \bar{Q}_{l,\;meat}
+$$ {#eq-Qobs-stage}
 
-For the veal adjustment,
-$\text{adj}_\text{veal} =
-(F_{LBOV1}^{out}-Q_{LBOV1}^{slaughter})/F_{LBOV1}^{out}$ when the
-bovine juvenile outflow is positive, and it is 1 otherwise. Here,
-$F_{LBOV1}^{out}$ is the inferred annual `LBOV1` outflow
-(heads/year), and $Q_{LBOV1}^{slaughter}$ is the FADN number of calves
-sold directly for slaughter (heads/year).
+where $L_s$ is the number of livestock categories within stage $s$ and
+$\bar{Q}_{l,\;meat}$ is the observed quantity of animals in category $l$ 
+attributed to meat production.
 
-The stage totals are defined in @eq-Qobs-stage. For cattle, the
-fattening stage follows four routes to slaughter: `LBOV1_2M` direct to
-slaughter, `LBOV1_2M` through `LBOV2` to slaughter, the fattening share
-of `LBOV1_2F` direct to slaughter, and that share through `LHEIFFAT` to
-slaughter. Let $D$ be the sum of the outflows from `LBOV1_2M` and the
-fattening share of `LBOV1_2F`:
+For breeders, where a given animal cannot go through different categories, the
+stage-level residence time $t_s$ is trivially the weighted average of
+the residence times of its categories. For fattening bovine however, the
+rearing stage is decomposed into its four possible pathways
+(`LBOV1_2F -> slaughter, LBOV1_2F -> LHEIFFAT -> slaughter, LBOV1_2M -> slaughter, and LBOV1_2M -> LBOV2 -> slaughter`)
+. The stage-level residence time $t_s$ is then the weighted average
+residence time per pathway (`f_pseudoherd_cattle()`, variables `Qobs_j`,
+`Qobs_f`, `Qobs_b`, `rt_j`, `rt_f`).
 
 $$
 \begin{aligned}
@@ -1012,54 +929,48 @@ t_f ={}&
    \frac{F_{LBOV1\_2F,\;fattening}^{out}
          -Q_{LBOV1\_2F}^{slaughter}}{D}
 \end{aligned}
-$$ {#eq-rt-f-cattle}
+$$ {#eq-rt_f_cattle}
 
-**Intuition.** Each route contributes its total residence time weighted
-by the proportion of cattle taking that route; the extra one-year
-terms account for time spent in `LBOV1_2M` or the fattening share of
-`LBOV1_2F` before entering `LBOV2` or `LHEIFFAT`.
+where 
+$t_f$ is the stage-level residence time for fattening bovine,
+$t_{LBOV1\_2M}^{slaughter}$ is the residence time for the pathway `LBOV1_2M -> slaughter`,
+$1 + t_{LBOV2}$ is the residence time for the pathway `LBOV1_2M -> LBOV2 -> slaughter`,
+$t_{LBOV1\_2F\_fattening}^{slaughter}$ is the residence time for the pathway `LBOV1_2F -> slaughter`,
+$1 + t_{LHEIFFAT}$ is the residence time for the pathway `LBOV1_2F -> LHEIFFAT -> slaughter`,
+$Q^{slaughter}_{LBOV1\_2M}$ is the observed quantity of `LBOV1_2M` animals sold directly for slaughter,
+$Q^{slaughter}_{LBOV1\_2F}$ is the observed quantity of `LBOV1_2F` animals sold directly for slaughter,
+$F^{out}_{LBOV1\_2M}$ is the total outflow of `LBOV1_2M` animals,
+and $F^{out}_{LBOV1\_2F\_fattening}$ is the total outflow of the fattening part of `LBOV1_2F` animals (@sec-mixed-categories).
 
-Here, $t_f$ is the beef fattening-stage residence time (years);
-$D=F_{LBOV1\_2M}^{out}+F_{LBOV1\_2F,\;fattening}^{out}$ is the total
-annual outflow across the two entry categories (heads/year);
-$t_{LBOV1\_2M,\;slaughter}$ and
-$t_{LBOV1\_2F,\;fattening,\;slaughter}$ are residence times before
-direct slaughter (years); $t_{LBOV2}$ and $t_{LHEIFFAT}$ are residence
-times in those FADN categories (years); and the $F^{out}$ and
-$Q^{slaughter}$ terms are inferred annual outflows and FADN slaughter
-sales (heads/year). These parameters are based on the FADN flows and
-rearing parameters described in @sec-restrain-dairy-cattle.
+As stated above, the stage used as
+reference to derive equilibrium quantities is the stage whose observed
+quantity $\bar{Q}_s$ is larger as what would be implied by each of the
+two other stages (in the code, this is obtained by selecting the rearing
+stage with the highest observed-to-equilibrium ratio). In case of a tie,
+fattening, as its the terminal rearing stage, is chosen as the reference.
 
-Every estimated stage quantity is bounded below by the observed
-quantity, $\widehat{Q}_s \geq \bar{Q}_s$. This ensures the pseudo-herd
-does not omit animals actually on the farm; small differences between
-the equilibrium equations can otherwise put an estimate slightly below
-the observed stock because rearing parameters are rounded.
+For cattle, this comparison — and the subsequent computation of
+$\widehat{Q}_j$, $\widehat{Q}_f$ and $\widehat{Q}_b$ following
+@tbl-pseudoherd_eq — additionally accounts for animals sold directly for
+slaughter, which never reach the following rearing stage, through the
+estimation of the retention time for fattening animals (@eq-rt_f_cattle)
+and through the estimation of the equilibrium quantity of fattening
+animals (@tbl-pseudoherd_eq).
 
-#### Other animals {#sec-pseudoherd-other-animals}
+As the pseudo-herd can only be larger than, or equal to, what is actually
+observed on the farm, the equilibrium quantity of a stage is bounded below by
+its observed quantity ($\widehat{Q}_s \geq \bar{Q}_s$) to remove any rounding errors.
 
-##### Sheep
+**Swine.** For swine, we consider that all animals are involved in the
+meat activity. We infer the number of animals at equilibrium as for the
+cattle meat activity, with the juvenile stage ($j$) being the single
+category `LPIGLET`, the fattening stage ($f$) being the single category
+`LPIGFAT`, and the breeder stage ($b$) including `LSOWBRE` and
+`LPIGOTH`; `LPIGOTH` is treated as male breeders and cull sows.
 
-Estimate the dairy-sheep renewal animals by the same method as for
-dairy cattle (@sec-pseudoherd-dairy-cattle and
-@sec-restrain-dairy-cattle). For the meat activity, estimate the
-equilibrium numbers using the same observed-versus-implied balancing
-principle described for beef cattle in @sec-pseudoherd-beef-cattle;
-sheep have an "others" stage and a breeders stage rather than the
-cattle three-stage structure.
-
-##### Pigs
-
-Pigs have a single meat activity, so use the three-stage equilibrium
-balancing method described for beef cattle in
-@sec-pseudoherd-beef-cattle. The pig stages are juveniles (`LPIGLET`),
-fattening (`LPIGFAT`), and breeders (`LSOWBRE` and `LPIGOTH`).
-
-##### Poultry
-
-Off-farm poultry are considered negligible, so the pseudo-herd equals
-the observed on-farm herd. Laying hens remain assigned to eggs and all
-other poultry categories to meat (see @sec-restrain-other-animals).
+**Poultry.** For poultry, we consider breeders of broilers and juveniles
+of laying hens as negligible, hence equilibrium quantities equaling
+observed quantities.
 
 #### Redistributing cattle equilibrium quantities across categories
 

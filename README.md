@@ -18,10 +18,8 @@ This package has been validated ONLY for:
 - Cereals farms (TF14 == 15)
 - Dairy farms   (TF14 == 45)
 
-Only FADN versions post 2014 are supported.
-
-Please filter your FADN data to these farm types and years before use.
-Results for other farm types are UNTESTED and may be unreliable.
+Please filter your FADN data to these farm types before use.
+Results for other farm types are STILL UNDER TEST and may be unreliable.
 
 =================================================================
 
@@ -68,9 +66,9 @@ This R package was built using R 4.5.0 and depends on R \>= 4.1.0
 A mock FADN data set can be loaded from the FADN2Footprint package to
 test it.
 
-## Peer-reviewed articles about FADN2Footprint {#peer-reviewed-articles-about-fadn2footprint}
+## Peer-reviewed articles about FADN2Footprint in preparation{#peer-reviewed-articles-about-fadn2footprint}
 
-Huet S., Thomas L., Braquaval X., Rincon-Ariza F., Ayouba K., Bellassen V. (in prep.) *FADN2Footprint: European Farm Accountancy Data Can Approximate On-Farm Carbon Diagnostics*, **Targeted journal: Journal of Cleaner Production**
+Huet S., Thomas L., Braquaval X., Rincon-Ariza F., Ayouba K., Bellassen V. (in prep.) *FADN2Footprint: Accountancy Data Unveil the Heterogeneity of European Farm Emissions*, **Targeted journal: Journal of Cleaner Production**
 
 ## Other resources {#other-resources}
 

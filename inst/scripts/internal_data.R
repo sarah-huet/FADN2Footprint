@@ -1,9 +1,12 @@
-devtools::load_all(".")
+devtools::load_all("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint/")
 
-load(file.path("R", "sysdata.rda"))
+load(file.path("C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint", "R", "sysdata.rda"))
 
 source(
-  file.path("inst", "scripts", "data_extra.R")
+  file.path(
+    "C:/Users/srhuet/OneDrive/Research/GitHub/FADN2Footprint",
+    "inst", "scripts", "pseudoherd_reference_table.R"
+  )
 )
 
 usethis::use_data(

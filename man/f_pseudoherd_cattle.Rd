@@ -61,10 +61,11 @@ respective category turnover rates.
 juveniles (LBOV1), fattening (LBOV1_2M, LBOV2, LHEIFFAT, and the
 fattening share of LBOV1_2F) and breeders (LHEIFBRE, LCOWOTH, LBOV1_2F
 breeders share, plus LCOWDAIR as a source of offspring). Missing
-turnover rates and offspring rates are replaced by NUTS2/country
-average values (via h_average_practices). The rearing stage with the
-highest observed-to-equilibrium animal ratio (Q_max) is used as the
-reference to compute the equilibrium number of animals at each stage
+turnover rates and offspring rates are replaced by NUTS2 reference
+medians, falling back to overall medians and clipped at reference
+thresholds. The rearing stage with the highest observed-to-equilibrium
+animal ratio (Q_max) is used as the reference to compute the equilibrium
+number of animals at each stage
 (Qeq_j_meat, Qeq_f_meat, Qeq_b_meat), accounting for direct sales of
 juveniles (LBOV1_SSN). These stage-level equilibrium numbers are then
 redistributed across individual livestock categories in proportion to
@@ -79,7 +80,7 @@ fadn_fict <- mock_data$fadn_fict[
   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
   drop = FALSE
 ]
-fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
+fadn_fict_obj <- data_4FADN2Footprint(fadn_fict)
 f_pseudoherd_cattle(object = fadn_fict_obj)
 
 }

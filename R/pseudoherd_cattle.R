@@ -28,10 +28,11 @@
 #'   juveniles (LBOV1), fattening (LBOV1_2M, LBOV2, LHEIFFAT, and the
 #'   fattening share of LBOV1_2F) and breeders (LHEIFBRE, LCOWOTH, LBOV1_2F
 #'   breeders share, plus LCOWDAIR as a source of offspring). Missing
-#'   turnover rates and offspring rates are replaced by NUTS2/country
-#'   average values (via h_average_practices). The rearing stage with the
-#'   highest observed-to-equilibrium animal ratio (Q_max) is used as the
-#'   reference to compute the equilibrium number of animals at each stage
+#'   turnover rates and offspring rates are replaced by NUTS2 reference
+#'   medians, falling back to overall medians and clipped at reference
+#'   thresholds. The rearing stage with the highest observed-to-equilibrium
+#'   animal ratio (Q_max) is used as the reference to compute the equilibrium
+#'   number of animals at each stage
 #'   (Qeq_j_meat, Qeq_f_meat, Qeq_b_meat), accounting for direct sales of
 #'   juveniles (LBOV1_SSN). These stage-level equilibrium numbers are then
 #'   redistributed across individual livestock categories in proportion to
@@ -77,7 +78,8 @@
 #' @import tidyr
 #' @import stringr
 
-f_pseudoherd_cattle <- function(object, overwrite = FALSE) {
+f_pseudoherd_cattle <- function(object,
+                                overwrite = FALSE) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -142,12 +144,12 @@ f_pseudoherd_cattle <- function(object, overwrite = FALSE) {
       ## we estimate other breeders category based on the dairy cows, to ensure dairy cow renewal
       LHEIFBRE_Qeq_milk = ifelse(
         LCOWDAIR_Qobs_milk > 0,
-        rt_LHEIFBRE * (LCOWDAIR_Qeq_milk / rt_LCOWDAIR),
+        pmax(LHEIFBRE_Qobs_milk, rt_LHEIFBRE * (LCOWDAIR_Qeq_milk / rt_LCOWDAIR)),
         0
       ),
       LBOV1_2F_Qeq_milk = ifelse(
         LCOWDAIR_Qobs_milk > 0,
-        (rt_LBOV1_2F_breeders * (LCOWDAIR_Qobs_milk / rt_LCOWDAIR)),
+        pmax(LBOV1_2F_Qobs_milk, rt_LBOV1_2F_breeders * (LCOWDAIR_Qobs_milk / rt_LCOWDAIR)),
         0
       ),
       LBOV1_2F_breeders_Qeq_milk = LBOV1_2F_Qeq_milk,
@@ -168,7 +170,7 @@ f_pseudoherd_cattle <- function(object, overwrite = FALSE) {
       LBOV1_rearing_Qeq_milk = ifelse(
         LCOWDAIR_Qobs_milk > 0,
         # here residence time equals one as we consider the first rearing stage of LBOV1 as the one that will produce the LBOV1_2F breeders
-        1 * (LBOV1_2F_breeders_Qeq_milk / rt_LBOV1_2F_breeders),
+        pmax(LBOV1_Qobs_milk, 1 * (LBOV1_2F_breeders_Qeq_milk / rt_LBOV1_2F_breeders)),
         0
       ),
       LBOV1_slaughter_Qeq_milk = 0,
@@ -191,6 +193,7 @@ f_pseudoherd_cattle <- function(object, overwrite = FALSE) {
       FADN_code_letter = gsub("_Qeq_milk", "", FADN_code_letter),
       Qeq_milk = round(Qeq_milk, 2)
     )
+
 
   ## MEAT ----
   # We deduct animals of the milk workshop from the on-farm animals to estimate on-farms animals involve in the meat workshop. Then we estimate number of animal at equilibrium for this workshop.
@@ -307,44 +310,52 @@ f_pseudoherd_cattle <- function(object, overwrite = FALSE) {
   # View(herd_cattle_meat |> tidyr::pivot_longer(cols = -c(ID,YEAR,NUTS2)) |> dplyr::filter(value >0))
   # View(herd_cattle_meat |> summarise(across(everything(), ~sum(is.finite(.x)))) |> tidyr::pivot_longer(cols = everything()))
 
-  # Remove NAs
-  herd_cattle_meat_aggr <- herd_cattle_meat_aggr |>
-    # add SYSO2
-    dplyr::left_join(
-      object@farm |>
-        dplyr::select(dplyr::all_of(id_cols), SYS02),
-      by = c(id_cols)
-    )
+  ### Replace missing aggregate parameters with reference values ----
 
-  tmp_avrg_rearing_param <- h_average_practices(
-    data = herd_cattle_meat_aggr,
-    target_vars = c("Qobs_j", "rt_j", "Qobs_f", "rt_f", "Qobs_b", "offspring"),
-    primary_grp = c("YEAR", "COUNTRY", "NUTS2"),
-    secondary_grp = c("COUNTRY"),
-    weight_var = "SYS02"
-  ) |>
-    dplyr::rename_with(
-      ~ paste0("avrg_", .x),
-      .cols = c("Qobs_j", "rt_j", "Qobs_f", "rt_f", "Qobs_b", "offspring")
-    )
+  for (var in c("rt_j", "rt_f", "offspring")) {
+    v <- rlang::sym(var)
 
-  ## add fallback averages
-  herd_cattle_meat_aggr <- herd_cattle_meat_aggr |>
-    dplyr::left_join(
-      tmp_avrg_rearing_param,
-      by = c("YEAR", "COUNTRY", "NUTS2")
-    ) |>
-    # replace NAs with fallback
-    dplyr::mutate(
-      # Qobs_j = ifelse(is.na(Qobs_j), avrg_Qobs_j, Qobs_j),
-      rt_j = ifelse(is.na(rt_j), avrg_rt_j, rt_j),
-      # Qobs_f = ifelse(is.na(Qobs_f), avrg_Qobs_f, Qobs_f),
-      rt_f = ifelse(is.na(rt_f), avrg_rt_f, rt_f),
-      # Qobs_b = ifelse(is.na(Qobs_b), avrg_Qobs_b, Qobs_b),
-      offspring = ifelse(is.na(offspring), avrg_offspring, offspring)
-    ) |>
-    # remove fallback variables
-    dplyr::select(-dplyr::matches("^avrg_"))
+    herd_cattle_meat_aggr <- herd_cattle_meat_aggr |>
+      dplyr::left_join(
+        reference_rearing_param$ref_per_NUTS2$cattle |>
+          dplyr::filter(rearing_param == var) |>
+          dplyr::select(NUTS2, median) |>
+          dplyr::rename(median_NUTS2 = median),
+        by = "NUTS2"
+      ) |>
+      (function(.) {
+        overall_tbl <- reference_rearing_param$ref_overall$cattle |>
+          dplyr::filter(rearing_param == var) |>
+          dplyr::select(median, threshold_down, threshold_up) |>
+          dplyr::rename(median_all = median)
+
+        if (nrow(overall_tbl) > 0) {
+          cbind(., overall_tbl)
+        } else {
+          cbind(., tibble::tibble(
+            median_all = NA_real_,
+            threshold_down = NA_real_,
+            threshold_up = NA_real_
+          ))
+        }
+      })() |>
+      dplyr::mutate(ref_val = dplyr::case_when(
+        !is.finite(median_NUTS2) ~ median_all,
+        .default = median_NUTS2
+      )) |>
+      dplyr::mutate(!!v := dplyr::case_when(
+        !is.finite(!!v) ~ ref_val,
+        .default = !!v
+      )) |>
+      dplyr::mutate(!!v := dplyr::case_when(
+        !!v < threshold_down ~ threshold_down,
+        !!v > threshold_up ~ threshold_up,
+        .default = !!v
+      )) |>
+      dplyr::select(-c(
+        median_NUTS2, median_all, ref_val, threshold_down, threshold_up
+      ))
+  }
 
   # View(herd_cattle_meat_aggr |> summarise(across(everything(), ~sum(is.finite(.x)))) |> tidyr::pivot_longer(cols = everything()))
 
@@ -352,6 +363,17 @@ f_pseudoherd_cattle <- function(object, overwrite = FALSE) {
 
   # we remove calves sold for slaughter and dairy cows
   herd_cattle_meat_eq1 <- herd_cattle_meat_aggr |>
+    # add herd cattle milk for estimation
+    dplyr::left_join(
+      herd_cattle_milk |>
+        dplyr::select(
+          dplyr::all_of(id_cols),
+          LBOV1_Qobs_milk,
+          LBOV1_2F_breeders_Qobs_milk,
+          LHEIFBRE_Qobs_milk
+        ),
+      by = id_cols
+    ) |>
     # juveniles sold for slaughter never reach the fattening stage
     # when estimating the juveniles or breeders from fattening, "add" juveniles sold for slaughter
     # When estimating the fattening from juveniles or breeders, "remove" juveniles sold for slaughter
@@ -379,15 +401,17 @@ f_pseudoherd_cattle <- function(object, overwrite = FALSE) {
               0
             ) ~ "fattening",
         ## Qobs_j >= ^Q_j estimated from fattening & >= ^Q_j estimated from breeders
-        Qobs_j >= ifelse(Qobs_f > 0, (1 * (Qobs_f / rt_f)), 0) &
+        Qobs_j >= ifelse(Qobs_f > 0, (1 * (Qobs_f / rt_f) * (1 / remove_juv)), 0) &
           ### we consider that calves involved in the following rearing stage have a residence time of 1 year
           Qobs_j >=
             ifelse(Qobs_b > 0, (rt_j * Qobs_b * offspring), 0) ~ "juveniles",
         ## Qobs_b >= ^Q_b estimated from juveniles & >= ^Q_b estimated from fattening
         Qobs_b >=
-          ifelse(Qobs_j > 0, (Qobs_j / rt_j / offspring) - LCOWDAIR_Qobs, 0) &
+          ifelse(Qobs_j > 0, (Qobs_j / rt_j + LBOV1_Qobs_milk / 1) * 1 / offspring - LCOWDAIR_Qobs, 0) &
           Qobs_b >=
-            ifelse(Qobs_f > 0, (Qobs_f / rt_f / offspring), 0) ~ "breeders" # ,
+            ifelse(Qobs_f > 0,
+                   (Qobs_f / rt_f + LBOV1_2F_breeders_Qobs_milk / rt_LBOV1_2F_breeders + LHEIFBRE_Qobs_milk / rt_LHEIFBRE) * 1 / offspring - LCOWDAIR_Qobs,
+                   0) ~ "breeders" # ,
         # .default = ifelse(LCOWDAIR_Qobs >0 | LCOWOTH_Qobs >0, "breeders", NA)
       )
     ) |>
@@ -403,8 +427,8 @@ f_pseudoherd_cattle <- function(object, overwrite = FALSE) {
         Q_max == "breeders" ~ (rt_f * Qobs_b * offspring) * remove_juv,
       ),
       Qeq_b_meat = dplyr::case_when(
-        Q_max == "juveniles" ~ (Qobs_j / rt_j / offspring) - LCOWDAIR_Qobs,
-        Q_max == "fattening" ~ (Qobs_f / rt_f / offspring),
+        Q_max == "juveniles" ~ (Qobs_j / rt_j + LBOV1_Qobs_milk / 1) * 1 / offspring - LCOWDAIR_Qobs,
+        Q_max == "fattening" ~ (Qobs_f / rt_f + LBOV1_2F_breeders_Qobs_milk / rt_LBOV1_2F_breeders + LHEIFBRE_Qobs_milk / rt_LHEIFBRE) * 1 / offspring - LCOWDAIR_Qobs,
         Q_max == "breeders" ~ Qobs_b
       )
     ) |>
@@ -630,7 +654,14 @@ f_pseudoherd_cattle <- function(object, overwrite = FALSE) {
         pseudoherd_cattle_meat,
         by = c(id_cols, "FADN_code_letter")
       ) |>
-      dplyr::mutate(species = "cattle")
+      dplyr::mutate(species = "cattle") |>
+      # filter farms with any Qobs or Qeq >= 0
+      dplyr::filter(
+        dplyr::if_any(
+          dplyr::matches("Qobs|Qeq"),
+          ~ . >= 0
+        )
+      )
   )
 
   return(pseudoherd_cattle)

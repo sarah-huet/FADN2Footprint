@@ -772,11 +772,9 @@
 #' \itemize{
 #'   \item \code{ALU} (Average Livestock Units): retained from the input if
 #'     available, otherwise computed as \code{AN × livestock_unit_coef}.
-#'   \item \code{Qobs} (Observed number of animals, head): estimated as the
-#'     row-wise mean of \code{AN}, \code{ALU / livestock_unit_coef},
-#'     \code{ON}, and \code{CN}, ignoring \code{NA} values. This averaging
-#'     strategy maximises data coverage across FADN datasets that report
-#'     different subsets of these variables.
+#'   \item \code{Qobs} (Observed number of animals, head): taken from
+#'     \code{AN} when available, otherwise calculated as
+#'     \code{ALU / livestock_unit_coef}.
 #' }
 #' Records with \code{Qobs == 0} are removed.
 #'
@@ -816,8 +814,8 @@
 #'     coefficient.}
 #'   \item{AN}{\code{numeric}. Average number of animals (head).}
 #'   \item{ALU}{\code{numeric}. Average livestock units (LU).}
-#'   \item{Qobs}{\code{numeric}. Observed number of animals (head), averaged
-#'     across available stock variables.}
+#'   \item{Qobs}{\code{numeric}. Observed number of animals (head), taken from
+#'     \code{AN} when available, otherwise derived from \code{ALU}.}
 #'   \item{ON, CN}{\code{numeric}. Opening and closing number of animals
 #'     (head), where available.}
 #'   \item{SSN, SSV}{\code{numeric}. Slaughter sales: number (head) and value
@@ -890,6 +888,13 @@
 
   # 4. Calculations & Imputations -------------------------------------------
   processed_data <- wide_data |>
+    # Ensure AN exists for ALU-only inputs.
+    (\(df) {
+      if (!"AN" %in% names(df)) {
+        df$AN <- NA_real_
+      }
+      df
+    })() |>
     # Ensure ALU column exists (filled with NA if absent)
     (\(df) {
       if (!"ALU" %in% names(df)) {
@@ -921,14 +926,9 @@
       }
       df
     })() |>
-    # Calculate Qobs (Observed Quantity of animals in number of head)
-    # Mean of average number and ALU-derived animal count
+    # Prefer the reported average animal count and use ALU only as a fallback.
     dplyr::mutate(
-      Qobs = rowMeans(
-        #cbind(AN,temp_alu_calc, ON, CN),
-        cbind(AN, temp_alu_calc),
-        na.rm = TRUE
-      )
+      Qobs = dplyr::coalesce(AN, temp_alu_calc)
     ) |>
     dplyr::select(-temp_alu_calc) |>
     # Filter out empty records (Qobs > 0)

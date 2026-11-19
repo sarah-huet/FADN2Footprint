@@ -565,7 +565,7 @@ parameter as the median in farms of the same NUTS2 where the livestock
 category is present when at least 15 such farms are available.
 Otherwise, we use the reference median for that parameter (see below).
 
-#### Reference median and thresholds for rearing parameters {#sec-r}
+#### Reference median and thresholds for rearing parameters {#sec-ref-rearing-param}
 
 We estimate reference median and thresholds below and above which a
 value is considered aberrant (see `pseudoherd_reference_table.R`). Lower
@@ -639,7 +639,7 @@ the renewal of dairy cows and thus estimate which animals are needed to maintain
 the dairy herd as follows:
 
 $$
-\bar{Q}_{l-1, \; \text{milk}} = \max(\bar{Q}_{l-1}, t_{l-1} \cdot \frac{\bar{Q}_{l, \; \text{milk}} }{t_{l}})
+\bar{Q}_{l-1, \; \text{milk}} = \min(\bar{Q}_{l-1}, t_{l-1} \cdot \frac{\bar{Q}_{l, \; \text{milk}} }{t_{l}})
 $$
 {#eq-restrain_herd_act}
 
@@ -726,7 +726,13 @@ breeders).
 The pseudo-herd equilibrium quantities
 ($\widehat{Q}_{l,\;milk}$, `f_pseudoherd_cattle()`) are computed with
 the very same equations than for restraining activities but **without** the cap
-on observed number of animals (@sec-restrain-cattle).
+on observed number of animals (@sec-restrain-cattle) such as:
+
+$$
+\bar{Q}_{l-1, \; \text{milk}} = \max(\bar{Q}_{l-1}, t_{l-1} \cdot \frac{\bar{Q}_{l, \; \text{milk}} }{t_{l}})
+$$
+{#eq-restrain_herd_act}
+
 As a result, $\widehat{Q}_{l,\;milk}$ can exceed $\bar{Q}_{l,\;milk}$ for the renewal
 categories whenever a farm does not raise, on-farm, all of the heifers
 and calves required to renew its own dairy herd — these additional
@@ -890,8 +896,9 @@ For breeders, where a given animal cannot go through different categories, the
 stage-level residence time $t_s$ is trivially the weighted average of
 the residence times of its categories. For fattening bovine however, the
 rearing stage is decomposed into its four possible pathways
-(`LBOV1_2F -> slaughter, LBOV1_2F -> LHEIFFAT -> slaughter, LBOV1_2M -> slaughter, and LBOV1_2M -> LBOV2 -> slaughter`)
-. The stage-level residence time $t_s$ is then the weighted average
+(`LBOV1_2F -> slaughter, LBOV1_2F -> LHEIFFAT -> slaughter, 
+LBOV1_2M -> slaughter, and LBOV1_2M -> LBOV2 -> slaughter`).
+The stage-level residence time $t_s$ is then the weighted average
 residence time per pathway (`f_pseudoherd_cattle()`, variables `Qobs_j`,
 `Qobs_f`, `Qobs_b`, `rt_j`, `rt_f`).
 
@@ -939,14 +946,26 @@ As the pseudo-herd can only be larger than, or equal to, what is actually
 observed on the farm, the equilibrium quantity of a stage is bounded below by
 its observed quantity ($\widehat{Q}_s \geq \bar{Q}_s$) to remove any rounding errors.
 
-**Swine.** For swine, we consider that all animals are involved in the
+**Sheep.**
+For sheep, we apply the same logic as for cattle. We first estimate 
+the animals needed to renew the dairy ewes (`LEWEBRE`) among the other sheeps
+(`LSHEPOTH`, including juveniles and fattening animals) and allocate all other animals 
+to the meat activity.
+Then, for sheep assigned to the meat, the equilibrium numbers are balanced
+using the observed counts, residence times, and breeder offspring rate.
+
+**Swine.** 
+
+For swine, we consider that all animals are involved in the
 meat activity. We infer the number of animals at equilibrium as for the
 cattle meat activity, with the juvenile stage ($j$) being the single
 category `LPIGLET`, the fattening stage ($f$) being the single category
 `LPIGFAT`, and the breeder stage ($b$) including `LSOWBRE` and
 `LPIGOTH`; `LPIGOTH` is treated as male breeders and cull sows.
 
-**Poultry.** For poultry, we consider breeders of broilers and juveniles
+**Poultry.** 
+
+For poultry, we consider breeders of broilers and juveniles
 of laying hens as negligible, hence equilibrium quantities equaling
 observed quantities.
 
@@ -991,24 +1010,16 @@ rates, time to first calving, offspring rate; see
 @sec-method-practices-rearing-param and
 @sec-method-practices-livestock-mixed-cat) cannot be estimated for every
 farm (e.g., a zero-quantity category) and can take unrealistic values
-when flows are poorly reported. For each parameter,
-`f_herd_rearing_param_cattle()` corrects these issues in two steps:
+when flows are poorly reported. For each parameter, non-finite and missing values
+are replaced by a reference value: the
+median value of that parameter among reference farms of the same
+NUTS2 region, or, if that NUTS2 has fewer reference farms than a
+minimum threshold (i.e., 15 farms), the reference median (@sec-ref-rearing-param).
+The resulting value (observed or imputed) is then
+clipped to a parameter-specific `[threshold_down, threshold_up]`
+interval derived from the pan-European reference distribution (@sec-ref-rearing-param).
 
-1.  Non-finite values are first replaced by a reference value: the
-    median value of that parameter among reference farms of the same
-    NUTS2 region, or, if that NUTS2 has fewer reference farms than a
-    minimum threshold (i.e., 15 farms), the reference median (XX renvoi
-    para idoine). The resulting value (observed or imputed) is then
-    clipped to a parameter-specific `[threshold_down, threshold_up]`
-    interval derived from the pan-European reference distribution (XX
-    renvoi para idoine).
-2.  Any value still missing after this step (e.g., when no reference
-    value is available at all for that parameter) is replaced by a
-    weighted average computed directly from the current input sample, at
-    the YEAR × COUNTRY × NUTS2 level, falling back to YEAR × COUNTRY
-    (`h_average_practices()`, weighted by `SYS02`).
-
-This two-step correction is applied once to the primary rearing
+This correction is applied once to the primary rearing
 parameters (computed from raw animal flows) and a second time to the
 rearing parameters of mixed categories (computed from the subdivision
 step of @sec-method-practices-livestock-mixed-cat, and therefore
@@ -1016,8 +1027,8 @@ depending on the first correction).
 
 #### Pseudo-herd feed and associated practices
 
-For each off-farm animal, we add the NUTS2 average of feed quantity and
-quality estimated from our test data set (see Section Feed).
+For each off-farm animal, we add the NUTS2 average of feed quantity and quality estimated from our test data set (see Section Feed).
+If not NUTS2 averages are available, we fall back to COUNTRY-level averages.
 
 ## Feed intake reconstruction {#sec-method-practices-feed}
 

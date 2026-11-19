@@ -13,7 +13,7 @@
 #'   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
 #'   drop = FALSE
 #' ]
-#' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
+#' fadn_fict_obj <- data_4FADN2Footprint(fadn_fict)
 #' f_herd_rearing_param_poultry(object = fadn_fict_obj)
 #'
 #' @concept practice-herding
@@ -23,14 +23,14 @@
 #' @import tidyr
 #' @import stringr
 
-f_herd_rearing_param_poultry <- function(object){
+f_herd_rearing_param_poultry <- function(object) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
 
   ## Steps:
   ## 1. Retrieve observed herd structure
-  ### Observed animal stock is the mean of average animal number and ALU-derived count
+  ### Observed animal stock prefers AN and falls back to the ALU-derived count
   ## 2. Modeling farm rearing process
   ### 2.1. Estimate animal flows between livestock categories
   ### 2.2. Estimate rearing parameters
@@ -45,8 +45,8 @@ f_herd_rearing_param_poultry <- function(object){
 
   # if no poultry, create a tibble with zeros for poultry variables
   if (nrow(herd_poultry) == 0) {
-    #stop("The input data frame has no poultry.")
-    #return(tibble())
+    # stop("The input data frame has no poultry.")
+    # return(tibble())
 
     herd_poultry <- object@farm |>
       dplyr::select(all_of(object@traceability$id_cols)) |>
@@ -60,38 +60,39 @@ f_herd_rearing_param_poultry <- function(object){
   # 2. Modeling farm rearing process ---------------------------------------------------------------------------------
 
   herd_poultry_process_init <- herd_poultry |>
-    dplyr::select(all_of(object@traceability$id_cols),FADN_code_letter,Qobs,ON,CN,PN,SN) |>
+    dplyr::select(all_of(object@traceability$id_cols), FADN_code_letter, Qobs, ON, CN, PN, SN) |>
     pivot_wider(
       id_cols = all_of(object@traceability$id_cols),
       names_from = FADN_code_letter,
-      values_from = c(Qobs,ON,CN,PN,SN),
+      values_from = c(Qobs, ON, CN, PN, SN),
       names_glue = "{FADN_code_letter}_{.value}"
     ) |>
     # replace NAs by zeros
-    mutate(across(where(is.numeric), ~replace_na(., 0))) |>
+    mutate(across(where(is.numeric), ~ replace_na(., 0))) |>
     # add missing livestock categories to prevent errors
     cbind(
-      expand.grid(code = setdiff(data_extra$livestock |> filter(species == "poultry") |> pull(FADN_code_letter),unique(herd_poultry$FADN_code_letter)),
-                  suffix = c("Qobs","ON","CN","PN","SN")) |>
+      expand.grid(
+        code = setdiff(data_extra$livestock |> filter(species == "poultry") |> pull(FADN_code_letter), unique(herd_poultry$FADN_code_letter)),
+        suffix = c("Qobs", "ON", "CN", "PN", "SN")
+      ) |>
         transmute(name = paste(code, suffix, sep = "_")) |>
         mutate(value = 0) |>
-        pivot_wider(names_from = name,values_from = value)
+        pivot_wider(names_from = name, values_from = value)
     ) |>
-
     ## 2.1. FLOWS ----
-  # Flows
-  ## See Figure in package vignette
-  mutate(
-    # Flow in LHENSLAY
-    LHENSLAY_Fout = LHENSLAY_SN,
-    LHENSLAY_Fin = LHENSLAY_PN + LHENSLAY_CN - LHENSLAY_ON + LHENSLAY_Fout,
-    # Flow in LPLTRBROYL
-    LPLTRBROYL_Fout = LPLTRBROYL_SN,
-    LPLTRBROYL_Fin = LPLTRBROYL_PN + LPLTRBROYL_CN - LPLTRBROYL_ON + LPLTRBROYL_Fout,
-    # Flow in LPLTROTH
-    LPLTROTH_Fout = LPLTROTH_SN,
-    LPLTROTH_Fin = LPLTROTH_PN + LPLTROTH_CN - LPLTROTH_ON + LPLTROTH_Fout
-  ) |>
+    # Flows
+    ## See Figure in package vignette
+    mutate(
+      # Flow in LHENSLAY
+      LHENSLAY_Fout = LHENSLAY_SN,
+      LHENSLAY_Fin = LHENSLAY_CN - LHENSLAY_ON + LHENSLAY_Fout,
+      # Flow in LPLTRBROYL
+      LPLTRBROYL_Fout = LPLTRBROYL_SN,
+      LPLTRBROYL_Fin = LPLTRBROYL_CN - LPLTRBROYL_ON + LPLTRBROYL_Fout,
+      # Flow in LPLTROTH
+      LPLTROTH_Fout = LPLTROTH_SN,
+      LPLTROTH_Fin = LPLTROTH_CN - LPLTROTH_ON + LPLTROTH_Fout
+    ) |>
     # replace flow values below zero by zeros
     dplyr::mutate(
       dplyr::across(
@@ -99,35 +100,36 @@ f_herd_rearing_param_poultry <- function(object){
         ~ pmax(.x, 0, na.rm = TRUE)
       )
     ) |>
-
     ## 2.2. REARING PARAMETERS ----
-  mutate(
-    rt_LHENSLAY = LHENSLAY_Qobs / ((LHENSLAY_Fin+LHENSLAY_Fout)/2),
-    rt_LPLTRBROYL = LPLTRBROYL_Qobs / ((LPLTRBROYL_Fin+LPLTRBROYL_Fout)/2),
-    rt_LPLTROTH = LPLTROTH_Qobs / ((LPLTROTH_Fin+LPLTROTH_Fout)/2)
-  )  |>
+    mutate(
+      rt_LHENSLAY = LHENSLAY_Qobs / ((LHENSLAY_Fin + LHENSLAY_Fout) / 2),
+      rt_LPLTRBROYL = LPLTRBROYL_Qobs / ((LPLTRBROYL_Fin + LPLTRBROYL_Fout) / 2),
+      rt_LPLTROTH = LPLTROTH_Qobs / ((LPLTROTH_Fin + LPLTROTH_Fout) / 2)
+    ) |>
     # replace Inf per NAs
     dplyr::mutate(
       dplyr::across(
         dplyr::matches("rt_|t_1st|offspring"),
         ~ ifelse(!is.finite(.x), NA_real_, .x)
-      ))# |>
+      )
+    ) # |>
   # remove columns with only zeros or NAs
-  #dplyr::select(where(~ !is.numeric(.) || is.na(sum(., na.rm = TRUE)) || sum(., na.rm = TRUE) != 0))
+  # dplyr::select(where(~ !is.numeric(.) || is.na(sum(., na.rm = TRUE)) || sum(., na.rm = TRUE) != 0))
 
   # how many NAs per columns => only in residence time columns
-  #View(tmp_df |> summarise(across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
+  # View(tmp_df |> summarise(across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
   ## replace outliers per percentiles ----
-  #reference_rearing_param$ref_overall$poultry
+  # reference_rearing_param$ref_overall$poultry
   herd_poultry_process_clean <- herd_poultry_process_init |>
     # add NUTS2 and SYS02
-    dplyr::left_join(object@farm |>
-                       dplyr::select(dplyr::all_of(object@traceability$id_cols), NUTS2, SYS02),
-                     by = object@traceability$id_cols)
+    dplyr::left_join(
+      object@farm |>
+        dplyr::select(dplyr::all_of(object@traceability$id_cols), NUTS2, SYS02),
+      by = object@traceability$id_cols
+    )
 
-  for (var in colnames(herd_poultry_process_clean)[grepl("rt_",colnames(herd_poultry_process_clean))]) {
-
+  for (var in colnames(herd_poultry_process_clean)[grepl("rt_", colnames(herd_poultry_process_clean))]) {
     v <- rlang::sym(var)
 
     # Join and replace
@@ -136,9 +138,10 @@ f_herd_rearing_param_poultry <- function(object){
       left_join(
         reference_rearing_param$ref_per_NUTS2$poultry |>
           filter(rearing_param == var) |>
-          dplyr::select(NUTS2,median) |>
+          dplyr::select(NUTS2, median) |>
           rename(median_NUTS2 = median),
-        by = "NUTS2") |>
+        by = "NUTS2"
+      ) |>
       # join overall medians and thresholds
       (function(.) {
         ovrll_tbl <- reference_rearing_param$ref_overall$poultry |>
@@ -149,9 +152,11 @@ f_herd_rearing_param_poultry <- function(object){
         if (nrow(ovrll_tbl) > 0) {
           cbind(., ovrll_tbl)
         } else {
-          cbind(., tibble(median_all = NA,
-                          threshold_down = NA,
-                          threshold_up = NA))
+          cbind(., tibble(
+            median_all = NA,
+            threshold_down = NA,
+            threshold_up = NA
+          ))
         }
       })() |>
       mutate(ref_val = case_when(
@@ -168,38 +173,9 @@ f_herd_rearing_param_poultry <- function(object){
         (!!v > threshold_up) ~ threshold_up,
         .default = !!v
       )) |>
-      dplyr::select(-c(median_NUTS2,median_all,ref_val,threshold_down,threshold_up))
+      dplyr::select(-c(median_NUTS2, median_all, ref_val, threshold_down, threshold_up))
   }
 
-
-  ## Replace NAs with fallback averages ----
-
-  # identify target variables dynamically
-  target_vars_poultry <- colnames(herd_poultry_process_clean)[grepl("rt_", colnames(herd_poultry_process_clean))]
-
-  tmp_avrg_rearing_param <- h_average_practices(data = herd_poultry_process_clean,
-                                                target_vars = target_vars_poultry,
-                                                primary_grp = c('YEAR', 'COUNTRY', 'NUTS2'),
-                                                secondary_grp = c('COUNTRY'),
-                                                weight_var = 'SYS02') |>
-    dplyr::rename_with(~ paste0("avrg_", .x),
-                       .cols = dplyr::all_of(target_vars_poultry))
-
-  ## add fallback averages
-  herd_poultry_process_clean <- herd_poultry_process_clean |>
-    dplyr::left_join(tmp_avrg_rearing_param,
-                     by = c('YEAR', 'COUNTRY', 'NUTS2')) |>
-    # replace NAs with fallback, for each target variable
-    dplyr::mutate(
-      dplyr::across(
-        dplyr::all_of(target_vars_poultry),
-        ~ ifelse(is.na(.x), get(paste0("avrg_", dplyr::cur_column())), .x)
-      )
-    ) |>
-    # remove fallback variables
-    dplyr::select(-dplyr::matches("^avrg_"))
-
-  # View(herd_poultry_process_clean |> summarise(across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
   ## 2.3. MIXED CATEGORIES
   # no mixed categories in poultry
@@ -210,8 +186,7 @@ f_herd_rearing_param_poultry <- function(object){
   herd_rearing_param_poultry <- herd_poultry_process_clean
 
   return(herd_rearing_param_poultry)
-
 }
 
-utils::globalVariables(c('land_use_type', 'sales_t', 'sales_kg','GE_MJ_kg', 'QVENT3'))
+utils::globalVariables(c("land_use_type", "sales_t", "sales_kg", "GE_MJ_kg", "QVENT3"))
 # this is to avoid a note in check package (the issue is from the use of dplyr)

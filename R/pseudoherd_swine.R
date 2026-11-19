@@ -147,47 +147,52 @@ f_pseudoherd_swine <- function(object,
       offspring = offspring_LSOWBRE
     )
 
-  # Remove NAs
-  herd_swine_meat_aggr <- herd_swine_meat_aggr |>
-    # add SYSO2
-    dplyr::left_join(
-      object@farm |>
-        dplyr::select(dplyr::all_of(id_cols), SYS02),
-      by = c(id_cols)
-    )
+ ### Replace missing aggregate parameters with reference values ----
 
+  for (var in c("rt_j", "rt_f", "offspring")) {
+    v <- rlang::sym(var)
 
-  tmp_avrg_rearing_param <- h_average_practices(
-    data = herd_swine_meat_aggr,
-    target_vars = c("Qobs_j", "rt_j", "Qobs_f", "rt_f", "Qobs_b", "offspring"),
-    primary_grp = c("YEAR", "COUNTRY", "NUTS2"),
-    secondary_grp = c("COUNTRY"),
-    weight_var = "SYS02"
-  ) |>
-    dplyr::rename_with(~ paste0("avrg_", .x),
-      .cols = c("Qobs_j", "rt_j", "Qobs_f", "rt_f", "Qobs_b", "offspring")
-    )
+    herd_swine_meat_aggr <- herd_swine_meat_aggr |>
+      dplyr::left_join(
+        reference_rearing_param$ref_per_NUTS2$swine |>
+          dplyr::filter(rearing_param == var) |>
+          dplyr::select(NUTS2, median) |>
+          dplyr::rename(median_NUTS2 = median),
+        by = "NUTS2"
+      ) |>
+      (function(.) {
+        overall_tbl <- reference_rearing_param$ref_overall$swine |>
+          dplyr::filter(rearing_param == var) |>
+          dplyr::select(median, threshold_down, threshold_up) |>
+          dplyr::rename(median_all = median)
 
-
-  ## add fallback averages
-  herd_swine_meat_aggr <- herd_swine_meat_aggr |>
-    dplyr::left_join(tmp_avrg_rearing_param,
-      by = c("YEAR", "COUNTRY", "NUTS2")
-    ) |>
-    # replace NAs with fallback
-    dplyr::mutate(
-      Qobs_j = ifelse(is.na(Qobs_j), avrg_Qobs_j, Qobs_j),
-      rt_j = ifelse(is.na(rt_j), avrg_rt_j, rt_j),
-      Qobs_f = ifelse(is.na(Qobs_f), avrg_Qobs_f, Qobs_f),
-      rt_f = ifelse(is.na(rt_f), avrg_rt_f, rt_f),
-      Qobs_b = ifelse(is.na(Qobs_b), avrg_Qobs_b, Qobs_b),
-      offspring = ifelse(is.na(offspring), avrg_offspring, offspring)
-    ) |>
-    # remove fallback variables
-    dplyr::select(-dplyr::matches("^avrg_"))
-
-
-  # View(herd_swine_meat_aggr |> summarise(across(everything(), ~sum(is.na(.x)))) |> tidyr::pivot_longer(cols = everything()))
+        if (nrow(overall_tbl) > 0) {
+          cbind(., overall_tbl)
+        } else {
+          cbind(., tibble::tibble(
+            median_all = NA_real_,
+            threshold_down = NA_real_,
+            threshold_up = NA_real_
+          ))
+        }
+      })() |>
+      dplyr::mutate(ref_val = dplyr::case_when(
+        !is.finite(median_NUTS2) ~ median_all,
+        .default = median_NUTS2
+      )) |>
+      dplyr::mutate(!!v := dplyr::case_when(
+        !is.finite(!!v) ~ ref_val,
+        .default = !!v
+      )) |>
+      dplyr::mutate(!!v := dplyr::case_when(
+        !!v < threshold_down ~ threshold_down,
+        !!v > threshold_up ~ threshold_up,
+        .default = !!v
+      )) |>
+      dplyr::select(-c(
+        median_NUTS2, median_all, ref_val, threshold_down, threshold_up
+      ))
+  }
 
   ### 2.2.2. Estimate herd at equilibrium ----
 

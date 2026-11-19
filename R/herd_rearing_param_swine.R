@@ -13,7 +13,7 @@
 #'   which(as.numeric(mock_data$fadn_fict$YEAR) >= 2017)[1], ,
 #'   drop = FALSE
 #' ]
-#' fadn_fict_obj = data_4FADN2Footprint(fadn_fict)
+#' fadn_fict_obj <- data_4FADN2Footprint(fadn_fict)
 #' f_herd_rearing_param_swine(object = fadn_fict_obj)
 #'
 #' @concept practice-herding
@@ -23,7 +23,7 @@
 #' @import tidyr
 #' @import stringr
 
-f_herd_rearing_param_swine <- function(object){
+f_herd_rearing_param_swine <- function(object) {
   if (!inherits(object, "FADN2Footprint")) {
     stop("Input must be a valid 'FADN2Footprint' object.")
   }
@@ -48,8 +48,8 @@ f_herd_rearing_param_swine <- function(object){
 
   # if no swine, create a tibble with zeros for swine variables
   if (nrow(herd_swine) == 0) {
-    #stop("The input data frame has no poultry.")
-    #return(tibble())
+    # stop("The input data frame has no poultry.")
+    # return(tibble())
 
     herd_swine <- object@farm |>
       dplyr::select(tidyselect::all_of(object@traceability$id_cols)) |>
@@ -63,44 +63,47 @@ f_herd_rearing_param_swine <- function(object){
   # 2. Modeling farm rearing process ---------------------------------------------------------------------------------
 
   herd_swine_process_init <- herd_swine |>
-    dplyr::select(tidyselect::all_of(object@traceability$id_cols),FADN_code_letter,Qobs,ON,CN,PN,SN) |>
+    dplyr::select(tidyselect::all_of(object@traceability$id_cols), FADN_code_letter, Qobs, ON, CN, PN, SN) |>
     tidyr::pivot_wider(
       id_cols = tidyselect::all_of(object@traceability$id_cols),
       names_from = FADN_code_letter,
-      values_from = c(Qobs,ON,CN,PN,SN),
+      values_from = c(Qobs, ON, CN, PN, SN),
       names_glue = "{FADN_code_letter}_{.value}"
     ) |>
     # replace NAs by zeros
-    dplyr::mutate(dplyr::across(where(is.numeric), ~tidyr::replace_na(., 0))) |>
+    dplyr::mutate(dplyr::across(where(is.numeric), ~ tidyr::replace_na(., 0))) |>
     # add missing livestock categories to prevent errors
     cbind(
-      expand.grid(code = setdiff(data_extra$livestock |>
-                                   dplyr::filter(species == "swine") |>
-                                   pull(FADN_code_letter),
-                                 unique(herd_swine$FADN_code_letter)),
-                  suffix = c("Qobs","ON","CN","PN","SN")) |>
+      expand.grid(
+        code = setdiff(
+          data_extra$livestock |>
+            dplyr::filter(species == "swine") |>
+            pull(FADN_code_letter),
+          unique(herd_swine$FADN_code_letter)
+        ),
+        suffix = c("Qobs", "ON", "CN", "PN", "SN")
+      ) |>
         transmute(name = paste(code, suffix, sep = "_")) |>
         dplyr::mutate(value = 0) |>
-        tidyr::pivot_wider(names_from = name,values_from = value)
+        tidyr::pivot_wider(names_from = name, values_from = value)
     ) |>
-
     ## 2.1. FLOWS ----
-  # Flows
-  ## See Figure in package vignette
-  dplyr::mutate(
-    # Flow in LSOWBRE
-    LSOWBRE_Fout = LSOWBRE_SN,
-    LSOWBRE_Fin = LSOWBRE_PN + LSOWBRE_CN - LSOWBRE_ON + LSOWBRE_Fout,
-    # Flow in LPIGOTH
-    LPIGOTH_Fout = LPIGOTH_SN,
-    LPIGOTH_Fin = LPIGOTH_PN + LPIGOTH_CN - LPIGOTH_ON + LPIGOTH_Fout,
-    # Flow in LPIGFAT
-    LPIGFAT_Fout = LPIGFAT_SN,
-    LPIGFAT_Fin = LPIGFAT_PN + LPIGFAT_CN - LPIGFAT_ON + LPIGFAT_Fout,
-    # Flow in LPIGLET
-    LPIGLET_Fout = LPIGLET_SN + (LPIGFAT_Fin-LPIGFAT_PN) + (LSOWBRE_Fin-LSOWBRE_PN) + (LPIGOTH_Fin-LPIGOTH_PN),
-    LPIGLET_Fin = LPIGLET_PN + LPIGLET_CN - LPIGLET_ON + LPIGLET_Fout
-  ) |>
+    # Flows
+    ## See Figure in package vignette
+    dplyr::mutate(
+      # Flow in LSOWBRE
+      LSOWBRE_Fout = LSOWBRE_SN,
+      LSOWBRE_Fin = LSOWBRE_CN - LSOWBRE_ON + LSOWBRE_Fout,
+      # Flow in LPIGOTH
+      LPIGOTH_Fout = LPIGOTH_SN,
+      LPIGOTH_Fin = LPIGOTH_CN - LPIGOTH_ON + LPIGOTH_Fout,
+      # Flow in LPIGFAT
+      LPIGFAT_Fout = LPIGFAT_SN,
+      LPIGFAT_Fin = LPIGFAT_CN - LPIGFAT_ON + LPIGFAT_Fout,
+      # Flow in LPIGLET
+      LPIGLET_Fout = LPIGLET_SN + pmax(0, LPIGFAT_Fin - LPIGFAT_PN) + pmax(0, LSOWBRE_Fin - LSOWBRE_PN) + pmax(0, LPIGOTH_Fin - LPIGOTH_PN),
+      LPIGLET_Fin = LPIGLET_CN - LPIGLET_ON + LPIGLET_Fout
+    ) |>
     # replace flow values below zero by zeros
     dplyr::mutate(
       dplyr::across(
@@ -108,36 +111,37 @@ f_herd_rearing_param_swine <- function(object){
         ~ pmax(.x, 0, na.rm = TRUE)
       )
     ) |>
-
     ## 2.2. REARING PARAMETERS ----
-  dplyr::mutate(
-    rt_LSOWBRE = LSOWBRE_Qobs / ((LSOWBRE_Fin+LSOWBRE_Fout)/2),
-    rt_LPIGOTH = LPIGOTH_Qobs / ((LPIGOTH_Fin+LPIGOTH_Fout)/2),
-    rt_LPIGFAT = LPIGFAT_Qobs / ((LPIGFAT_Fin+LPIGFAT_Fout)/2),
-    rt_LPIGLET = LPIGLET_Qobs / ((LPIGLET_Fin + LPIGLET_Fout)/2),
-    offspring_LSOWBRE = (LPIGLET_Fin-LPIGLET_PN) / LSOWBRE_Qobs
-  ) |>
+    dplyr::mutate(
+      rt_LSOWBRE = LSOWBRE_Qobs / ((LSOWBRE_Fin + LSOWBRE_Fout) / 2),
+      rt_LPIGOTH = LPIGOTH_Qobs / ((LPIGOTH_Fin + LPIGOTH_Fout) / 2),
+      rt_LPIGFAT = LPIGFAT_Qobs / ((LPIGFAT_Fin + LPIGFAT_Fout) / 2),
+      rt_LPIGLET = LPIGLET_Qobs / ((LPIGLET_Fin + LPIGLET_Fout) / 2),
+      offspring_LSOWBRE = (LPIGLET_Fin - LPIGLET_PN) / LSOWBRE_Qobs
+    ) |>
     # replace Inf per NAs
     dplyr::mutate(
       dplyr::across(
         dplyr::matches("rt_|t_1st|offspring"),
-      ~ ifelse(!is.finite(.x), NA_real_, .x)
-    ))
+        ~ ifelse(!is.finite(.x), NA_real_, .x)
+      )
+    )
   # remove columns with only zeros or NAs
-  #dplyr::select(where(~ !is.numeric(.) || is.na(sum(., na.rm = TRUE)) || sum(., na.rm = TRUE) != 0))
+  # dplyr::select(where(~ !is.numeric(.) || is.na(sum(., na.rm = TRUE)) || sum(., na.rm = TRUE) != 0))
 
   # how many NAs per columns => only in residence time columns
-  #View(tmp_df |> summarise(dplyr::across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
+  # View(tmp_df |> summarise(dplyr::across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
   ## replace outliers per percentiles ----
   herd_swine_process_clean <- herd_swine_process_init |>
     # add NUTS2 and SYS02
-    dplyr::left_join(object@farm |>
-                       dplyr::select(tidyselect::all_of(object@traceability$id_cols), NUTS2, SYS02),
-                     by = object@traceability$id_cols)
+    dplyr::left_join(
+      object@farm |>
+        dplyr::select(tidyselect::all_of(object@traceability$id_cols), NUTS2, SYS02),
+      by = object@traceability$id_cols
+    )
 
-  for (var in colnames(herd_swine_process_clean)[grepl("rt_|offspring",colnames(herd_swine_process_clean))]) {
-
+  for (var in colnames(herd_swine_process_clean)[grepl("rt_|offspring", colnames(herd_swine_process_clean))]) {
     v <- rlang::sym(var)
 
     # Join and replace
@@ -146,9 +150,10 @@ f_herd_rearing_param_swine <- function(object){
       dplyr::left_join(
         reference_rearing_param$ref_per_NUTS2$swine |>
           dplyr::filter(rearing_param == var) |>
-          dplyr::select(NUTS2,median) |>
+          dplyr::select(NUTS2, median) |>
           dplyr::rename(median_NUTS2 = median),
-        by = "NUTS2") |>
+        by = "NUTS2"
+      ) |>
       # join overall medians and thresholds
       (function(.) {
         ovrll_tbl <- reference_rearing_param$ref_overall$swine |>
@@ -159,9 +164,11 @@ f_herd_rearing_param_swine <- function(object){
         if (nrow(ovrll_tbl) > 0) {
           cbind(., ovrll_tbl)
         } else {
-          cbind(., tibble(median_all = NA,
-                          threshold_down = NA,
-                          threshold_up = NA))
+          cbind(., tibble(
+            median_all = NA,
+            threshold_down = NA,
+            threshold_up = NA
+          ))
         }
       })() |>
       dplyr::mutate(ref_val = case_when(
@@ -178,37 +185,8 @@ f_herd_rearing_param_swine <- function(object){
         (!!v > threshold_up) ~ threshold_up,
         .default = !!v
       )) |>
-      dplyr::select(-c(median_NUTS2,median_all,ref_val,threshold_down,threshold_up))
+      dplyr::select(-c(median_NUTS2, median_all, ref_val, threshold_down, threshold_up))
   }
-
-  ## Replace NAs with fallback averages ----
-
-  # identify target variables dynamically
-  target_vars_swine <- colnames(herd_swine_process_clean)[grepl("rt_|offspring", colnames(herd_swine_process_clean))]
-
-  tmp_avrg_rearing_param <- h_average_practices(data = herd_swine_process_clean,
-                                                target_vars = target_vars_swine,
-                                                primary_grp = c('YEAR', 'COUNTRY', 'NUTS2'),
-                                                secondary_grp = c('COUNTRY'),
-                                                weight_var = 'SYS02') |>
-    dplyr::rename_with(~ paste0("avrg_", .x),
-                       .cols = dplyr::all_of(target_vars_swine))
-
-  ## add fallback averages
-  herd_swine_process_clean <- herd_swine_process_clean |>
-    dplyr::left_join(tmp_avrg_rearing_param,
-                     by = c('YEAR', 'COUNTRY', 'NUTS2')) |>
-    # replace NAs with fallback, for each target variable
-    dplyr::mutate(
-      dplyr::across(
-        dplyr::all_of(target_vars_swine),
-        ~ ifelse(is.na(.x), get(paste0("avrg_", dplyr::cur_column())), .x)
-      )
-    ) |>
-    # remove fallback variables
-    dplyr::select(-dplyr::matches("^avrg_|SYS02"))
-
-  # View(herd_swine_process_clean |> summarise(dplyr::across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
   ## 2.3. MIXED CATEGORIES
   # no mixed categories in swine
@@ -219,5 +197,4 @@ f_herd_rearing_param_swine <- function(object){
 
 
   return(herd_rearing_param_swine)
-
 }

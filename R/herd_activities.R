@@ -108,10 +108,10 @@ f_herd_activities <- function(object,
       LCOWDAIR_Qobs_milk = ifelse(LCOWDAIR_Qobs >0, LCOWDAIR_Qobs, 0),
 
       LHEIFBRE_Qobs_milk = ifelse(LCOWDAIR_Qobs >0 & LHEIFBRE_Qobs >0,
-                                  rt_LHEIFBRE * (LCOWDAIR_Qobs_milk/rt_LCOWDAIR),
+                                  pmin(LHEIFBRE_Qobs, rt_LHEIFBRE * (LCOWDAIR_Qobs_milk/rt_LCOWDAIR)),
                                   0),
       LBOV1_2F_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
-                                  (rt_LBOV1_2F_breeders * (LCOWDAIR_Qobs_milk/rt_LCOWDAIR)),
+                                  pmin(LBOV1_2F_Qobs, rt_LBOV1_2F_breeders * (LCOWDAIR_Qobs_milk/rt_LCOWDAIR)),
                                   0),
       LBOV1_2F_breeders_Qobs_milk = LBOV1_2F_Qobs_milk,
       LBOV1_2F_fattening_Qobs_milk = 0,
@@ -131,9 +131,9 @@ f_herd_activities <- function(object,
       # juveniles
       LBOV1_rearing_Qobs_milk = ifelse(LCOWDAIR_Qobs >0,
                                 # here residence time equals one as we consider the first rearing stage of LBOV1 as the one that will produce the LBOV1_2F breeders
-                               1 * (LBOV1_2F_breeders_Qobs_milk/rt_LBOV1_2F_breeders),
+                               pmin(LBOV1_Qobs, 1 * (LBOV1_2F_breeders_Qobs_milk/rt_LBOV1_2F_breeders)),
                                0),
-      LBOV1_slaughter_Qobs_milk = 0,                         
+      LBOV1_slaughter_Qobs_milk = 0,
       LBOV1_Qobs_milk = LBOV1_rearing_Qobs_milk
       )  |>
     # dplyr::select columns
@@ -241,35 +241,54 @@ f_herd_activities <- function(object,
   tmp_milk_prod = object@output$other_herd_products |>
     dplyr::filter(FADN_code_letter_output == "PMLKSHEP")
 
-  herd_sheep <- object@herd |>
-    dplyr::filter(species == "sheep") |>
-    # dplyr::select columns
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, dplyr::matches("Qobs")) |>
-    # add milk production
-    dplyr::left_join(
-      tmp_milk_prod |>
-        dplyr::select(dplyr::all_of(id_cols), prod_t) |>
-        dplyr::rename(prod_milk_t = prod_t),
-      by = id_cols
-    ) |>
-    # restrain to activity
-    dplyr::mutate(
-      Qobs_milk = dplyr::case_when(
-        FADN_code_letter == "LEWEBRE" & prod_milk_t >0 ~ pmax(1, prod_milk_t / 0.255, na.rm = TRUE),
-        .default = 0
-      ),
-      Qobs_milk = round(Qobs_milk, 2),
-      Qobs_meat = Qobs - Qobs_milk,
-      Qobs_meat = round(Qobs_meat, 2),
-      species = "sheep"
-    )|>
-    #remove rows with only NAs or zeros
-    dplyr::filter(
-      dplyr::if_any(
-        dplyr::matches("Qobs"),
-        ~ !is.na(.x) & .x != 0
-      )
-    )
+
+  herd_sheep <- f_herd_rearing_param_sheep(object) |>
+       # add milk production
+       dplyr::left_join(
+            tmp_milk_prod |>
+                 dplyr::select(dplyr::all_of(id_cols), prod_t) |>
+                 dplyr::rename(prod_milk_t = prod_t),
+            by = id_cols
+       ) |>
+       # estimate observed quantities and times for each production process step
+       # first estimate how many animals are needed to renew the dairy cows, in farms that have dairy cows
+       dplyr::mutate(
+
+            # breeders
+            LEWEBRE_Qobs_milk = ifelse(LEWEBRE_Qobs >0 & prod_milk_t >0, pmax(1, prod_milk_t / 0.255, na.rm = TRUE), 0),
+
+            LSHEPOTH_Qobs_milk = ifelse(LEWEBRE_Qobs_milk >0 & LSHEPOTH_Qobs >0,
+                                        pmin(LSHEPOTH_Qobs, rt_LSHEPOTH * (LEWEBRE_Qobs_milk/rt_LEWEBRE)),
+                                        0)) |>
+       # dplyr::select columns
+       dplyr::select(dplyr::all_of(object@traceability$id_cols), dplyr::matches("Qobs")) |>
+       # pivot table
+       tidyr::pivot_longer(
+            cols = -dplyr::all_of(object@traceability$id_cols),
+            names_to = c("FADN_code_letter", "variable"),
+            names_pattern = "(.+)_(Qobs(?:_milk)?)"  # captures 'Qobs' or 'Qobs_milk'
+       ) |>
+       tidyr::pivot_wider(
+            names_from = variable,
+            values_from = value
+       ) |>
+       # estimate Qobs
+       dplyr::mutate(
+            ## for milk: check that estimated Qobs are <= Qobs
+            Qobs_milk = pmin(Qobs,Qobs_milk),
+            Qobs_milk = round(Qobs_milk, 2),
+            ## for meat: animals not involved in the milk process are considered part of the meat activity
+            Qobs_meat = Qobs - dplyr::coalesce(Qobs_milk,0),
+            Qobs_meat = round(Qobs_meat, 2),
+            species = "sheep"
+       )|>
+       #remove rows with only NAs or zeros
+       dplyr::filter(
+            dplyr::if_any(
+                 dplyr::matches("Qobs"),
+                 ~ !is.na(.x) & .x != 0
+            )
+       )
 
   ## GOATS ----
 

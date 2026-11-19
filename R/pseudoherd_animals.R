@@ -66,34 +66,34 @@ f_pseudoherd_animals <- function(object,
                 stop("Input must be a valid 'FADN2Footprint' object.")
         }
 
-        if (!is.null(object@practices$herding$pseudoherd$animals)&& !overwrite) {
+        if (!is.null(object@practices$herding$pseudoherd$animals) && !overwrite) {
                 message("Using cached values stored in object@practices$herding$pseudoherd$animals.")
-                return(object@practices$herding$pseudoherd$animals)  # use cached value
+                return(object@practices$herding$pseudoherd$animals) # use cached value
         }
 
 
-        id_cols = object@traceability$id_cols
+        id_cols <- object@traceability$id_cols
         # retrieve herd activities
         herd_activities <- f_herd_activities(object)
 
         # Estimate off-farm herd ----
-        pseudoherd_cattle = f_pseudoherd_cattle(object)
-        pseudoherd_swine = f_pseudoherd_swine(object)
-        pseudoherd_poultry = f_pseudoherd_poultry(object)
+        pseudoherd_cattle <- f_pseudoherd_cattle(object)
+        pseudoherd_swine <- f_pseudoherd_swine(object)
+        pseudoherd_poultry <- f_pseudoherd_poultry(object)
+        pseudoherd_sheep <- f_pseudoherd_sheep(object)
 
 
-
-        #pseudoherd_sheep = f_pseudoherd_sheep(object)
-
-
-       pseudoherd_animals <- Reduce(bind_rows,
-                                    list(pseudoherd_cattle$pseudoherd,
-                                         pseudoherd_swine$pseudoherd,
-                                         pseudoherd_poultry$pseudoherd
-                                         )) |>
+        pseudoherd_animals <- Reduce(
+                bind_rows,
+                list(
+                        pseudoherd_cattle$pseudoherd,
+                        pseudoherd_swine$pseudoherd,
+                        pseudoherd_poultry$pseudoherd
+                )
+        ) |>
                 # keep only FADN_code_letter
                 ## this remove the code for mixed categories (e.g., "LBOV1_2F_breeders")
-                dplyr::filter(FADN_code_letter %in% data_extra$livestock$FADN_code_letter)|>
+                dplyr::filter(FADN_code_letter %in% data_extra$livestock$FADN_code_letter) |>
                 # estimate total number of animals, and off-farm animals
                 dplyr::mutate(
                         Qeq = dplyr::coalesce(Qeq_milk, 0) + dplyr::coalesce(Qeq_meat, 0) + dplyr::coalesce(Qeq_eggs, 0),
@@ -110,6 +110,5 @@ f_pseudoherd_animals <- function(object,
                 )
 
 
-                return(pseudoherd_animals)
-
+        return(pseudoherd_animals)
 }

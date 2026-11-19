@@ -35,3 +35,4 @@
 ^inst/ext_data/forage_yield/.*lock.*
 ^inst/ext_data/forage_yield/.*working paper.*
 ^tests/test_infer_Nmin_Q_from_price[.]R$
+^\.Rproj\.user$

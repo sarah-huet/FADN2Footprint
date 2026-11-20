@@ -60,92 +60,10 @@ f_herd_rearing_param_cattle <- function(object) {
 
   # 2. Modeling farm rearing process ---------------------------------------------------------------------------------
 
-  herd_cattle_process_init <- herd_cattle |>
-    dplyr::select(dplyr::all_of(object@traceability$id_cols), FADN_code_letter, Qobs, ON, CN, PN, SN, SSN, SRN) |>
-    tidyr::pivot_wider(
-      id_cols = dplyr::all_of(object@traceability$id_cols),
-      names_from = FADN_code_letter,
-      values_from = c(Qobs, ON, CN, PN, SN, SSN, SRN),
-      names_glue = "{FADN_code_letter}_{.value}"
-    ) |>
-    # replace NAs by zeros
-    dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~ tidyr::replace_na(., 0))) |>
-    # add missing livestock categories to prevent errors
-    cbind(
-      expand.grid(
-        code = setdiff(
-          data_extra$livestock |>
-            dplyr::filter(species == "cattle") |>
-            dplyr::pull(FADN_code_letter),
-          unique(herd_cattle$FADN_code_letter)
-        ),
-        suffix = c("Qobs", "ON", "CN", "PN", "SN", "SSN", "SRN")
-      ) |>
-        transmute(name = paste(code, suffix, sep = "_")) |>
-        dplyr::mutate(value = 0) |>
-        tidyr::pivot_wider(names_from = name, values_from = value)
-    ) |>
-    ## 2.1. FLOWS ----
-    ## see diagram in Annex 1 of COMMUNITY COMMITTEE FOR THE FARM ACCOUNTANCY DATA NETWORK, 2009. Typology Handbook of agricultural holdings and the standard output (SO) coefficient calculation. (No. RI/CC 1500 rev. 3), COMMUNITY COMMITTEE FOR THE FARM ACCOUNTANCY DATA NETWORK. European Commission, Brussels.
-    ## See Figure in package vignette
-    dplyr::mutate(
-      # Flow in LCOWDAIR
-      LCOWDAIR_Fout = LCOWDAIR_SN,
-      ## LCOWDAIR_Fin = LCOWDAIR_PN + LCOWDAIR_CN - LCOWDAIR_ON + LCOWDAIR_SN, # no ON and CN variables for LCOWDAIR
-      LCOWDAIR_Fin = LCOWDAIR_CN - LCOWDAIR_ON + LCOWDAIR_Fout,
-      # Flow in LCOWOTH
-      LCOWOTH_Fout = LCOWOTH_SN,
-      LCOWOTH_Fin = LCOWOTH_CN - LCOWOTH_ON + LCOWOTH_Fout,
-      # Flow in LBOV2
-      LBOV2_Fout = LBOV2_SN,
-      LBOV2_Fin = LBOV2_CN - LBOV2_ON + LBOV2_Fout,
-      # Flow in LHEIFFAT
-      LHEIFFAT_Fout = LHEIFFAT_SN,
-      LHEIFFAT_Fin = LHEIFFAT_CN - LHEIFFAT_ON + LHEIFFAT_Fout,
-
-      # Flow in LHEIFBRE
-      LHEIFBRE_Fout = LHEIFBRE_SN + pmax(0, LCOWDAIR_Fin - LCOWDAIR_PN) + pmax(0, LCOWOTH_Fin - LCOWOTH_PN),
-      LHEIFBRE_Fin = LHEIFBRE_CN - LHEIFBRE_ON + LHEIFBRE_Fout,
-
-      # Flow in LBOV1_2F
-      LBOV1_2F_Fout = LBOV1_2F_SN + pmax(0, LHEIFFAT_Fin - LHEIFFAT_PN) + pmax(0, LHEIFBRE_Fin - LHEIFBRE_PN),
-      LBOV1_2F_Fin = LBOV1_2F_CN - LBOV1_2F_ON + LBOV1_2F_Fout,
-
-      # Flow in LBOV1_2M
-      LBOV1_2M_Fout = LBOV1_2M_SN + pmax(0, LBOV2_Fin - LBOV2_PN),
-      LBOV1_2M_Fin = LBOV1_2M_CN - LBOV1_2M_ON + LBOV1_2M_Fout,
-
-      # Flow in LBOV1
-      LBOV1_Fout = LBOV1_SN + pmax(0, LBOV1_2F_Fin - LBOV1_2F_PN) + pmax(0, LBOV1_2M_Fin - LBOV1_2M_PN),
-      LBOV1_Fin = LBOV1_CN - LBOV1_ON + LBOV1_Fout
-    ) |>
-    # replace flow values below zero by zeros
-    dplyr::mutate(
-      dplyr::across(
-        dplyr::matches("Fin|Fout"),
-        ~ pmax(.x, 0, na.rm = TRUE)
-      )
-    ) |>
-    ## 2.2. REARING PARAMETERS ----
-    dplyr::mutate(
-      rt_LCOWDAIR = LCOWDAIR_Qobs / ((LCOWDAIR_Fin + LCOWDAIR_Fout) / 2),
-      rt_LCOWOTH = LCOWOTH_Qobs / ((LCOWOTH_Fin + LCOWOTH_Fout) / 2),
-      rt_LBOV2 = LBOV2_Qobs / ((LBOV2_Fin + LBOV2_Fout) / 2),
-      rt_LHEIFFAT = LHEIFFAT_Qobs / ((LHEIFFAT_Fin + LHEIFFAT_Fout) / 2),
-      rt_LBOV1_2M = LBOV1_2M_Qobs / ((LBOV1_2M_Fin + LBOV1_2M_Fout) / 2),
-      rt_LHEIFBRE = LHEIFBRE_Qobs / ((LHEIFBRE_Fin + LHEIFBRE_Fout) / 2),
-      rt_LBOV1_2F = LBOV1_2F_Qobs / ((LBOV1_2F_Fin + LBOV1_2F_Fout) / 2),
-      rt_LBOV1 = LBOV1_Qobs / ((LBOV1_Fin + LBOV1_Fout) / 2),
-      t_1st_calve_heiffers = ((2 + rt_LHEIFBRE) * LHEIFBRE_Qobs) / LHEIFBRE_Qobs, ## LHEIFBRE have at least 2 y.o.
-      offspring_cows = (LBOV1_Fin - LBOV1_PN) / (LCOWDAIR_Qobs + LCOWOTH_Qobs)
-    ) |>
-    # replace Inf per NAs
-    dplyr::mutate(
-      dplyr::across(
-        dplyr::matches("rt_|t_1st|offspring"),
-        ~ ifelse(!is.finite(.x), NA_real_, .x)
-      )
-    )
+  herd_cattle_process_init <- h_herd_cattle_process_init(
+    herd_cattle = herd_cattle,
+    id_cols = object@traceability$id_cols
+  )
 
   # remove columns with only zeros or NAs
   # select(where(~ !is.numeric(.) || is.na(sum(., na.rm = TRUE)) || sum(., na.rm = TRUE) != 0))
@@ -155,6 +73,8 @@ f_herd_rearing_param_cattle <- function(object) {
   # View(herd_cattle_process_init |> summarise(across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
   ## replace outliers per percentiles ----
+  # Clean the output of the first function
+
   herd_cattle_process_clean1 <- herd_cattle_process_init |>
     # add NUTS2 and SYS02
     dplyr::left_join(
@@ -213,127 +133,15 @@ f_herd_rearing_param_cattle <- function(object) {
 
   ## 2.3. MIXED CATEGORIES ----
 
-  herd_cattle_process <- herd_cattle_process_clean1 |>
-    # LBOV1_2F
-    dplyr::mutate(
-      ## Total number of animals in downward rearing stages
-      # LBOV1_2F_total_downward =
-      #  LHEIFFAT_Qobs/rt_LHEIFFAT
-      #+ LHEIFBRE_Qobs/rt_LHEIFBRE
-      #+ LCOWDAIR_Qobs/rt_LCOWDAIR
-      #+ LCOWOTH_Qobs/rt_LCOWOTH,
-      ### Total number of animals in downward fattening rearing stages
-      # LBOV1_2F_total_downward_fattening =
-      #  LHEIFFAT_Qobs/rt_LHEIFFAT,
-      ### Total number of animals in downward breeders rearing stages
-      # LBOV1_2F_total_downward_breeders =
-      #  LHEIFBRE_Qobs/rt_LHEIFBRE
-      #+ LCOWDAIR_Qobs/rt_LCOWDAIR
-      #+ LCOWOTH_Qobs/rt_LCOWOTH,
-      LBOV1_2F_total_downward = LBOV1_2F_Fout,
-      LBOV1_2F_total_downward_fattening = LBOV1_2F_SSN + (LHEIFFAT_Fin - LHEIFFAT_PN),
-      LBOV1_2F_total_downward_breeders = LBOV1_2F_Fout - LBOV1_2F_total_downward_fattening,
-      ## proportion of fattening
-      LBOV1_2F_fattening_prop = ifelse(LBOV1_2F_total_downward > 0, LBOV1_2F_total_downward_fattening / LBOV1_2F_total_downward, 0),
-      ## proportion of breeding
-      LBOV1_2F_breeders_prop = ifelse(LBOV1_2F_total_downward > 0, LBOV1_2F_total_downward_breeders / LBOV1_2F_total_downward, 0),
-
-      ## Observed number of animals
-      LBOV1_2F_fattening_Qobs = LBOV1_2F_Qobs * LBOV1_2F_fattening_prop,
-      LBOV1_2F_breeders_Qobs = LBOV1_2F_Qobs * LBOV1_2F_breeders_prop,
-      ## Outflow
-      LBOV1_2F_fattening_Fout = LBOV1_2F_Fout * LBOV1_2F_fattening_prop,
-      LBOV1_2F_breeders_Fout = LBOV1_2F_Fout * LBOV1_2F_breeders_prop,
-      ## Inflow
-      LBOV1_2F_fattening_Fin = LBOV1_2F_Fin * LBOV1_2F_fattening_prop,
-      LBOV1_2F_breeders_Fin = LBOV1_2F_Fin * LBOV1_2F_breeders_prop,
-      ## residence time
-      rt_LBOV1_2F_fattening = LBOV1_2F_fattening_Qobs / ((LBOV1_2F_fattening_Fin + LBOV1_2F_fattening_Fout) / 2),
-      rt_LBOV1_2F_breeders = LBOV1_2F_breeders_Qobs / ((LBOV1_2F_breeders_Fin + LBOV1_2F_breeders_Fout) / 2)
-    ) |>
-    # rearing parameter including mixed categories
-    ## LBOV1_2F have at least 1 y.o., LHEIFBRE have at least 2 y.o.
-    dplyr::mutate(
-      t_1st_calve = ((1 + rt_LBOV1_2F_breeders) * LBOV1_2F_breeders_Qobs + ((2 + rt_LHEIFBRE) * LHEIFBRE_Qobs)) / (LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs),
-      offspring_b = (LBOV1_Fin - LBOV1_PN) / (LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs + LCOWDAIR_Qobs + LCOWOTH_Qobs)
-    ) |>
-    # LBOV1_2F_fattening
-    dplyr::mutate(
-      ## proportion of calves for slaughter
-      LBOV1_2F_fattening_slaughter_prop = ifelse(LBOV1_2F_SSN > 0 & LBOV1_2F_fattening_Fout > 0, LBOV1_2F_SSN / LBOV1_2F_fattening_Fout, 0),
-      ## proportion of calves for rearing
-      LBOV1_2F_fattening_rearing_prop = 1 - LBOV1_2F_fattening_slaughter_prop,
-      ## we consider that all calves are either reared or slaughtered, so the sum of the two proportions equals 1
-      ## if no sales is reported, we consider that all calves are reared, so the rearing proportion equals 1 and the slaughter proportion equals 0
-
-      ## Observed number of animals
-      LBOV1_2F_fattening_rearing_Qobs = LBOV1_2F_fattening_Qobs * LBOV1_2F_fattening_rearing_prop,
-      LBOV1_2F_fattening_slaughter_Qobs = LBOV1_2F_fattening_Qobs * LBOV1_2F_fattening_slaughter_prop,
-      ## Outflow
-      LBOV1_2F_fattening_rearing_Fout = LBOV1_2F_fattening_Fout * LBOV1_2F_fattening_rearing_prop,
-      LBOV1_2F_fattening_slaughter_Fout = LBOV1_2F_fattening_Fout * LBOV1_2F_fattening_slaughter_prop,
-      ## Inflow
-      LBOV1_2F_fattening_rearing_Fin = LBOV1_2F_fattening_Fin * LBOV1_2F_fattening_rearing_prop,
-      LBOV1_2F_fattening_slaughter_Fin = LBOV1_2F_fattening_Fin * LBOV1_2F_fattening_slaughter_prop,
-      ## residence time
-      rt_LBOV1_2F_fattening_rearing = LBOV1_2F_fattening_rearing_Qobs / ((LBOV1_2F_fattening_rearing_Fin + LBOV1_2F_fattening_rearing_Fout) / 2),
-      rt_LBOV1_2F_fattening_slaughter = LBOV1_2F_fattening_slaughter_Qobs / ((LBOV1_2F_fattening_slaughter_Fin + LBOV1_2F_fattening_slaughter_Fout) / 2)
-    ) |>
-    # LBOV1_2M
-    dplyr::mutate(
-      ## proportion of calves for slaughter
-      LBOV1_2M_slaughter_prop = ifelse(LBOV1_2M_SSN > 0 & LBOV1_2M_Fout > 0, LBOV1_2M_SSN / LBOV1_2M_Fout, 0),
-      ## proportion of calves for rearing
-      LBOV1_2M_rearing_prop = 1 - LBOV1_2M_slaughter_prop,
-      ## we consider that all calves are either reared or slaughtered, so the sum of the two proportions equals 1
-      ## if no sales is reported, we consider that all calves are reared, so the rearing proportion equals 1 and the slaughter proportion equals 0
-
-      ## Observed number of animals
-      LBOV1_2M_rearing_Qobs = LBOV1_2M_Qobs * LBOV1_2M_rearing_prop,
-      LBOV1_2M_slaughter_Qobs = LBOV1_2M_Qobs * LBOV1_2M_slaughter_prop,
-      ## Outflow
-      LBOV1_2M_rearing_Fout = LBOV1_2M_Fout * LBOV1_2M_rearing_prop,
-      LBOV1_2M_slaughter_Fout = LBOV1_2M_Fout * LBOV1_2M_slaughter_prop,
-      ## Inflow
-      LBOV1_2M_rearing_Fin = LBOV1_2M_Fin * LBOV1_2M_rearing_prop,
-      LBOV1_2M_slaughter_Fin = LBOV1_2M_Fin * LBOV1_2M_slaughter_prop,
-      ## residence time
-      rt_LBOV1_2M_rearing = LBOV1_2M_rearing_Qobs / ((LBOV1_2M_rearing_Fin + LBOV1_2M_rearing_Fout) / 2),
-      rt_LBOV1_2M_slaughter = LBOV1_2M_slaughter_Qobs / ((LBOV1_2M_slaughter_Fin + LBOV1_2M_slaughter_Fout) / 2)
-    ) |>
-    # LBOV1
-    dplyr::mutate(
-      ## proportion of calves for slaughter
-      LBOV1_slaughter_prop = ifelse(LBOV1_SSN > 0 & LBOV1_Fout > 0, LBOV1_SSN / LBOV1_Fout, 0),
-      ## proportion of calves for rearing
-      LBOV1_rearing_prop = 1 - LBOV1_slaughter_prop,
-      ## we consider that all calves are either reared or slaughtered, so the sum of the two proportions equals 1
-      ## if no sales is reported, we consider that all calves are reared, so the rearing proportion equals 1 and the slaughter proportion equals 0
-
-      ## Observed number of animals
-      LBOV1_rearing_Qobs = LBOV1_Qobs * LBOV1_rearing_prop,
-      LBOV1_slaughter_Qobs = LBOV1_Qobs * LBOV1_slaughter_prop,
-      ## Outflow
-      LBOV1_rearing_Fout = LBOV1_Fout * LBOV1_rearing_prop,
-      LBOV1_slaughter_Fout = LBOV1_Fout * LBOV1_slaughter_prop,
-      ## Inflow
-      LBOV1_rearing_Fin = LBOV1_Fin * LBOV1_rearing_prop,
-      LBOV1_slaughter_Fin = LBOV1_Fin * LBOV1_slaughter_prop,
-      ## residence time
-      rt_LBOV1_rearing = LBOV1_rearing_Qobs / ((LBOV1_rearing_Fin + LBOV1_rearing_Fout) / 2),
-      rt_LBOV1_slaughter = LBOV1_slaughter_Qobs / ((LBOV1_slaughter_Fin + LBOV1_slaughter_Fout) / 2)
-    ) |>
-    # replace Inf per NAs
-    dplyr::mutate(
-      dplyr::across(
-        dplyr::matches("rt_|t_1st|offspring"),
-        ~ ifelse(!is.finite(.x), NA_real_, .x)
-      )
-    )
+  herd_cattle_process <- h_herd_cattle_process_mixed_categories(
+    herd_cattle_process_clean1
+  )
 
   # View(herd_cattle_process |> summarise(across(everything(), ~sum(is.na(.x)))) |> pivot_longer(cols = everything()))
 
   ## replace outliers per percentiles ----
+
+  # Clean the output of the second function
   herd_cattle_process_clean2 <- herd_cattle_process
 
   tmp_var <- setdiff(
@@ -390,5 +198,220 @@ f_herd_rearing_param_cattle <- function(object) {
   return(herd_rearing_param_cattle)
 }
 
-utils::globalVariables(c("land_use_type", "sales_t", "sales_kg", "GE_MJ_kg", "QVENT3"))
-# this is to avoid a note in check package (the issue is from the use of dplyr)
+#' Estimate flows and residence times for cattle livestock categories
+#'
+#' @param herd_cattle A cattle herd table with annual animal counts and flows.
+#'   Counts and flows are in heads.
+#' @param id_cols Names of the columns uniquely identifying each farm record.
+#' @return A tibble with one row per farm record, flow estimates in heads, and
+#'   residence-time estimates in years.
+#' @noRd
+h_herd_cattle_process_init <- function(herd_cattle, id_cols) {
+  herd_cattle |>
+    dplyr::select(dplyr::all_of(id_cols), FADN_code_letter, Qobs, ON, CN, PN, SN, SSN, SRN) |>
+    tidyr::pivot_wider(
+      id_cols = dplyr::all_of(id_cols),
+      names_from = FADN_code_letter,
+      values_from = c(Qobs, ON, CN, PN, SN, SSN, SRN),
+      names_glue = "{FADN_code_letter}_{.value}"
+    ) |>
+    # replace NAs by zeros
+    dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~ tidyr::replace_na(., 0))) |>
+    # add missing livestock categories to prevent errors
+    cbind(
+      expand.grid(
+        code = setdiff(
+          data_extra$livestock |>
+            dplyr::filter(species == "cattle") |>
+            dplyr::pull(FADN_code_letter),
+          unique(herd_cattle$FADN_code_letter)
+        ),
+        suffix = c("Qobs", "ON", "CN", "PN", "SN", "SSN", "SRN")
+      ) |>
+        transmute(name = paste(code, suffix, sep = "_")) |>
+        dplyr::mutate(value = 0) |>
+        tidyr::pivot_wider(names_from = name, values_from = value)
+    ) |>
+    ## Flows between livestock categories
+    ## See Annex 1 of COMMUNITY COMMITTEE FOR THE FARM ACCOUNTANCY DATA NETWORK,
+    ## 2009. Typology Handbook of agricultural holdings and the standard output
+    ## (SO) coefficient calculation. (No. RI/CC 1500 rev. 3), Brussels.
+    ## See the figure in the package vignette.
+    dplyr::mutate(
+      # Flow in LCOWDAIR
+      LCOWDAIR_Fout = LCOWDAIR_SN,
+      ## LCOWDAIR_Fin = LCOWDAIR_PN + LCOWDAIR_CN - LCOWDAIR_ON + LCOWDAIR_SN, # no ON and CN variables for LCOWDAIR
+      LCOWDAIR_Fin = LCOWDAIR_CN - LCOWDAIR_ON + LCOWDAIR_Fout,
+      # Flow in LCOWOTH
+      LCOWOTH_Fout = LCOWOTH_SN,
+      LCOWOTH_Fin = LCOWOTH_CN - LCOWOTH_ON + LCOWOTH_Fout,
+      # Flow in LBOV2
+      LBOV2_Fout = LBOV2_SN,
+      LBOV2_Fin = LBOV2_CN - LBOV2_ON + LBOV2_Fout,
+      # Flow in LHEIFFAT
+      LHEIFFAT_Fout = LHEIFFAT_SN,
+      LHEIFFAT_Fin = LHEIFFAT_CN - LHEIFFAT_ON + LHEIFFAT_Fout,
+      # Flow in LHEIFBRE
+      LHEIFBRE_Fout = LHEIFBRE_SN + pmax(0, LCOWDAIR_Fin - LCOWDAIR_PN) + pmax(0, LCOWOTH_Fin - LCOWOTH_PN),
+      LHEIFBRE_Fin = LHEIFBRE_CN - LHEIFBRE_ON + LHEIFBRE_Fout,
+      # Flow in LBOV1_2F
+      LBOV1_2F_Fout = LBOV1_2F_SN + pmax(0, LHEIFFAT_Fin - LHEIFFAT_PN) + pmax(0, LHEIFBRE_Fin - LHEIFBRE_PN),
+      LBOV1_2F_Fin = LBOV1_2F_CN - LBOV1_2F_ON + LBOV1_2F_Fout,
+      # Flow in LBOV1_2M
+      LBOV1_2M_Fout = LBOV1_2M_SN + pmax(0, LBOV2_Fin - LBOV2_PN),
+      LBOV1_2M_Fin = LBOV1_2M_CN - LBOV1_2M_ON + LBOV1_2M_Fout,
+      # Flow in LBOV1
+      LBOV1_Fout = LBOV1_SN + pmax(0, LBOV1_2F_Fin - LBOV1_2F_PN) + pmax(0, LBOV1_2M_Fin - LBOV1_2M_PN),
+      LBOV1_Fin = LBOV1_CN - LBOV1_ON + LBOV1_Fout
+    ) |>
+    # replace flow values below zero by zeros
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::matches("Fin|Fout"),
+        ~ pmax(.x, 0, na.rm = TRUE)
+      )
+    ) |>
+    ## Rearing parameters
+    dplyr::mutate(
+      rt_LCOWDAIR = LCOWDAIR_Qobs / ((LCOWDAIR_Fin + LCOWDAIR_Fout) / 2),
+      rt_LCOWOTH = LCOWOTH_Qobs / ((LCOWOTH_Fin + LCOWOTH_Fout) / 2),
+      rt_LBOV2 = LBOV2_Qobs / ((LBOV2_Fin + LBOV2_Fout) / 2),
+      rt_LHEIFFAT = LHEIFFAT_Qobs / ((LHEIFFAT_Fin + LHEIFFAT_Fout) / 2),
+      rt_LBOV1_2M = LBOV1_2M_Qobs / ((LBOV1_2M_Fin + LBOV1_2M_Fout) / 2),
+      rt_LHEIFBRE = LHEIFBRE_Qobs / ((LHEIFBRE_Fin + LHEIFBRE_Fout) / 2),
+      rt_LBOV1_2F = LBOV1_2F_Qobs / ((LBOV1_2F_Fin + LBOV1_2F_Fout) / 2),
+      rt_LBOV1 = LBOV1_Qobs / ((LBOV1_Fin + LBOV1_Fout) / 2),
+      t_1st_calve_heiffers = ((2 + rt_LHEIFBRE) * LHEIFBRE_Qobs) / LHEIFBRE_Qobs, ## LHEIFBRE have at least 2 y.o.
+      offspring_cows = (LBOV1_Fin - LBOV1_PN) / (LCOWDAIR_Qobs + LCOWOTH_Qobs)
+    ) |>
+    # replace Inf per NAs
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::matches("rt_|t_1st|offspring"),
+        ~ ifelse(!is.finite(.x), NA_real_, .x)
+      )
+    )
+}
+
+#' Estimate flows and residence times for mixed cattle categories
+#'
+#' @param herd_cattle_process_clean1 Cattle process table with base flow and
+#'   residence-time estimates. Counts and flows are in heads.
+#' @return The input table with mixed-category flow estimates in heads and
+#'   residence-time estimates in years.
+#' @noRd
+h_herd_cattle_process_mixed_categories <- function(herd_cattle_process_clean1) {
+  herd_cattle_process_clean1 |>
+    # Split LBOV1_2F into fattening and breeding categories
+    dplyr::mutate(
+      ## Total number of animals in downward rearing stages
+      # LBOV1_2F_total_downward =
+      #  LHEIFFAT_Qobs / rt_LHEIFFAT
+      #+ LHEIFBRE_Qobs / rt_LHEIFBRE
+      #+ LCOWDAIR_Qobs / rt_LCOWDAIR
+      #+ LCOWOTH_Qobs / rt_LCOWOTH,
+      ### Total number of animals in downward fattening rearing stages
+      # LBOV1_2F_total_downward_fattening =
+      #  LHEIFFAT_Qobs / rt_LHEIFFAT,
+      ### Total number of animals in downward breeders rearing stages
+      # LBOV1_2F_total_downward_breeders =
+      #  LHEIFBRE_Qobs / rt_LHEIFBRE
+      #+ LCOWDAIR_Qobs / rt_LCOWDAIR
+      #+ LCOWOTH_Qobs / rt_LCOWOTH,
+      LBOV1_2F_total_downward = LBOV1_2F_Fout,
+      LBOV1_2F_total_downward_fattening = LBOV1_2F_SSN + (LHEIFFAT_Fin - LHEIFFAT_PN),
+      LBOV1_2F_total_downward_breeders = LBOV1_2F_Fout - LBOV1_2F_total_downward_fattening,
+      ## proportion of fattening
+      LBOV1_2F_fattening_prop = ifelse(LBOV1_2F_total_downward > 0, LBOV1_2F_total_downward_fattening / LBOV1_2F_total_downward, 0),
+      ## proportion of breeding
+      LBOV1_2F_breeders_prop = ifelse(LBOV1_2F_total_downward > 0, LBOV1_2F_total_downward_breeders / LBOV1_2F_total_downward, 0),
+      ## Observed number of animals
+      LBOV1_2F_fattening_Qobs = LBOV1_2F_Qobs * LBOV1_2F_fattening_prop,
+      LBOV1_2F_breeders_Qobs = LBOV1_2F_Qobs * LBOV1_2F_breeders_prop,
+      ## Outflow
+      LBOV1_2F_fattening_Fout = LBOV1_2F_Fout * LBOV1_2F_fattening_prop,
+      LBOV1_2F_breeders_Fout = LBOV1_2F_Fout * LBOV1_2F_breeders_prop,
+      ## Inflow
+      LBOV1_2F_fattening_Fin = LBOV1_2F_Fin * LBOV1_2F_fattening_prop,
+      LBOV1_2F_breeders_Fin = LBOV1_2F_Fin * LBOV1_2F_breeders_prop,
+      ## residence time
+      rt_LBOV1_2F_fattening = LBOV1_2F_fattening_Qobs / ((LBOV1_2F_fattening_Fin + LBOV1_2F_fattening_Fout) / 2),
+      rt_LBOV1_2F_breeders = LBOV1_2F_breeders_Qobs / ((LBOV1_2F_breeders_Fin + LBOV1_2F_breeders_Fout) / 2)
+    ) |>
+    # rearing parameter including mixed categories
+    ## LBOV1_2F have at least 1 y.o., LHEIFBRE have at least 2 y.o.
+    dplyr::mutate(
+      t_1st_calve = ((1 + rt_LBOV1_2F_breeders) * LBOV1_2F_breeders_Qobs + ((2 + rt_LHEIFBRE) * LHEIFBRE_Qobs)) / (LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs),
+      offspring_b = (LBOV1_Fin - LBOV1_PN) / (LBOV1_2F_breeders_Qobs + LHEIFBRE_Qobs + LCOWDAIR_Qobs + LCOWOTH_Qobs)
+    ) |>
+    # Split LBOV1_2F fattening category into rearing and slaughter
+    dplyr::mutate(
+      ## proportion of calves for slaughter
+      LBOV1_2F_fattening_slaughter_prop = ifelse(LBOV1_2F_SSN > 0 & LBOV1_2F_fattening_Fout > 0, LBOV1_2F_SSN / LBOV1_2F_fattening_Fout, 0),
+      ## proportion of calves for rearing
+      LBOV1_2F_fattening_rearing_prop = 1 - LBOV1_2F_fattening_slaughter_prop,
+      ## we consider that all calves are either reared or slaughtered, so the sum of the two proportions equals 1
+      ## if no sales is reported, we consider that all calves are reared, so the rearing proportion equals 1 and the slaughter proportion equals 0
+      ## Observed number of animals
+      LBOV1_2F_fattening_rearing_Qobs = LBOV1_2F_fattening_Qobs * LBOV1_2F_fattening_rearing_prop,
+      LBOV1_2F_fattening_slaughter_Qobs = LBOV1_2F_fattening_Qobs * LBOV1_2F_fattening_slaughter_prop,
+      ## Outflow
+      LBOV1_2F_fattening_rearing_Fout = LBOV1_2F_fattening_Fout * LBOV1_2F_fattening_rearing_prop,
+      LBOV1_2F_fattening_slaughter_Fout = LBOV1_2F_fattening_Fout * LBOV1_2F_fattening_slaughter_prop,
+      ## Inflow
+      LBOV1_2F_fattening_rearing_Fin = LBOV1_2F_fattening_Fin * LBOV1_2F_fattening_rearing_prop,
+      LBOV1_2F_fattening_slaughter_Fin = LBOV1_2F_fattening_Fin * LBOV1_2F_fattening_slaughter_prop,
+      ## residence time
+      rt_LBOV1_2F_fattening_rearing = LBOV1_2F_fattening_rearing_Qobs / ((LBOV1_2F_fattening_rearing_Fin + LBOV1_2F_fattening_rearing_Fout) / 2),
+      rt_LBOV1_2F_fattening_slaughter = LBOV1_2F_fattening_slaughter_Qobs / ((LBOV1_2F_fattening_slaughter_Fin + LBOV1_2F_fattening_slaughter_Fout) / 2)
+    ) |>
+    # Split LBOV1_2M into rearing and slaughter categories
+    dplyr::mutate(
+      ## proportion of calves for slaughter
+      LBOV1_2M_slaughter_prop = ifelse(LBOV1_2M_SSN > 0 & LBOV1_2M_Fout > 0, LBOV1_2M_SSN / LBOV1_2M_Fout, 0),
+      ## proportion of calves for rearing
+      LBOV1_2M_rearing_prop = 1 - LBOV1_2M_slaughter_prop,
+      ## we consider that all calves are either reared or slaughtered, so the sum of the two proportions equals 1
+      ## if no sales is reported, we consider that all calves are reared, so the rearing proportion equals 1 and the slaughter proportion equals 0
+      ## Observed number of animals
+      LBOV1_2M_rearing_Qobs = LBOV1_2M_Qobs * LBOV1_2M_rearing_prop,
+      LBOV1_2M_slaughter_Qobs = LBOV1_2M_Qobs * LBOV1_2M_slaughter_prop,
+      ## Outflow
+      LBOV1_2M_rearing_Fout = LBOV1_2M_Fout * LBOV1_2M_rearing_prop,
+      LBOV1_2M_slaughter_Fout = LBOV1_2M_Fout * LBOV1_2M_slaughter_prop,
+      ## Inflow
+      LBOV1_2M_rearing_Fin = LBOV1_2M_Fin * LBOV1_2M_rearing_prop,
+      LBOV1_2M_slaughter_Fin = LBOV1_2M_Fin * LBOV1_2M_slaughter_prop,
+      ## residence time
+      rt_LBOV1_2M_rearing = LBOV1_2M_rearing_Qobs / ((LBOV1_2M_rearing_Fin + LBOV1_2M_rearing_Fout) / 2),
+      rt_LBOV1_2M_slaughter = LBOV1_2M_slaughter_Qobs / ((LBOV1_2M_slaughter_Fin + LBOV1_2M_slaughter_Fout) / 2)
+    ) |>
+    # Split LBOV1 into rearing and slaughter categories
+    dplyr::mutate(
+      ## proportion of calves for slaughter
+      LBOV1_slaughter_prop = ifelse(LBOV1_SSN > 0 & LBOV1_Fout > 0, LBOV1_SSN / LBOV1_Fout, 0),
+      ## proportion of calves for rearing
+      LBOV1_rearing_prop = 1 - LBOV1_slaughter_prop,
+      ## we consider that all calves are either reared or slaughtered, so the sum of the two proportions equals 1
+      ## if no sales is reported, we consider that all calves are reared, so the rearing proportion equals 1 and the slaughter proportion equals 0
+      ## Observed number of animals
+      LBOV1_rearing_Qobs = LBOV1_Qobs * LBOV1_rearing_prop,
+      LBOV1_slaughter_Qobs = LBOV1_Qobs * LBOV1_slaughter_prop,
+      ## Outflow
+      LBOV1_rearing_Fout = LBOV1_Fout * LBOV1_rearing_prop,
+      LBOV1_slaughter_Fout = LBOV1_Fout * LBOV1_slaughter_prop,
+      ## Inflow
+      LBOV1_rearing_Fin = LBOV1_Fin * LBOV1_rearing_prop,
+      LBOV1_slaughter_Fin = LBOV1_Fin * LBOV1_slaughter_prop,
+      ## residence time
+      rt_LBOV1_rearing = LBOV1_rearing_Qobs / ((LBOV1_rearing_Fin + LBOV1_rearing_Fout) / 2),
+      rt_LBOV1_slaughter = LBOV1_slaughter_Qobs / ((LBOV1_slaughter_Fin + LBOV1_slaughter_Fout) / 2)
+    ) |>
+    # replace Inf per NAs
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::matches("rt_|t_1st|offspring"),
+        ~ ifelse(!is.finite(.x), NA_real_, .x)
+      )
+    )
+}
